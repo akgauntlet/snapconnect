@@ -45,7 +45,6 @@ import {
 } from 'react-native';
 import { messagingService } from '../../services/firebase/messagingService';
 import { useAuthStore } from '../../stores/authStore';
-import { useThemeStore } from '../../stores/themeStore';
 
 /**
  * Props for MediaViewer component
@@ -76,8 +75,6 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
   onExpire,
   onClose
 }) => {
-  const theme = useThemeStore((state) => state.theme);
-  const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
   const { user } = useAuthStore();
   
   // Component state
@@ -140,7 +137,8 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
       console.error('Start viewing failed:', error);
       Alert.alert('Error', 'Failed to view message.');
     }
-  }, [isViewing, hasViewed, messageId, timer, user, onView]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isViewing, hasViewed, messageId, timer, user, onView, fadeAnimation, progressAnimation]);
 
   /**
    * Handle message expiration
@@ -176,7 +174,7 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
     } catch (error) {
       console.error('Handle expire failed:', error);
     }
-  }, [messageId, onExpire, onClose]);
+  }, [messageId, onExpire, onClose, fadeAnimation]);
 
   /**
    * Handle manual close

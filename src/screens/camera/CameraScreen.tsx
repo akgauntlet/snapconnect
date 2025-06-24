@@ -77,7 +77,6 @@ const CameraScreen: React.FC = () => {
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [microphonePermission, requestMicrophonePermission] = useMicrophonePermissions();
   const [cameraReady, setCameraReady] = useState(false);
-  const [cameraInitialized, setCameraInitialized] = useState(false);
   
   // Camera configuration
   const [facing, setFacing] = useState<CameraType>('back');
@@ -110,7 +109,6 @@ const CameraScreen: React.FC = () => {
   const recordedChunksRef = useRef<Blob[]>([]);
 
   // Web camera device selection (for automatic selection)
-  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
 
   /**
@@ -147,8 +145,6 @@ const CameraScreen: React.FC = () => {
 
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter(device => device.kind === 'videoinput');
-      
-      setAvailableCameras(videoDevices);
       
       // Auto-select the best camera (avoid virtual cameras)
       if (videoDevices.length > 0) {
@@ -211,6 +207,7 @@ const CameraScreen: React.FC = () => {
         enumerateCameras();
       }, 1000);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**
@@ -222,6 +219,7 @@ const CameraScreen: React.FC = () => {
         enumerateCameras();
       }, 500);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cameraPermission?.granted, microphonePermission?.granted]);
 
   /**
@@ -313,7 +311,6 @@ const CameraScreen: React.FC = () => {
     // Add a small delay to ensure camera is fully stable
     setTimeout(() => {
       setCameraReady(true);
-      setCameraInitialized(true);
       console.log('📷 Camera is ready for capture');
     }, 500);
   };
@@ -324,7 +321,6 @@ const CameraScreen: React.FC = () => {
   const reinitializeCamera = () => {
     console.log('📷 Reinitializing camera...');
     setCameraReady(false);
-    setCameraInitialized(false);
     // The camera will reinitialize when onCameraReady is called again
   };
 
@@ -740,13 +736,7 @@ const CameraScreen: React.FC = () => {
     Alert.alert('Coming Soon', 'Messages feature will be implemented next!');
   };
 
-  /**
-   * Navigate to stories screen  
-   */
-  const handleStoriesPress = () => {
-    // TODO: Navigate to stories
-    Alert.alert('Coming Soon', 'Stories feature will be implemented next!');
-  };
+
 
   /**
    * Handle sending to multiple recipients  
@@ -830,7 +820,7 @@ const CameraScreen: React.FC = () => {
       console.log('📤 Creating story:', { mediaType, fileSize, privacy });
       
       // Create story
-      const storyId = await storiesService.createStory(
+      await storiesService.createStory(
         user.uid,
         mediaData,
         '', // No text overlay for now
@@ -868,17 +858,7 @@ const CameraScreen: React.FC = () => {
     }
   };
 
-  /**
-   * Toggle story mode
-   */
-  const toggleStoryMode = async () => {
-    try {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setIsStoryMode(!isStoryMode);
-    } catch (error) {
-      console.error('Toggle story mode failed:', error);
-    }
-  };
+
 
   /**
    * Show recipient selector
@@ -937,7 +917,6 @@ const CameraScreen: React.FC = () => {
 
   if (!cameraPermission.granted || !microphonePermission.granted) {
     const cameraBlocked = cameraPermission?.status === 'denied';
-    const micBlocked = microphonePermission?.status === 'denied';
     
     return (
       <View className="flex-1 justify-center items-center bg-cyber-black p-6">

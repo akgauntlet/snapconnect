@@ -41,7 +41,6 @@ import {
 } from 'react-native';
 import { storiesService } from '../../services/firebase/storiesService';
 import { useAuthStore } from '../../stores/authStore';
-import { useThemeStore } from '../../stores/themeStore';
 
 /**
  * Story interface
@@ -90,8 +89,6 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
   onClose,
   onStoryViewed
 }) => {
-  const theme = useThemeStore((state) => state.theme);
-  const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
   const { user } = useAuthStore();
   
   // Component state
@@ -102,7 +99,6 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
   
   // Story timing
   const [storyDuration] = useState(5000); // 5 seconds per story
-  const [progress, setProgress] = useState(0);
   
   // Refs
   const progressInterval = useRef<NodeJS.Timeout | null>(null);
@@ -120,7 +116,6 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
     
     // Reset progress
     progressAnimation.setValue(0);
-    setProgress(0);
     
     // Clear existing interval
     if (progressInterval.current) {
@@ -138,20 +133,20 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
       }
     });
     
-    // Update progress state for UI
+    // Progress tracking for cleanup
     const startTime = Date.now();
     progressInterval.current = setInterval(() => {
       const elapsed = Date.now() - startTime;
       const newProgress = Math.min(elapsed / storyDuration, 1);
-      setProgress(newProgress);
       
       if (newProgress >= 1) {
         if (progressInterval.current) {
           clearInterval(progressInterval.current);
         }
       }
-    }, 50);
-  }, [isPaused, storyDuration]);
+          }, 50);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPaused, storyDuration, progressAnimation]);
 
   /**
    * Pause story progress
@@ -162,7 +157,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
     if (progressInterval.current) {
       clearInterval(progressInterval.current);
     }
-  }, []);
+  }, [progressAnimation]);
 
   /**
    * Resume story progress

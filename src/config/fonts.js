@@ -22,11 +22,28 @@ import * as Font from 'expo-font';
 
 /**
  * Font configuration map for cyber gaming theme
- * Currently using system fonts with SpaceMono as available custom font
- * TODO: Add Inter, Orbitron, and JetBrains Mono font files to assets/fonts/ directories
+ * Using Inter 18pt for body text, Orbitron for headers, JetBrains Mono for code
  */
 export const fonts = {
-  // Available custom font
+  // Inter fonts (18pt for optimal readability)
+  'Inter-Regular': require('../../assets/fonts/Inter_18pt-Regular.ttf'),
+  'Inter-Medium': require('../../assets/fonts/Inter_18pt-Medium.ttf'),
+  'Inter-SemiBold': require('../../assets/fonts/Inter_18pt-SemiBold.ttf'),
+  'Inter-Bold': require('../../assets/fonts/Inter_18pt-Bold.ttf'),
+  
+  // Orbitron fonts (gaming headers and titles)
+  'Orbitron-Regular': require('../../assets/fonts/Orbitron-Regular.ttf'),
+  'Orbitron-Medium': require('../../assets/fonts/Orbitron-Medium.ttf'),
+  'Orbitron-SemiBold': require('../../assets/fonts/Orbitron-SemiBold.ttf'),
+  'Orbitron-Bold': require('../../assets/fonts/Orbitron-Bold.ttf'),
+  'Orbitron-Black': require('../../assets/fonts/Orbitron-Black.ttf'),
+  
+  // JetBrains Mono fonts (technical content and code)
+  'JetBrainsMono-Regular': require('../../assets/fonts/JetBrainsMono-Regular.ttf'),
+  'JetBrainsMono-Medium': require('../../assets/fonts/JetBrainsMono-Medium.ttf'),
+  'JetBrainsMono-Bold': require('../../assets/fonts/JetBrainsMono-Bold.ttf'),
+  
+  // SpaceMono (backup monospace)
   'SpaceMono-Regular': require('../../assets/fonts/SpaceMono-Regular.ttf'),
 };
 
@@ -46,100 +63,100 @@ export const loadFonts = async () => {
 
 /**
  * Font family names for use in styles
- * Using system fonts with SpaceMono as available custom font
+ * Now using actual custom fonts with system fallbacks
  */
 export const fontFamilies = {
-  // System font fallbacks (will use system defaults)
-  interRegular: 'System',
-  interMedium: 'System',
-  interSemiBold: 'System',
-  interBold: 'System',
+  // Inter fonts for body text
+  interRegular: 'Inter-Regular',
+  interMedium: 'Inter-Medium',
+  interSemiBold: 'Inter-SemiBold',
+  interBold: 'Inter-Bold',
   
-  // System font fallbacks for gaming headers
-  orbitronLight: 'System',
-  orbitronRegular: 'System', 
-  orbitronMedium: 'System',
-  orbitronBold: 'System',
-  orbitronBlack: 'System',
+  // Orbitron fonts for gaming headers
+  orbitronRegular: 'Orbitron-Regular',
+  orbitronMedium: 'Orbitron-Medium',
+  orbitronSemiBold: 'Orbitron-SemiBold',
+  orbitronBold: 'Orbitron-Bold',
+  orbitronBlack: 'Orbitron-Black',
   
-  // System font fallbacks for technical content
-  jetbrainsRegular: 'monospace',
-  jetbrainsMedium: 'monospace',
-  jetbrainsBold: 'monospace',
+  // JetBrains Mono for technical content
+  jetbrainsRegular: 'JetBrainsMono-Regular',
+  jetbrainsMedium: 'JetBrainsMono-Medium',
+  jetbrainsBold: 'JetBrainsMono-Bold',
   
-  // Available custom font
+  // SpaceMono as backup
   spaceMono: 'SpaceMono-Regular',
 };
 
 /**
  * Font presets for common use cases
- * Using system fonts with proper fallbacks
+ * Using custom fonts for gaming aesthetic
  */
 export const fontPresets = {
-  // Headers and titles - using system fonts for now
+  // Headers and titles - using Orbitron for gaming aesthetic
   headerLarge: {
-    fontFamily: 'System',
+    fontFamily: fontFamilies.orbitronBold,
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: 'normal', // Weight is built into font
   },
   headerMedium: {
-    fontFamily: 'System',
+    fontFamily: fontFamilies.orbitronSemiBold,
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: 'normal',
   },
   headerSmall: {
-    fontFamily: 'System',
+    fontFamily: fontFamilies.orbitronMedium,
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: 'normal',
   },
   
-  // Body text - using system fonts
+  // Body text - using Inter for readability
   bodyLarge: {
-    fontFamily: 'System',
+    fontFamily: fontFamilies.interSemiBold,
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: 'normal',
   },
   bodyMedium: {
-    fontFamily: 'System',
+    fontFamily: fontFamilies.interRegular,
     fontSize: 16,
-    fontWeight: '400',
+    fontWeight: 'normal',
   },
   bodySmall: {
-    fontFamily: 'System',
+    fontFamily: fontFamilies.interRegular,
     fontSize: 14,
-    fontWeight: '400',
+    fontWeight: 'normal',
   },
   
-  // Technical content - using monospace
+  // Technical content - using JetBrains Mono
   codeLarge: {
-    fontFamily: fontFamilies.spaceMono,
+    fontFamily: fontFamilies.jetbrainsRegular,
     fontSize: 16,
     fontWeight: 'normal',
   },
   codeMedium: {
-    fontFamily: fontFamilies.spaceMono,
+    fontFamily: fontFamilies.jetbrainsRegular,
     fontSize: 14,
     fontWeight: 'normal',
   },
   codeSmall: {
-    fontFamily: fontFamilies.spaceMono,
+    fontFamily: fontFamilies.jetbrainsRegular,
     fontSize: 12,
     fontWeight: 'normal',
   },
   
-  // Gaming UI elements
+  // Gaming UI elements - mixing Orbitron and Inter
   gamingButton: {
-    fontFamily: 'System',
+    fontFamily: fontFamilies.orbitronMedium,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'normal',
   },
   gamingLabel: {
-    fontFamily: 'System',
+    fontFamily: fontFamilies.interMedium,
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: 'normal',
   },
   gamingStats: {
-    fontFamily: fontFamilies.spaceMono,
+    fontFamily: fontFamilies.jetbrainsRegular,
     fontSize: 14,
     fontWeight: 'normal',
   },

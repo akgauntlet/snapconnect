@@ -39,7 +39,6 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
 
 /**
@@ -84,7 +83,6 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
 }) => {
   const theme = useThemeStore((state) => state.theme);
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
-  const { user } = useAuthStore();
   
   // Component state
   const [friends, setFriends] = useState<Friend[]>([]);

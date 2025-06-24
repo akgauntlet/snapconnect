@@ -10,11 +10,20 @@ module.exports = {
   presets: [require("nativewind/preset")],
   theme: {
     extend: {
-      // Custom fonts for gaming aesthetic (using system fonts for now)
+      // Custom fonts for gaming aesthetic
       fontFamily: {
-        'orbitron': ['system-ui', 'sans-serif'], // Gaming display font (system fallback)
-        'inter': ['system-ui', 'sans-serif'], // Body text font (system fallback)
-        'mono': ['SpaceMono-Regular', 'monospace'], // Technical content (available custom font)
+        'orbitron': ['Orbitron-Regular', 'system-ui', 'sans-serif'], // Gaming display font
+        'orbitron-medium': ['Orbitron-Medium', 'system-ui', 'sans-serif'],
+        'orbitron-semibold': ['Orbitron-SemiBold', 'system-ui', 'sans-serif'],
+        'orbitron-bold': ['Orbitron-Bold', 'system-ui', 'sans-serif'],
+        'orbitron-black': ['Orbitron-Black', 'system-ui', 'sans-serif'],
+        'inter': ['Inter-Regular', 'system-ui', 'sans-serif'], // Body text font
+        'inter-medium': ['Inter-Medium', 'system-ui', 'sans-serif'],
+        'inter-semibold': ['Inter-SemiBold', 'system-ui', 'sans-serif'],
+        'inter-bold': ['Inter-Bold', 'system-ui', 'sans-serif'],
+        'mono': ['JetBrainsMono-Regular', 'SpaceMono-Regular', 'monospace'], // Technical content
+        'mono-medium': ['JetBrainsMono-Medium', 'SpaceMono-Regular', 'monospace'],
+        'mono-bold': ['JetBrainsMono-Bold', 'SpaceMono-Regular', 'monospace'],
       },
       
       // Cyber gaming color palette

@@ -130,6 +130,7 @@ const MessagesScreen: React.FC = () => {
     return () => {
       realtimeService.cleanup();
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   /**
@@ -155,6 +156,7 @@ const MessagesScreen: React.FC = () => {
         ]
       );
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**
