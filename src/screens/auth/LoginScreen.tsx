@@ -284,9 +284,15 @@ const LoginScreen: React.FC<LoginScreenProps> = () => {
           <TouchableOpacity
             onPress={authMethod === 'email' ? handleEmailLogin : handlePhoneLogin}
             disabled={isLoading}
-            className={`bg-gradient-to-r from-cyber-cyan to-blue-500 py-4 rounded-lg shadow-lg ${
+            className={`bg-cyber-cyan py-4 rounded-lg shadow-lg ${
               isLoading ? 'opacity-50' : ''
             }`}
+            style={{
+              shadowColor: '#00ffff',
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.3,
+              shadowRadius: 10,
+            }}
           >
             <Text className="text-cyber-black font-bold text-lg font-orbitron text-center">
               {isLoading ? 'SIGNING IN...' : 'SIGN IN'}
@@ -295,7 +301,7 @@ const LoginScreen: React.FC<LoginScreenProps> = () => {
 
           {/* Gaming Aesthetic Elements */}
           <View className="items-center my-6">
-            <View className="w-full h-px bg-gradient-to-r from-transparent via-cyber-cyan to-transparent mb-4" />
+            <View className="w-full h-px bg-cyber-cyan opacity-30 mb-4" />
             <Text className="text-green-400 text-sm font-mono">
               [ SECURE CONNECTION ESTABLISHED ]
             </Text>

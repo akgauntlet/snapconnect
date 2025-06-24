@@ -245,9 +245,15 @@ const PhoneVerificationScreen: React.FC<PhoneVerificationScreenProps> = () => {
         <TouchableOpacity
           onPress={() => handleVerifyCode()}
           disabled={isLoading || code.some(digit => digit === '')}
-          className={`bg-gradient-to-r from-cyber-cyan to-blue-500 py-4 rounded-lg shadow-lg mb-6 ${
+          className={`bg-cyber-cyan py-4 rounded-lg shadow-lg mb-6 ${
             isLoading || code.some(digit => digit === '') ? 'opacity-50' : ''
           }`}
+          style={{
+            shadowColor: '#00ffff',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.3,
+            shadowRadius: 10,
+          }}
         >
           <Text className="text-cyber-black font-bold text-lg font-orbitron text-center">
             {isLoading ? 'VERIFYING...' : 'VERIFY CODE'}
@@ -271,7 +277,7 @@ const PhoneVerificationScreen: React.FC<PhoneVerificationScreenProps> = () => {
 
         {/* Gaming Aesthetic Elements */}
         <View className="items-center mb-6">
-          <View className="w-full h-px bg-gradient-to-r from-transparent via-cyber-cyan to-transparent mb-4" />
+          <View className="w-full h-px bg-cyber-cyan opacity-30 mb-4" />
           <Text className="text-green-400 text-sm font-mono">
             [ VERIFICATION IN PROGRESS ]
           </Text>

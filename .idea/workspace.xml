@@ -6,18 +6,15 @@
   <component name="ChangeListManager">
     <list default="true" id="91f2d82c-fdb7-4442-aede-2811908de7d2" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/App.js" beforeDir="false" afterPath="$PROJECT_DIR$/App.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/metro.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/metro.config.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/config/firebase.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/config/firebase.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/navigation/AppNavigator.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/navigation/AppNavigator.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/auth/LoginScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/auth/LoginScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/auth/PhoneVerificationScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/auth/PhoneVerificationScreen.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/screens/auth/WelcomeScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/auth/WelcomeScreen.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/services/firebase/authService.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/firebase/authService.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/services/firebase/friendsService.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/firebase/friendsService.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/services/firebase/messagingService.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/firebase/messagingService.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/services/firebase/storiesService.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/firebase/storiesService.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/stores/authStore.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/stores/authStore.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

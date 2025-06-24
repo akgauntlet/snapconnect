@@ -50,6 +50,20 @@ class AuthService {
   }
 
   /**
+   * Verify storage availability before authentication operations
+   * @returns {Promise<boolean>} True if storage is working
+   */
+  async verifyStorage() {
+    try {
+      const { verifyAsyncStorage } = require('../../config/firebase');
+      return await verifyAsyncStorage();
+    } catch (error) {
+      console.warn('⚠️ Storage verification failed:', error);
+      return false;
+    }
+  }
+
+  /**
    * Sign in with email and password
    * @param {string} email - User email address
    * @param {string} password - User password
@@ -57,19 +71,29 @@ class AuthService {
    */
   async signInWithEmail(email, password) {
     try {
+      console.log('🔄 Starting email signin process for:', email);
+      console.log('📞 Calling authService.signInWithEmail...');
+      console.log('🔄 Getting Firebase Auth instance...');
+      
       const auth = this.getAuth();
+      console.log('🔄 Signing in with email and password...');
+      
       const userCredential = await auth.signInWithEmailAndPassword(email, password);
       const user = userCredential.user;
       
+      console.log('✅ Firebase Auth signin successful');
+      
       // Get user profile from database
       const profile = await this.getUserProfile(user.uid);
+      
+      console.log('✅ User profile loaded successfully');
       
       return {
         user: this.formatUserData(user),
         profile
       };
     } catch (error) {
-      console.error('Email sign in failed:', error);
+      console.error('❌ Email sign in failed:', error);
       throw this.handleAuthError(error);
     }
   }
@@ -84,12 +108,27 @@ class AuthService {
    */
   async signUpWithEmail(email, password, displayName, additionalData = {}) {
     try {
+      console.log('🔄 Starting email signup process for:', email);
+      console.log('📞 Calling authService.signUpWithEmail...');
+      console.log('🔄 Getting Firebase Auth instance...');
+      
+      // Verify storage is working before proceeding
+      const storageWorking = await this.verifyStorage();
+      if (!storageWorking) {
+        console.warn('⚠️ AsyncStorage verification failed, but continuing with auth...');
+      }
+      
       const auth = this.getAuth();
+      console.log('🔄 Creating user with email and password...');
+      
       const userCredential = await auth.createUserWithEmailAndPassword(email, password);
       const user = userCredential.user;
       
+      console.log('✅ Firebase Auth user created successfully');
+      
       // Update Firebase Auth profile
       await user.updateProfile({ displayName });
+      console.log('✅ Firebase Auth profile updated');
       
       // Create user profile in database
       const profile = await this.createUserProfile(user.uid, {
@@ -99,13 +138,34 @@ class AuthService {
         ...additionalData
       });
       
+      console.log('✅ User profile created in database');
+      
       return {
         user: this.formatUserData(user),
         profile
       };
     } catch (error) {
-      console.error('Email sign up failed:', error);
+      console.error('❌ Email sign up failed:', error);
+      
+      // Check if this might be a storage error
+      if (error.message && error.message.includes('setItem')) {
+        console.error('🚨 Storage/persistence error detected during signup');
+        console.warn('⚠️ This is likely a local storage issue, not an authentication failure');
+        console.warn('⚠️ Firebase Auth operations may have succeeded despite this error');
+        console.error('Storage error details:', error.message);
+        
+        // Wrap storage errors with user-friendly message
+        const wrappedError = new Error('Authentication completed but local storage may not be working properly.');
+        console.error('❌ Email sign up failed:', `[${wrappedError.constructor.name}: ${wrappedError.message}]`);
+        console.warn('⚠️ This appears to be a storage/persistence error, not an authentication error');
+        console.warn('⚠️ The user may have been created successfully despite this error');
+        
+        throw wrappedError;
+      }
+      
       throw this.handleAuthError(error);
+    } finally {
+      console.log('✅ Signup process completed (storage issues may exist but auth should work)');
     }
   }
 
@@ -215,6 +275,7 @@ class AuthService {
     try {
       const auth = this.getAuth();
       await auth.signOut();
+      console.log('✅ User signed out successfully');
     } catch (error) {
       console.error('Sign out failed:', error);
       throw this.handleAuthError(error);

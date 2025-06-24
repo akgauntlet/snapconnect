@@ -25,9 +25,9 @@ import React from 'react';
 // Import authentication screens
 import LoginScreen from '../screens/auth/LoginScreen';
 import PhoneVerificationScreen from '../screens/auth/PhoneVerificationScreen';
+import SignupScreen from '../screens/auth/SignupScreen';
 import WelcomeScreen from '../screens/auth/WelcomeScreen';
 // TODO: Import other auth screens when created
-// import SignupScreen from '../screens/auth/SignupScreen';
 // import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 // import ProfileSetupScreen from '../screens/auth/ProfileSetupScreen';
 
@@ -76,6 +76,14 @@ const AuthNavigator = () => {
       />
       
       <Stack.Screen 
+        name="SignUp" 
+        component={SignupScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      
+      <Stack.Screen 
         name="PhoneVerification" 
         component={PhoneVerificationScreen}
         options={{
@@ -86,7 +94,6 @@ const AuthNavigator = () => {
       
       {/* TODO: Add additional authentication screens */}
       {/*
-      <Stack.Screen name="SignUp" component={SignupScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
       <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
       */}

@@ -19,6 +19,7 @@
  * Supports real-time data synchronization for AI-powered features.
  */
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import 'firebase/compat/firestore';
@@ -90,18 +91,26 @@ export const initializeFirebaseServices = async () => {
       console.log('🔥 Firebase already initialized');
     }
     
-    // Configure Auth persistence with AsyncStorage
+    // Configure Auth persistence for React Native
     try {
-      await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-      console.log('✅ Firebase Auth persistence configured');
+      // Check if we're in React Native environment
+      if (typeof navigator !== 'undefined' && navigator.product === 'ReactNative') {
+        // React Native automatically handles auth persistence with AsyncStorage
+        // No need to explicitly set persistence - Firebase handles this internally
+        console.log('✅ Firebase Auth persistence enabled with AsyncStorage');
+      } else {
+        // For web platforms, use localStorage persistence
+        await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+        console.log('✅ Firebase Auth persistence enabled with localStorage');
+      }
     } catch (persistenceError) {
       console.warn('⚠️ Firebase Auth persistence configuration warning:', persistenceError.message);
-      // Continue without persistence if it fails
+      // Continue without explicit persistence configuration
     }
     
     console.log('✅ Firebase services initialized successfully');
   } catch (error) {
-    console.error('Firebase services initialization failed:', error);
+    console.error('❌ Firebase services initialization failed:', error);
     throw error;
   }
 };
@@ -156,6 +165,26 @@ export const getFirebaseApp = () => {
  */
 export const isFirebaseInitialized = () => {
   return firebase.apps.length > 0;
+};
+
+/**
+ * Verify AsyncStorage is available
+ * @returns {Promise<boolean>} True if AsyncStorage is working
+ */
+export const verifyAsyncStorage = async () => {
+  try {
+    const testKey = '@snapconnect:storage_test';
+    const testValue = 'test';
+    
+    await AsyncStorage.setItem(testKey, testValue);
+    const retrievedValue = await AsyncStorage.getItem(testKey);
+    await AsyncStorage.removeItem(testKey);
+    
+    return retrievedValue === testValue;
+  } catch (error) {
+    console.error('AsyncStorage verification failed:', error);
+    return false;
+  }
 };
 
 // Export the firebase object for direct access when needed

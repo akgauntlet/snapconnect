@@ -46,7 +46,7 @@ const LoadingScreen = () => (
       [ LOADING SYSTEM ]
     </Text>
     <View className="w-32 h-1 bg-cyber-dark rounded-full mt-4">
-      <View className="w-full h-full bg-gradient-to-r from-cyber-cyan to-blue-500 rounded-full animate-pulse" />
+      <View className="w-full h-full bg-cyber-cyan rounded-full animate-pulse" />
     </View>
   </View>
 );

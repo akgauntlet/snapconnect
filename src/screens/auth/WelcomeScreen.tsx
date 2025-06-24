@@ -86,30 +86,36 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = () => {
         </Text>
         
         {/* Gaming Aesthetic Elements */}
-        <View className="w-full h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
+        <View className="w-full h-px bg-cyber-cyan opacity-30" />
         
         {/* Call to Action Buttons */}
         <View className="w-full space-y-4">
           <TouchableOpacity
             onPress={handleGetStarted}
-            className="bg-gradient-to-r from-cyan-500 to-blue-500 px-8 py-4 rounded-lg shadow-lg"
+            className="bg-cyber-cyan px-8 py-4 rounded-lg shadow-lg"
+            style={{
+              shadowColor: '#00ffff',
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.3,
+              shadowRadius: 10,
+            }}
             accessible={true}
             accessibilityLabel="Sign In"
             accessibilityRole="button"
           >
-            <Text className="text-black font-bold text-lg font-orbitron text-center">
+            <Text className="text-cyber-black font-bold text-lg font-orbitron text-center">
               SIGN IN
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={handleSignUp}
-            className="border-2 border-cyan-500 px-8 py-4 rounded-lg"
+            className="border-2 border-cyber-cyan bg-transparent px-8 py-4 rounded-lg"
             accessible={true}
             accessibilityLabel="Create Account"
             accessibilityRole="button"
           >
-            <Text className="text-cyan-400 font-bold text-lg font-orbitron text-center">
+            <Text className="text-cyber-cyan font-bold text-lg font-orbitron text-center">
               CREATE ACCOUNT
             </Text>
           </TouchableOpacity>
