@@ -24,6 +24,18 @@ module.exports = function (api) {
           },
         },
       ],
+      // Transform import.meta statements for React Native Web compatibility
+      function() {
+        return {
+          visitor: {
+            MetaProperty(path) {
+              if (path.node.meta.name === 'import' && path.node.property.name === 'meta') {
+                path.replaceWithSourceString('{}');
+              }
+            }
+          }
+        };
+      }
     ],
   };
 };

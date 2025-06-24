@@ -6,10 +6,9 @@
   <component name="ChangeListManager">
     <list default="true" id="91f2d82c-fdb7-4442-aede-2811908de7d2" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/config/firebase.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/config/firebase.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utils/constants.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/constants.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/storage.rules" beforeDir="false" afterPath="$PROJECT_DIR$/storage.rules" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/android/build.gradle" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/camera/CameraScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/camera/CameraScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/stories/StoriesScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/stories/StoriesScreen.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

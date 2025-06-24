@@ -35,6 +35,7 @@ import {
   Animated,
   Dimensions,
   Image,
+  Modal,
   Pressable,
   SafeAreaView,
   StatusBar,
@@ -44,6 +45,7 @@ import {
 } from 'react-native';
 import RecipientSelector from '../../components/common/RecipientSelector';
 import { messagingService } from '../../services/firebase/messagingService';
+import { storiesService } from '../../services/firebase/storiesService';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
 
@@ -86,6 +88,10 @@ const CameraScreen: React.FC = () => {
   const [capturedMedia, setCapturedMedia] = useState<string | null>(null);
   const [mediaType, setMediaType] = useState<'photo' | 'video' | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Story mode state
+  const [isStoryMode, setIsStoryMode] = useState(false);
+  const [showStoryOptions, setShowStoryOptions] = useState(false);
   
   // Recipient selector
   const [showRecipientSelector, setShowRecipientSelector] = useState(false);
@@ -130,10 +136,33 @@ const CameraScreen: React.FC = () => {
    */
   const requestAllPermissions = async () => {
     try {
+      console.log('🔐 Permission states before request:');
+      console.log('  Camera permission object:', cameraPermission);
+      console.log('  Camera granted:', cameraPermission?.granted);
+      console.log('  Microphone permission object:', microphonePermission);
+      console.log('  Microphone granted:', microphonePermission?.granted);
+      
+      // Request camera permission for photo/video capture
+      if (cameraPermission && !cameraPermission.granted) {
+        console.log('🔐 Requesting camera permission...');
+        const cameraResult = await requestCameraPermission();
+        console.log('🔐 Camera permission result:', cameraResult);
+      } else {
+        console.log('🔐 Camera permission already granted or not available');
+      }
+      
       // Request microphone permission for video recording
       if (microphonePermission && !microphonePermission.granted) {
-        await requestMicrophonePermission();
+        console.log('🔐 Requesting microphone permission...');
+        const micResult = await requestMicrophonePermission();
+        console.log('🔐 Microphone permission result:', micResult);
+      } else {
+        console.log('🔐 Microphone permission already granted or not available');
       }
+      
+      console.log('🔐 Permission states after request:');
+      console.log('  Camera granted:', cameraPermission?.granted);
+      console.log('  Microphone granted:', microphonePermission?.granted);
     } catch (error) {
       console.error('Permission request failed:', error);
     }
@@ -483,6 +512,84 @@ const CameraScreen: React.FC = () => {
   };
 
   /**
+   * Handle story creation
+   */
+  const handleCreateStory = async (privacy: 'public' | 'friends' | 'custom' = 'friends', allowedUsers: string[] = []) => {
+    if (!capturedMedia || !mediaType || !user) return;
+    
+    try {
+      setIsProcessing(true);
+      
+      // Get file size for better tracking
+      let fileSize = 0;
+      try {
+        const response = await fetch(capturedMedia);
+        const blob = await response.blob();
+        fileSize = blob.size;
+      } catch (sizeError) {
+        console.warn('Could not determine file size:', sizeError);
+      }
+      
+      const mediaData = {
+        uri: capturedMedia,
+        type: mediaType,
+        size: fileSize
+      };
+      
+      console.log('📤 Creating story:', { mediaType, fileSize, privacy });
+      
+      // Create story
+      const storyId = await storiesService.createStory(
+        user.uid,
+        mediaData,
+        '', // No text overlay for now
+        privacy,
+        allowedUsers
+      );
+      
+      // Clear captured media
+      setCapturedMedia(null);
+      setMediaType(null);
+      setShowStoryOptions(false);
+      setIsStoryMode(false);
+      
+      // Haptic feedback
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      
+      Alert.alert('Story Created!', 'Your story has been shared successfully.');
+    } catch (error) {
+      console.error('Create story failed:', error);
+      Alert.alert('Error', 'Failed to create story. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  /**
+   * Show story options modal
+   */
+  const showStoryPrivacyOptions = async () => {
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setShowStoryOptions(true);
+    } catch (error) {
+      console.error('Show story options failed:', error);
+    }
+  };
+
+  /**
+   * Toggle story mode
+   */
+  const toggleStoryMode = async () => {
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setIsStoryMode(!isStoryMode);
+    } catch (error) {
+      console.error('Toggle story mode failed:', error);
+    }
+  };
+
+  /**
    * Show recipient selector
    */
   const showSendOptions = async () => {
@@ -538,26 +645,95 @@ const CameraScreen: React.FC = () => {
   }
 
   if (!cameraPermission.granted || !microphonePermission.granted) {
+    const cameraBlocked = cameraPermission?.status === 'denied';
+    const micBlocked = microphonePermission?.status === 'denied';
+    
     return (
       <View className="flex-1 justify-center items-center bg-cyber-black p-6">
         <Ionicons name="camera" size={64} color={accentColor} />
         <Text className="text-cyber-cyan font-orbitron text-xl mt-4 mb-2">
-          Camera & Microphone Access Required
+          {cameraBlocked ? 'Camera Access Blocked' : 'Camera & Microphone Access Required'}
         </Text>
-        <Text className="text-white/80 font-inter text-center mb-6">
-          SnapConnect needs camera and microphone access to capture photos and record videos with audio.
-        </Text>
+        
+        {cameraBlocked ? (
+          <View className="mb-6">
+            <Text className="text-white/80 font-inter text-center mb-4">
+              Camera access was previously denied. Please enable it manually in your browser settings.
+            </Text>
+            
+            {/* Browser-specific instructions */}
+            <View className="bg-cyber-gray/20 p-4 rounded-lg mb-4">
+              <Text className="text-cyber-cyan font-inter font-semibold mb-2">
+                📍 How to Enable Camera Access:
+              </Text>
+              <Text className="text-white/80 font-inter text-sm mb-1">
+                1. Look for the camera icon 📷 in your address bar
+              </Text>
+              <Text className="text-white/80 font-inter text-sm mb-1">
+                2. Click it and select &quot;Allow&quot;
+              </Text>
+              <Text className="text-white/80 font-inter text-sm mb-1">
+                3. Or go to browser Settings → Privacy → Site Settings → Camera
+              </Text>
+              <Text className="text-white/80 font-inter text-sm">
+                4. Find this site and change to &quot;Allow&quot;
+              </Text>
+            </View>
+            
+            <TouchableOpacity
+              onPress={() => {
+                // Force a page reload to re-check permissions
+                window.location.reload();
+              }}
+              className="bg-cyber-green px-6 py-3 rounded-lg mb-3"
+            >
+              <Text className="text-black font-inter font-semibold">
+                I&apos;ve Enabled Camera - Refresh Page
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <Text className="text-white/80 font-inter text-center mb-6">
+            SnapConnect needs camera and microphone access to capture photos and record videos with audio.
+          </Text>
+        )}
+        
         <TouchableOpacity
           onPress={async () => {
-            if (!cameraPermission.granted) await requestCameraPermission();
-            if (!microphonePermission.granted) await requestMicrophonePermission();
+            try {
+              console.log('🔐 Attempting permission request...');
+              await requestAllPermissions();
+              
+              if (!cameraPermission?.granted) {
+                Alert.alert(
+                  'Camera Access Required',
+                  'Please check the camera icon in your browser address bar and allow camera access, then refresh the page.',
+                  [
+                    { text: 'OK', style: 'default' }
+                  ]
+                );
+              }
+            } catch (error) {
+              console.error('🔐 Permission request failed:', error);
+              Alert.alert('Error', 'Failed to request permissions. Please check your browser settings.');
+            }
           }}
           className="bg-cyber-cyan px-6 py-3 rounded-lg"
         >
           <Text className="text-cyber-black font-inter font-semibold">
-            Grant Permissions
+            {cameraBlocked ? 'Try Again' : 'Grant Permissions'}
           </Text>
         </TouchableOpacity>
+        
+        {/* Show current permission states for debugging */}
+        <View className="mt-6 p-3 bg-cyber-gray/10 rounded-lg">
+          <Text className="text-white/60 font-inter text-xs text-center mb-1">
+            Debug: Camera: {cameraPermission?.status} | Mic: {microphonePermission?.status}
+          </Text>
+          <Text className="text-white/60 font-inter text-xs text-center">
+            Camera can ask again: {cameraPermission?.canAskAgain ? 'Yes' : 'No'}
+          </Text>
+        </View>
       </View>
     );
   }
@@ -609,13 +785,13 @@ const CameraScreen: React.FC = () => {
                 <Ionicons name="trash-outline" size={24} color="#ef4444" />
               </TouchableOpacity>
               
-              <TouchableOpacity
-                onPress={showSendOptions}
-                className="w-20 h-20 bg-cyber-cyan rounded-full justify-center items-center"
-                disabled={isProcessing}
-              >
-                <Ionicons name="send" size={28} color="#000" />
-              </TouchableOpacity>
+                              <TouchableOpacity
+                 onPress={isStoryMode ? showStoryPrivacyOptions : showSendOptions}
+                 className="w-20 h-20 bg-cyber-cyan rounded-full justify-center items-center"
+                 disabled={isProcessing}
+                >
+                 <Ionicons name={isStoryMode ? "add-circle" : "send"} size={28} color="#000" />
+                </TouchableOpacity>
               
               <TouchableOpacity
                 onPress={openMediaLibrary}
@@ -663,27 +839,52 @@ const CameraScreen: React.FC = () => {
         />
         
         {/* Top Controls - Absolutely positioned */}
-        <View className="absolute top-0 left-0 right-0 z-10 flex-row justify-between items-center px-6 py-4 bg-black/30">
-          <TouchableOpacity onPress={toggleFlash} className="p-2">
-            <Ionicons name={getFlashIcon()} size={24} color="white" />
-          </TouchableOpacity>
-          
-          <View className="flex-1 justify-center items-center">
-            <Text className="text-white font-orbitron text-lg">
-              SnapConnect
-            </Text>
-            {!cameraReady && (
-              <TouchableOpacity onPress={reinitializeCamera} className="mt-1">
-                <Text className="text-cyber-cyan font-inter text-xs">
-                  Camera initializing... Tap to retry
+        <View className="absolute top-0 left-0 right-0 z-10 px-6 py-4 bg-black/30">
+          {/* First Row: Flash, Title, Messages */}
+          <View className="flex-row justify-between items-center">
+            <TouchableOpacity onPress={toggleFlash} className="p-2">
+              <Ionicons name={getFlashIcon()} size={24} color="white" />
+            </TouchableOpacity>
+            
+            <View className="flex-1 justify-center items-center">
+              <Text className="text-white font-orbitron text-lg">
+                SnapConnect
+              </Text>
+              {!cameraReady && (
+                <TouchableOpacity onPress={reinitializeCamera} className="mt-1">
+                  <Text className="text-cyber-cyan font-inter text-xs">
+                    Camera initializing... Tap to retry
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            
+            <TouchableOpacity onPress={handleMessagesPress} className="p-2">
+              <Ionicons name="chatbubble-outline" size={24} color="white" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Second Row: Mode Toggle */}
+          <View className="items-center mt-4">
+            <View className="flex-row bg-black/60 rounded-full p-1">
+              <TouchableOpacity
+                onPress={() => setIsStoryMode(false)}
+                className={`px-4 py-2 rounded-full ${!isStoryMode ? 'bg-white/20' : ''}`}
+              >
+                <Text className={`font-inter text-sm font-medium ${!isStoryMode ? 'text-white' : 'text-white/60'}`}>
+                  SNAP
                 </Text>
               </TouchableOpacity>
-            )}
+              <TouchableOpacity
+                onPress={() => setIsStoryMode(true)}
+                className={`px-4 py-2 rounded-full ${isStoryMode ? 'bg-white/20' : ''}`}
+              >
+                <Text className={`font-inter text-sm font-medium ${isStoryMode ? 'text-white' : 'text-white/60'}`}>
+                  STORY
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-          
-          <TouchableOpacity onPress={handleMessagesPress} className="p-2">
-            <Ionicons name="chatbubble-outline" size={24} color="white" />
-          </TouchableOpacity>
         </View>
 
         {/* Recording Indicator - Absolutely positioned */}
@@ -697,44 +898,214 @@ const CameraScreen: React.FC = () => {
         )}
 
         {/* Bottom Controls - Absolutely positioned */}
-        <View className="absolute bottom-0 left-0 right-0 z-10 flex-row justify-between items-center px-6 py-8 bg-black/30">
-          {/* Media Library Button */}
-          <TouchableOpacity 
-            onPress={openMediaLibrary}
-            className="w-12 h-12 bg-cyber-gray rounded-lg justify-center items-center"
-          >
-            <Ionicons name="images-outline" size={20} color="white" />
-          </TouchableOpacity>
-          
-          {/* Capture Button */}
-          <Animated.View style={{ transform: [{ scale: captureButtonScale }] }}>
-            <Pressable
-              onPress={handleCapturePress}
-              onLongPress={handleCaptureLongPress}
-              onPressOut={handlePressOut}
-              className={`w-20 h-20 border-4 rounded-full justify-center items-center ${
-                isRecording ? 'border-red-500' : 'border-cyber-cyan'
-              }`}
-              style={{ borderColor: isRecording ? '#ef4444' : accentColor }}
-              disabled={!cameraReady || isProcessing}
+        <View className="absolute bottom-0 left-0 right-0 z-10 px-6 py-8 bg-black/30">
+          <View className="flex-row justify-between items-center">
+            {/* Media Library Button */}
+            <TouchableOpacity 
+              onPress={openMediaLibrary}
+              className="w-12 h-12 bg-cyber-gray rounded-lg justify-center items-center"
             >
-              <View 
-                className={`w-16 h-16 rounded-full ${
-                  isRecording ? 'bg-red-500' : 'bg-white'
-                }`}
-              />
-            </Pressable>
-          </Animated.View>
-          
-          {/* Switch Camera Button */}
-          <TouchableOpacity 
-            onPress={toggleCameraFacing}
-            className="w-12 h-12 bg-cyber-gray rounded-lg justify-center items-center"
-          >
-            <Ionicons name="camera-reverse-outline" size={20} color="white" />
-          </TouchableOpacity>
+              <Ionicons name="images-outline" size={20} color="white" />
+            </TouchableOpacity>
+            
+            {/* Capture Button with Instructions */}
+            <View className="items-center">
+              <Animated.View style={{ transform: [{ scale: captureButtonScale }] }}>
+                <Pressable
+                  onPress={handleCapturePress}
+                  onLongPress={handleCaptureLongPress}
+                  onPressOut={handlePressOut}
+                  className={`w-20 h-20 border-4 rounded-full justify-center items-center ${
+                    isRecording ? 'border-red-500' : isStoryMode ? 'border-green-400' : 'border-cyber-cyan'
+                  }`}
+                  style={{ borderColor: isRecording ? '#ef4444' : isStoryMode ? '#4ade80' : accentColor }}
+                  disabled={!cameraReady || isProcessing}
+                >
+                  <View 
+                    className={`w-16 h-16 rounded-full ${
+                      isRecording ? 'bg-red-500' : 'bg-white'
+                    }`}
+                  />
+                </Pressable>
+              </Animated.View>
+              
+              {/* Mode Instructions */}
+              <Text className="text-white font-inter text-xs mt-2 opacity-80 text-center">
+                {isStoryMode ? 'TAP FOR STORY' : 'TAP • HOLD FOR VIDEO'}
+              </Text>
+            </View>
+            
+            {/* Switch Camera Button */}
+            <TouchableOpacity 
+              onPress={toggleCameraFacing}
+              className="w-12 h-12 bg-cyber-gray rounded-lg justify-center items-center"
+            >
+              <Ionicons name="camera-reverse-outline" size={20} color="white" />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
+
+      {/* Media Preview Modal */}
+      {capturedMedia && (
+        <Modal
+          visible={!!capturedMedia}
+          animationType="fade"
+          presentationStyle="fullScreen"
+        >
+          <SafeAreaView className="flex-1 bg-black">
+            {/* Header */}
+            <View className="flex-row justify-between items-center px-6 py-4">
+              <TouchableOpacity onPress={discardMedia} className="p-2">
+                <Ionicons name="close" size={24} color="white" />
+              </TouchableOpacity>
+              
+              <Text className="text-white font-inter font-medium">
+                {isStoryMode ? 'Add to Story' : 'Send Snap'}
+              </Text>
+              
+              <View className="w-8" />
+            </View>
+
+            {/* Media Display */}
+            <View className="flex-1 justify-center items-center">
+              {mediaType === 'photo' ? (
+                <Image
+                  source={{ uri: capturedMedia }}
+                  style={{
+                    width: screenWidth,
+                    height: screenHeight * 0.7,
+                  }}
+                  resizeMode="contain"
+                />
+              ) : (
+                <View className="w-full h-96 bg-cyber-dark rounded-lg justify-center items-center">
+                  <Ionicons name="play-circle" size={64} color="white" />
+                  <Text className="text-white font-inter mt-4">
+                    Video Preview
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Action Buttons */}
+            <View className="px-6 pb-8">
+              {isStoryMode ? (
+                // Story Mode Actions
+                <TouchableOpacity
+                  onPress={showStoryPrivacyOptions}
+                  disabled={isProcessing}
+                  className={`bg-cyber-cyan py-4 rounded-lg ${isProcessing ? 'opacity-50' : ''}`}
+                >
+                  <Text className="text-cyber-black font-bold text-lg font-orbitron text-center">
+                    {isProcessing ? 'CREATING STORY...' : 'ADD TO STORY'}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                // Snap Mode Actions
+                <TouchableOpacity
+                  onPress={showSendOptions}
+                  disabled={isProcessing}
+                  className={`bg-cyber-cyan py-4 rounded-lg ${isProcessing ? 'opacity-50' : ''}`}
+                >
+                  <Text className="text-cyber-black font-bold text-lg font-orbitron text-center">
+                    {isProcessing ? 'SENDING...' : 'SEND SNAP'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </SafeAreaView>
+        </Modal>
+      )}
+
+      {/* Story Privacy Options Modal */}
+      {showStoryOptions && (
+        <Modal
+          visible={showStoryOptions}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setShowStoryOptions(false)}
+        >
+          <SafeAreaView className="flex-1 bg-cyber-black">
+            <View className="flex-1">
+              {/* Header */}
+              <View className="flex-row justify-between items-center px-6 py-4 border-b border-cyber-gray/20">
+                <TouchableOpacity onPress={() => setShowStoryOptions(false)} className="p-2">
+                  <Ionicons name="close" size={24} color="white" />
+                </TouchableOpacity>
+                
+                <Text className="text-white font-orbitron text-lg">
+                  Story Privacy
+                </Text>
+                
+                <View className="w-8" />
+              </View>
+
+              {/* Privacy Options */}
+              <View className="px-6 py-8">
+                <TouchableOpacity
+                  onPress={() => handleCreateStory('friends')}
+                  className="flex-row items-center p-4 bg-cyber-gray/20 rounded-lg mb-4"
+                >
+                  <Ionicons name="people" size={24} color={accentColor} />
+                  <View className="ml-4 flex-1">
+                    <Text className="text-white font-inter font-medium text-lg">
+                      Friends
+                    </Text>
+                    <Text className="text-white/60 font-inter text-sm">
+                      Share with all your friends
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => handleCreateStory('public')}
+                  className="flex-row items-center p-4 bg-cyber-gray/20 rounded-lg mb-4"
+                >
+                  <Ionicons name="globe" size={24} color={accentColor} />
+                  <View className="ml-4 flex-1">
+                    <Text className="text-white font-inter font-medium text-lg">
+                      Public
+                    </Text>
+                    <Text className="text-white/60 font-inter text-sm">
+                      Anyone can view your story
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => Alert.alert('Coming Soon', 'Custom privacy settings will be available soon!')}
+                  className="flex-row items-center p-4 bg-cyber-gray/20 rounded-lg mb-4"
+                >
+                  <Ionicons name="settings" size={24} color={accentColor} />
+                  <View className="ml-4 flex-1">
+                    <Text className="text-white font-inter font-medium text-lg">
+                      Custom
+                    </Text>
+                    <Text className="text-white/60 font-inter text-sm">
+                      Choose specific friends
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </SafeAreaView>
+        </Modal>
+      )}
+
+      {/* Recipient Selector Modal */}
+      {showRecipientSelector && !isStoryMode && (
+        <RecipientSelector
+          visible={showRecipientSelector}
+          mediaData={capturedMedia ? {
+            uri: capturedMedia,
+            type: mediaType!,
+            size: 0
+          } : null}
+          onSend={handleSendToRecipients}
+          onClose={() => setShowRecipientSelector(false)}
+        />
+      )}
     </SafeAreaView>
   );
 };
