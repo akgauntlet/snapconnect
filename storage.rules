@@ -8,10 +8,16 @@ service firebase.storage {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Message media - users can read and write media for messages they're part of
-    match /messages/{messageId}/{allPaths=**} {
-      allow read, write: if request.auth != null;
-      // TODO: Add proper validation to check if user is part of the message
+    // Message media - users can upload their own media files
+    match /messages/{userId}/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Snap media - ephemeral media files for snaps
+    match /snaps/{userId}/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
     
     // Story media - users can read all stories, but only write their own

@@ -10,6 +10,7 @@
  * @dependencies
  * - firebase/firestore: Firestore Web SDK
  * - firebase/storage: Firebase Storage Web SDK
+ * - expo-file-system: File system access for React Native
  * 
  * @usage
  * import { messagingService } from '@/services/firebase/messagingService';
@@ -38,6 +39,14 @@ class MessagingService {
    */
   getStorage() {
     return getFirebaseStorage();
+  }
+
+  /**
+   * Get Firebase Auth instance (lazy-loaded)
+   * @returns {object} Firebase Auth instance
+   */
+  getAuth() {
+    return require('../../config/firebase').getFirebaseAuth();
   }
 
   /**
@@ -226,25 +235,82 @@ class MessagingService {
    */
   async uploadMedia(mediaData, userId) {
     try {
+      console.log('🔄 Starting media upload process...');
+      console.log('📱 Media data:', { uri: mediaData.uri, type: mediaData.type, size: mediaData.size });
+      console.log('👤 User ID:', userId);
+      
+      // Check authentication first
+      const auth = this.getAuth();
+      const currentUser = auth.currentUser;
+      
+      if (!currentUser) {
+        throw new Error('User not authenticated. Please log in first.');
+      }
+      
+      console.log('✅ User authenticated:', currentUser.uid);
+      
       const storage = this.getStorage();
       const timestamp = Date.now();
-      const fileName = `messages/${userId}/${timestamp}_${Math.random().toString(36).substr(2, 9)}`;
+      const fileExtension = mediaData.type === 'video' ? 'mp4' : 'jpg';
+      const fileName = `messages/${userId}/${timestamp}_${Math.random().toString(36).substr(2, 9)}.${fileExtension}`;
       
-      // For React Native, mediaData.uri contains the file URI
-      const response = await fetch(mediaData.uri);
-      const blob = await response.blob();
+      console.log('📁 Storage path:', fileName);
       
       const storageRef = storage.ref().child(fileName);
-      const uploadTask = await storageRef.put(blob);
+      console.log('📂 Storage ref created:', storageRef.fullPath);
+      
+      // Create file blob using fetch API (React Native compatible)
+      console.log('🔄 Fetching file from URI...');
+      const response = await fetch(mediaData.uri);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
+      }
+      
+      const blob = await response.blob();
+      console.log('📦 Blob created successfully:', {
+        size: blob.size,
+        type: blob.type,
+        sizeFormatted: `${(blob.size / 1024 / 1024).toFixed(2)} MB`
+      });
+      
+      // Validate blob
+      if (blob.size === 0) {
+        throw new Error('File is empty or could not be read');
+      }
+      
+      // Upload the blob
+      console.log('📤 Starting Firebase Storage upload...');
+      const uploadTask = await storageRef.put(blob, {
+        contentType: mediaData.type === 'video' ? 'video/mp4' : 'image/jpeg',
+        customMetadata: {
+          uploadedBy: userId,
+          originalType: mediaData.type,
+          timestamp: timestamp.toString()
+        }
+      });
+      
+      console.log('✅ Upload completed, getting download URL...');
       const downloadUrl = await uploadTask.ref.getDownloadURL();
       
-      console.log('✅ Media uploaded successfully');
+      console.log('✅ Media uploaded successfully:', downloadUrl);
       return downloadUrl;
     } catch (error) {
       console.error('❌ Upload media failed:', error);
-      throw error;
+      console.error('❌ Error details:', {
+        message: error.message,
+        code: error.code,
+        serverResponse: error.serverResponse,
+        customData: error.customData,
+        stack: error.stack
+      });
+      
+      // Re-throw with more context
+      throw new Error(`Media upload failed: ${error.message}`);
     }
   }
+
+
 
   /**
    * Delete a message (immediate deletion)

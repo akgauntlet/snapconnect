@@ -5,13 +5,18 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="91f2d82c-fdb7-4442-aede-2811908de7d2" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/screens/auth/WelcomeScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/auth/WelcomeScreen.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/screens/profile/ProfileScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/profile/ProfileScreen.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/services/firebase/authService.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/firebase/authService.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/services/firebase/friendsService.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/firebase/friendsService.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app.json" beforeDir="false" afterPath="$PROJECT_DIR$/app.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/firestore.rules" beforeDir="false" afterPath="$PROJECT_DIR$/firestore.rules" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/common/FirebaseTest.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/common/FirebaseTest.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/config/firebase.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/config/firebase.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/camera/CameraScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/camera/CameraScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/screens/messaging/MessagesScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/messaging/MessagesScreen.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/services/firebase/messagingService.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/firebase/messagingService.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/services/firebase/storiesService.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/firebase/storiesService.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/storage.rules" beforeDir="false" afterPath="$PROJECT_DIR$/storage.rules" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -33,18 +38,20 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.readMode.enableVisualFormatting&quot;: &quot;true&quot;,
-    &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
-    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.readMode.enableVisualFormatting": "true",
+    "cf.first.check.clang-format": "false",
+    "cidr.known.project.marker": "true",
+    "git-widget-placeholder": "master",
+    "ignore.virus.scanning.warn.message": "true",
+    "kotlin-language-version-configured": "true",
+    "settings.editor.selected.configurable": "project.propVCSSupport.DirectoryMappings"
   }
-}</component>
+}]]></component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">

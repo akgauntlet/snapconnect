@@ -12,11 +12,68 @@ service cloud.firestore {
       allow read: if request.auth != null;
     }
     
-    // Messages - users can read and write messages they're part of
-    match /messages/{messageId} {
+    // User presence - users can write their own presence, read others' presence
+    match /users/{userId}/presence/{document=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Top-level presence collection for real-time status
+    match /presence/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Conversations - users can read and write conversations they're part of
+    match /conversations/{conversationId} {
       allow read, write: if request.auth != null && 
         (request.auth.uid in resource.data.participants || 
          request.auth.uid in request.resource.data.participants);
+    }
+    
+    // Messages - ephemeral messages between users
+    match /messages/{messageId} {
+      allow read: if request.auth != null && 
+        (request.auth.uid == resource.data.senderId || 
+         request.auth.uid == resource.data.recipientId);
+      allow write: if request.auth != null && 
+        (request.auth.uid == resource.data.senderId || 
+         request.auth.uid == request.resource.data.senderId);
+    }
+    
+    // Messages collection - allow creation of new messages
+    match /messages/{messageId} {
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.senderId;
+    }
+    
+    // User message collections - users can manage their own message collections
+    match /users/{userId}/messages/{messageId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Notifications - users can read their own notifications
+    match /notifications/{notificationId} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow write: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+    
+    // Screenshots tracking - for security monitoring
+    match /screenshots/{screenshotId} {
+      allow read: if request.auth != null && 
+        (request.auth.uid == resource.data.senderId || 
+         request.auth.uid == resource.data.viewerId);
+      allow write: if request.auth != null;
+    }
+    
+    // Snap messages - ephemeral messages with view tracking
+    match /snaps/{snapId} {
+      allow read: if request.auth != null && 
+        (request.auth.uid == resource.data.senderId || 
+         request.auth.uid in resource.data.recipients);
+      allow write: if request.auth != null && 
+        (request.auth.uid == resource.data.senderId || 
+         request.auth.uid == request.resource.data.senderId);
     }
     
     // Stories - users can read all stories, but only write their own
@@ -34,6 +91,31 @@ service cloud.firestore {
     match /leaderboards/{document=**} {
       allow read: if request.auth != null;
       allow write: if request.auth != null; // Could be restricted to admin users
+    }
+    
+    // Friends collections - users can manage their own friends
+    match /users/{userId}/friends/{friendId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Friend requests - users can send and receive friend requests
+    match /friendRequests/{requestId} {
+      allow read: if request.auth != null && 
+        (request.auth.uid == resource.data.senderId || 
+         request.auth.uid == resource.data.recipientId);
+      allow write: if request.auth != null && 
+        (request.auth.uid == resource.data.senderId || 
+         request.auth.uid == request.resource.data.senderId);
+    }
+    
+    // Typing indicators - temporary real-time status
+    match /typing/{conversationId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Test collection for connectivity testing
+    match /test/{document=**} {
+      allow read, write: if request.auth != null;
     }
   }
 } 
