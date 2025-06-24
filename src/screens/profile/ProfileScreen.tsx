@@ -23,7 +23,8 @@
 
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { SafeAreaView, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, SafeAreaView, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
 
 /**
@@ -45,16 +46,19 @@ const ProfileScreen: React.FC = () => {
   const theme = useThemeStore((state) => state.theme);
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
   
-  // Mock user data
+  // Auth store
+  const { signOut, isLoading, user, profile } = useAuthStore();
+  
+  // Use actual user data if available, otherwise fallback to mock data
   const userData = {
-    name: 'Gaming Pro',
-    username: '@gamingpro2024',
-    bio: 'Competitive gamer • Content creator • Clan leader',
+    name: profile?.displayName || user?.displayName || 'Gaming Pro',
+    username: profile?.username || '@gamingpro2024',
+    bio: profile?.bio || 'Competitive gamer • Content creator • Clan leader',
     stats: {
-      victories: 247,
-      highlights: 89,
-      friends: 156,
-      achievements: 42,
+      victories: profile?.stats?.victories || 247,
+      highlights: profile?.stats?.highlights || 89,
+      friends: profile?.stats?.friends || 156,
+      achievements: profile?.stats?.achievements || 42,
     },
   };
   
@@ -65,6 +69,40 @@ const ProfileScreen: React.FC = () => {
     { icon: 'shield-outline', title: 'Privacy', subtitle: 'Account security' },
     { icon: 'help-circle-outline', title: 'Help', subtitle: 'Support center' },
   ];
+
+  /**
+   * Handle sign out with confirmation
+   */
+  const handleSignOut = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out of your account?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await signOut();
+              console.log('User signed out successfully');
+            } catch (error) {
+              Alert.alert(
+                'Sign Out Failed',
+                'There was an error signing out. Please try again.',
+                [{ text: 'OK' }]
+              );
+              console.error('Sign out error:', error);
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  };
   
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background.primary }}>
@@ -137,10 +175,23 @@ const ProfileScreen: React.FC = () => {
           ))}
           
           {/* Sign Out Button */}
-          <TouchableOpacity className="flex-row items-center justify-center py-4 px-4 mt-4 bg-neon-red/20 rounded-lg border border-neon-red/30">
-            <Ionicons name="log-out-outline" size={20} color={theme.colors.gaming.defeat} />
+          <TouchableOpacity 
+            onPress={handleSignOut}
+            disabled={isLoading}
+            className={`flex-row items-center justify-center py-4 px-4 mt-4 bg-neon-red/20 rounded-lg border border-neon-red/30 ${
+              isLoading ? 'opacity-50' : ''
+            }`}
+            accessible={true}
+            accessibilityLabel="Sign Out"
+            accessibilityRole="button"
+          >
+            <Ionicons 
+              name={isLoading ? "hourglass-outline" : "log-out-outline"} 
+              size={20} 
+              color={theme.colors.gaming.defeat} 
+            />
             <Text className="text-gaming-defeat font-inter font-medium ml-2">
-              Sign Out
+              {isLoading ? 'Signing Out...' : 'Sign Out'}
             </Text>
           </TouchableOpacity>
         </View>

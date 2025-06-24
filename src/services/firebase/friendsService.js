@@ -40,6 +40,7 @@ class FriendsService {
   async sendFriendRequest(fromUserId, toUserId) {
     try {
       const db = this.getDB();
+      const { firebase } = require('../../config/firebase');
       
       // Check if users are already friends
       if (await this.areFriends(fromUserId, toUserId)) {
@@ -57,8 +58,8 @@ class FriendsService {
         fromUserId,
         toUserId,
         status: 'pending',
-        createdAt: db.FieldValue.serverTimestamp(),
-        updatedAt: db.FieldValue.serverTimestamp()
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       };
       
       const requestRef = await db.collection('friendRequests').add(requestData);
@@ -83,6 +84,7 @@ class FriendsService {
   async acceptFriendRequest(requestId, userId) {
     try {
       const db = this.getDB();
+      const { firebase } = require('../../config/firebase');
       const batch = db.batch();
       
       // Get the friend request
@@ -103,14 +105,14 @@ class FriendsService {
       // Update request status
       batch.update(requestRef, {
         status: 'accepted',
-        updatedAt: db.FieldValue.serverTimestamp()
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       
       // Create friendship records for both users
       const friendship1Ref = db.collection('friendships').doc();
       const friendship2Ref = db.collection('friendships').doc();
       
-      const now = db.FieldValue.serverTimestamp();
+      const now = firebase.firestore.FieldValue.serverTimestamp();
       
       batch.set(friendship1Ref, {
         userId: requestData.fromUserId,
@@ -145,6 +147,7 @@ class FriendsService {
   async declineFriendRequest(requestId, userId) {
     try {
       const db = this.getDB();
+      const { firebase } = require('../../config/firebase');
       const requestRef = db.collection('friendRequests').doc(requestId);
       const requestDoc = await requestRef.get();
       
@@ -162,7 +165,7 @@ class FriendsService {
       // Update request status
       await requestRef.update({
         status: 'declined',
-        updatedAt: db.FieldValue.serverTimestamp()
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       
       console.log('✅ Friend request declined successfully');
@@ -552,12 +555,13 @@ class FriendsService {
   async sendFriendRequestNotification(recipientId, senderId) {
     try {
       const db = this.getDB();
+      const { firebase } = require('../../config/firebase');
       
       const notificationData = {
         userId: recipientId,
         type: 'friend_request',
         senderId,
-        createdAt: db.FieldValue.serverTimestamp(),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         read: false
       };
       
@@ -577,12 +581,13 @@ class FriendsService {
   async sendFriendAcceptedNotification(recipientId, accepterId) {
     try {
       const db = this.getDB();
+      const { firebase } = require('../../config/firebase');
       
       const notificationData = {
         userId: recipientId,
         type: 'friend_accepted',
         accepterId,
-        createdAt: db.FieldValue.serverTimestamp(),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         read: false
       };
       

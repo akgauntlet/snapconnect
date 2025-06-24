@@ -52,6 +52,7 @@ class StoriesService {
   async createStory(userId, mediaData, text = '', privacy = 'friends', allowedUsers = []) {
     try {
       const db = this.getDB();
+      const { firebase } = require('../../config/firebase');
       
       // Upload media
       const mediaUrl = await this.uploadStoryMedia(mediaData, userId);
@@ -67,7 +68,7 @@ class StoriesService {
         text: text || '',
         privacy,
         allowedUsers: privacy === 'custom' ? allowedUsers : [],
-        createdAt: db.FieldValue.serverTimestamp(),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         expiresAt,
         viewers: {}, // Object to track viewers and view times
         viewCount: 0
@@ -116,9 +117,10 @@ class StoriesService {
       
       // Record the view if not already viewed by this user
       if (!storyData.viewers[viewerId]) {
+        const { firebase } = require('../../config/firebase');
         await storyRef.update({
-          [`viewers.${viewerId}`]: db.FieldValue.serverTimestamp(),
-          viewCount: db.FieldValue.increment(1)
+          [`viewers.${viewerId}`]: firebase.firestore.FieldValue.serverTimestamp(),
+          viewCount: firebase.firestore.FieldValue.increment(1)
         });
         
         // Notify story owner (unless they're viewing their own story)
@@ -425,13 +427,14 @@ class StoriesService {
   async notifyStoryViewed(ownerId, viewerId, storyId) {
     try {
       const db = this.getDB();
+      const { firebase } = require('../../config/firebase');
       
       const notificationData = {
         userId: ownerId,
         type: 'story_viewed',
         viewerId,
         storyId,
-        createdAt: db.FieldValue.serverTimestamp(),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         read: false
       };
       

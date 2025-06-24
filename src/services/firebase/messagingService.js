@@ -52,7 +52,8 @@ class MessagingService {
   async sendMessage(senderId, recipientId, mediaData, timer = 5, text = '') {
     try {
       const db = this.getDB();
-      const now = db.FieldValue.serverTimestamp();
+      const { firebase } = require('../../config/firebase');
+      const now = firebase.firestore.FieldValue.serverTimestamp();
       
       // Upload media if provided
       let mediaUrl = null;
@@ -122,7 +123,8 @@ class MessagingService {
       }
       
       // Mark as viewed and set expiration
-      const viewedAt = db.FieldValue.serverTimestamp();
+      const { firebase } = require('../../config/firebase');
+      const viewedAt = firebase.firestore.FieldValue.serverTimestamp();
       const expiresAt = new Date(Date.now() + (messageData.timer * 1000));
       
       await messageRef.update({
@@ -301,13 +303,14 @@ class MessagingService {
   async addToConversationLists(senderId, recipientId, messageId, timestamp) {
     try {
       const db = this.getDB();
+      const { firebase } = require('../../config/firebase');
       const conversationId = this.getConversationId(senderId, recipientId);
       
       const conversationData = {
         participants: [senderId, recipientId],
         lastMessageId: messageId,
         lastMessageAt: timestamp,
-        updatedAt: timestamp
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       };
       
       // Use set with merge to create or update conversation
@@ -372,12 +375,13 @@ class MessagingService {
   async notifyMessageViewed(senderId, messageId) {
     try {
       const db = this.getDB();
+      const { firebase } = require('../../config/firebase');
       
       const notificationData = {
         userId: senderId,
         type: 'message_viewed',
         messageId,
-        createdAt: db.FieldValue.serverTimestamp(),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         read: false
       };
       
@@ -397,6 +401,7 @@ class MessagingService {
   async reportScreenshot(messageId, viewerId) {
     try {
       const db = this.getDB();
+      const { firebase } = require('../../config/firebase');
       const messageRef = db.collection('messages').doc(messageId);
       const messageDoc = await messageRef.get();
       
@@ -408,7 +413,7 @@ class MessagingService {
           messageId,
           senderId: messageData.senderId,
           viewerId,
-          timestamp: db.FieldValue.serverTimestamp()
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
         
         // Notify sender
@@ -432,13 +437,14 @@ class MessagingService {
   async notifyScreenshot(senderId, viewerId, messageId) {
     try {
       const db = this.getDB();
+      const { firebase } = require('../../config/firebase');
       
       const notificationData = {
         userId: senderId,
         type: 'screenshot_taken',
         messageId,
         viewerId,
-        createdAt: db.FieldValue.serverTimestamp(),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         read: false
       };
       

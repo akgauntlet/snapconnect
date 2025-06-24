@@ -291,6 +291,8 @@ class AuthService {
   async createUserProfile(uid, profileData) {
     try {
       const db = this.getDB();
+      const { firebase } = require('../../config/firebase');
+      
       const profile = {
         uid,
         username: profileData.username || null,
@@ -300,8 +302,8 @@ class AuthService {
         profilePhoto: profileData.profilePhoto || null,
         authMethod: profileData.authMethod,
         gamingPlatform: profileData.gamingPlatform || null,
-        createdAt: db.FieldValue.serverTimestamp(),
-        lastActive: db.FieldValue.serverTimestamp(),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        lastActive: firebase.firestore.FieldValue.serverTimestamp(),
         status: 'active',
         preferences: {
           theme: 'cyber',
@@ -346,9 +348,11 @@ class AuthService {
   async updateUserProfile(uid, updates) {
     try {
       const db = this.getDB();
+      const { firebase } = require('../../config/firebase');
+      
       const updateData = {
         ...updates,
-        lastActive: db.FieldValue.serverTimestamp()
+        lastActive: firebase.firestore.FieldValue.serverTimestamp()
       };
       
       const userRef = db.collection('users').doc(uid);
