@@ -246,12 +246,7 @@ const CameraScreen: React.FC = () => {
     };
   }, []);
 
-  /**
-   * Debug camera state changes
-   */
-  useEffect(() => {
-    // Camera state logging for debugging if needed
-  }, [cameraReady, facing, flash]);
+
 
   /**
    * Request media library permissions
@@ -272,33 +267,15 @@ const CameraScreen: React.FC = () => {
    */
   const requestAllPermissions = async () => {
     try {
-      console.log('🔐 Permission states before request:');
-      console.log('  Camera permission object:', cameraPermission);
-      console.log('  Camera granted:', cameraPermission?.granted);
-      console.log('  Microphone permission object:', microphonePermission);
-      console.log('  Microphone granted:', microphonePermission?.granted);
-      
       // Request camera permission for photo/video capture
       if (cameraPermission && !cameraPermission.granted) {
-        console.log('🔐 Requesting camera permission...');
-        const cameraResult = await requestCameraPermission();
-        console.log('🔐 Camera permission result:', cameraResult);
-      } else {
-        console.log('🔐 Camera permission already granted or not available');
+        await requestCameraPermission();
       }
       
       // Request microphone permission for video recording
       if (microphonePermission && !microphonePermission.granted) {
-        console.log('🔐 Requesting microphone permission...');
-        const micResult = await requestMicrophonePermission();
-        console.log('🔐 Microphone permission result:', micResult);
-      } else {
-        console.log('🔐 Microphone permission already granted or not available');
+        await requestMicrophonePermission();
       }
-      
-      console.log('🔐 Permission states after request:');
-      console.log('  Camera granted:', cameraPermission?.granted);
-      console.log('  Microphone granted:', microphonePermission?.granted);
     } catch (error) {
       console.error('Permission request failed:', error);
     }
@@ -311,7 +288,6 @@ const CameraScreen: React.FC = () => {
     // Add a small delay to ensure camera is fully stable
     setTimeout(() => {
       setCameraReady(true);
-      console.log('📷 Camera is ready for capture');
     }, 500);
   };
 
@@ -319,7 +295,6 @@ const CameraScreen: React.FC = () => {
    * Force camera re-initialization if needed
    */
   const reinitializeCamera = () => {
-    console.log('📷 Reinitializing camera...');
     setCameraReady(false);
     // The camera will reinitialize when onCameraReady is called again
   };
@@ -359,23 +334,18 @@ const CameraScreen: React.FC = () => {
    * Capture photo with enhanced error handling and debugging
    */
   const takePicture = async () => {
-    console.log('📷 Taking picture - Camera ready:', cameraReady, 'Camera ref:', !!cameraRef.current);
-    
     if (!cameraRef.current) {
-      console.warn('📷 Camera ref not available');
       Alert.alert('Error', 'Camera not available. Please try again.');
       return;
     }
     
     if (!cameraReady) {
-      console.warn('📷 Camera not ready');
       Alert.alert('Error', 'Camera is still initializing. Please wait a moment and try again.');
       return;
     }
     
     try {
       setIsProcessing(true);
-      console.log('📷 Starting photo capture...');
       
       // Animate capture button
       Animated.sequence([
@@ -406,20 +376,16 @@ const CameraScreen: React.FC = () => {
         imageType: 'jpg',
       });
       
-      console.log('📷 Photo captured:', photo);
-      
       if (photo?.uri) {
-        console.log('📷 Photo URI received:', photo.uri);
         setCapturedMedia(photo.uri);
         setMediaType('photo');
       } else {
-        console.error('📷 No photo URI received');
+        console.error('Photo capture failed - no image data received');
         Alert.alert('Error', 'Photo capture failed - no image data received.');
       }
     } catch (error) {
-      console.error('📷 Photo capture failed:', error);
+      console.error('Photo capture failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('📷 Error details:', error);
       Alert.alert('Error', `Failed to capture photo: ${errorMessage}`);
     } finally {
       setIsProcessing(false);
@@ -433,8 +399,6 @@ const CameraScreen: React.FC = () => {
     if (!cameraRef.current || !cameraReady || isRecording) return;
 
     try {
-      console.log('🎬 Starting video recording...');
-      
       // Check web recording support
       if (Platform.OS === 'web' && !isWebRecordingSupported()) {
         Alert.alert(
@@ -467,7 +431,7 @@ const CameraScreen: React.FC = () => {
       }
         
     } catch (error) {
-      console.error('🎬 Start recording failed:', error);
+      console.error('Start recording failed:', error);
       setIsRecording(false);
       setRecordingDuration(0);
       setRecordingStartTime(0);
@@ -504,14 +468,13 @@ const CameraScreen: React.FC = () => {
       // Handle recording result when it completes
       recordingPromise.current
         .then((video) => {
-          console.log('🎬 Recording completed:', video);
           if (video?.uri) {
             setCapturedMedia(video.uri);
             setMediaType('video');
           }
         })
         .catch((error) => {
-          console.error('🎬 Recording promise failed:', error);
+          console.error('Recording promise failed:', error);
           if (!error.message.includes('Recording was cancelled')) {
             Alert.alert('Error', 'Video recording failed. Please try again.');
           }
@@ -526,7 +489,7 @@ const CameraScreen: React.FC = () => {
           }
         });
     } catch (error) {
-      console.error('🎬 Mobile recording failed:', error);
+      console.error('Mobile recording failed:', error);
       throw error;
     }
   };
@@ -648,11 +611,8 @@ const CameraScreen: React.FC = () => {
       const recordingTime = currentTime - recordingStartTime;
       const minimumRecordingTime = 500; // 500ms minimum
       
-      console.log(`🛑 Attempting to stop recording after ${recordingTime}ms`);
-      
       // Ensure minimum recording time
       if (recordingTime < minimumRecordingTime) {
-        console.log(`🛑 Recording too short (${recordingTime}ms), waiting...`);
         setTimeout(() => {
           if (isRecording) {
             stopRecording();
@@ -660,8 +620,6 @@ const CameraScreen: React.FC = () => {
         }, minimumRecordingTime - recordingTime);
         return;
       }
-      
-      console.log('🛑 Stopping video recording...');
       
       if (Platform.OS === 'web') {
         // Stop web recording using MediaRecorder
@@ -678,7 +636,7 @@ const CameraScreen: React.FC = () => {
       // Haptic feedback
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch (error) {
-      console.error('🛑 Stop recording failed:', error);
+      console.error('Stop recording failed:', error);
     }
   };
 
@@ -763,8 +721,6 @@ const CameraScreen: React.FC = () => {
         size: fileSize
       };
       
-      console.log('📤 Sending media:', { mediaType, fileSize, recipients: recipients.length, timer });
-      
       // Send to all recipients
       for (const recipientId of recipients) {
         await messagingService.sendMessage(
@@ -816,8 +772,6 @@ const CameraScreen: React.FC = () => {
         type: mediaType,
         size: fileSize
       };
-      
-      console.log('📤 Creating story:', { mediaType, fileSize, privacy });
       
       // Create story
       await storiesService.createStory(
@@ -971,7 +925,6 @@ const CameraScreen: React.FC = () => {
         <TouchableOpacity
           onPress={async () => {
             try {
-              console.log('🔐 Attempting permission request...');
               await requestAllPermissions();
               
               if (!cameraPermission?.granted) {
@@ -984,7 +937,7 @@ const CameraScreen: React.FC = () => {
                 );
               }
             } catch (error) {
-              console.error('🔐 Permission request failed:', error);
+              console.error('Permission request failed:', error);
               Alert.alert('Error', 'Failed to request permissions. Please check your browser settings.');
             }
           }}
@@ -994,16 +947,7 @@ const CameraScreen: React.FC = () => {
             {cameraBlocked ? 'Try Again' : 'Grant Permissions'}
           </Text>
         </TouchableOpacity>
-        
-        {/* Show current permission states for debugging */}
-        <View className="mt-6 p-3 bg-cyber-gray/10 rounded-lg">
-          <Text className="text-white/60 font-inter text-xs text-center mb-1">
-            Debug: Camera: {cameraPermission?.status} | Mic: {microphonePermission?.status}
-          </Text>
-          <Text className="text-white/60 font-inter text-xs text-center">
-            Camera can ask again: {cameraPermission?.canAskAgain ? 'Yes' : 'No'}
-          </Text>
-        </View>
+
       </View>
     );
   }

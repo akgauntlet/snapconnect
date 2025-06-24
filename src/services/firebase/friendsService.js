@@ -87,7 +87,6 @@ class FriendsService {
       const { firebase } = require('../../config/firebase');
       const batch = db.batch();
       
-      // Get the friend request
       const requestRef = db.collection('friendRequests').doc(requestId);
       const requestDoc = await requestRef.get();
       
@@ -108,21 +107,19 @@ class FriendsService {
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       
-      // Create friendship records for both users
-      const friendship1Ref = db.collection('friendships').doc();
-      const friendship2Ref = db.collection('friendships').doc();
+      // Create friendship records for both users using subcollections
+      const friendship1Ref = db.collection('users').doc(requestData.fromUserId).collection('friends').doc(requestData.toUserId);
+      const friendship2Ref = db.collection('users').doc(requestData.toUserId).collection('friends').doc(requestData.fromUserId);
       
       const now = firebase.firestore.FieldValue.serverTimestamp();
       
       batch.set(friendship1Ref, {
-        userId: requestData.fromUserId,
-        friendId: requestData.toUserId,
+        userId: requestData.toUserId,
         createdAt: now
       });
       
       batch.set(friendship2Ref, {
-        userId: requestData.toUserId,
-        friendId: requestData.fromUserId,
+        userId: requestData.fromUserId,
         createdAt: now
       });
       
@@ -186,26 +183,12 @@ class FriendsService {
       const db = this.getDB();
       const batch = db.batch();
       
-      // Find and delete both friendship records
-      const friendship1Query = await db
-        .collection('friendships')
-        .where('userId', '==', userId)
-        .where('friendId', '==', friendId)
-        .get();
+      // Delete friendship records from both user's subcollections
+      const friendship1Ref = db.collection('users').doc(userId).collection('friends').doc(friendId);
+      const friendship2Ref = db.collection('users').doc(friendId).collection('friends').doc(userId);
       
-      const friendship2Query = await db
-        .collection('friendships')
-        .where('userId', '==', friendId)
-        .where('friendId', '==', userId)
-        .get();
-      
-      friendship1Query.forEach(doc => {
-        batch.delete(doc.ref);
-      });
-      
-      friendship2Query.forEach(doc => {
-        batch.delete(doc.ref);
-      });
+      batch.delete(friendship1Ref);
+      batch.delete(friendship2Ref);
       
       await batch.commit();
       
@@ -225,18 +208,19 @@ class FriendsService {
     try {
       const db = this.getDB();
       
-      // Get friendship records
-      const friendshipsSnapshot = await db
-        .collection('friendships')
-        .where('userId', '==', userId)
+      // Get friendship records from user's subcollection
+      const friendsSnapshot = await db
+        .collection('users')
+        .doc(userId)
+        .collection('friends')
         .get();
       
-      if (friendshipsSnapshot.empty) {
+      if (friendsSnapshot.empty) {
         return [];
       }
       
       // Get friend IDs
-      const friendIds = friendshipsSnapshot.docs.map(doc => doc.data().friendId);
+      const friendIds = friendsSnapshot.docs.map(doc => doc.id);
       
       // Get friend user data (batch get for efficiency)
       const friends = [];
@@ -435,13 +419,14 @@ class FriendsService {
     try {
       const db = this.getDB();
       
-      const friendshipSnapshot = await db
-        .collection('friendships')
-        .where('userId', '==', userId1)
-        .where('friendId', '==', userId2)
+      const friendDoc = await db
+        .collection('users')
+        .doc(userId1)
+        .collection('friends')
+        .doc(userId2)
         .get();
       
-      return !friendshipSnapshot.empty;
+      return friendDoc.exists;
     } catch (error) {
       console.error('❌ Check friendship failed:', error);
       return false;
@@ -486,12 +471,13 @@ class FriendsService {
     try {
       const db = this.getDB();
       
-      const friendshipsSnapshot = await db
-        .collection('friendships')
-        .where('userId', '==', userId)
+      const friendsSnapshot = await db
+        .collection('users')
+        .doc(userId)
+        .collection('friends')
         .get();
       
-      return friendshipsSnapshot.docs.map(doc => doc.data().friendId);
+      return friendsSnapshot.docs.map(doc => doc.id);
     } catch (error) {
       console.error('❌ Get friend IDs failed:', error);
       return [];
@@ -513,11 +499,12 @@ class FriendsService {
       // For each friend, get their friends
       for (const friendId of currentFriends.slice(0, 10)) { // Limit to avoid too many queries
         const friendsFriendsSnapshot = await db
-          .collection('friendships')
-          .where('userId', '==', friendId)
+          .collection('users')
+          .doc(friendId)
+          .collection('friends')
           .get();
         
-        const friendsFriends = friendsFriendsSnapshot.docs.map(doc => doc.data().friendId);
+        const friendsFriends = friendsFriendsSnapshot.docs.map(doc => doc.id);
         
         // Find potential suggestions (friends of friends)
         for (const potentialFriendId of friendsFriends) {
