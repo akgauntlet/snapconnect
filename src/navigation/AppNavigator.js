@@ -23,8 +23,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 
 // Import navigation stacks
-// TODO: Import other navigators when created
-// import TabNavigator from './TabNavigator';
+import TabNavigator from './TabNavigator';
 
 // Import screens
 import WelcomeScreen from '../screens/auth/WelcomeScreen';
@@ -53,8 +52,8 @@ const AppNavigator = () => {
   // TODO: Implement authentication state management
   // const { isAuthenticated, isLoading } = useAuthStore();
   
-  // For now, always show welcome screen until auth is implemented
-  const isAuthenticated = false;
+  // Temporarily showing main app to test Phase 1 features
+  const isAuthenticated = true; // Changed to true to access main app
   const isLoading = false;
 
   if (isLoading) {
@@ -71,13 +70,13 @@ const AppNavigator = () => {
       }}
     >
       {isAuthenticated ? (
-        // TODO: Add main app screens when implemented
-        <Stack.Screen name="Welcome" component={WelcomeScreen} />
+        // Main app navigation
+        <Stack.Screen name="MainApp" component={TabNavigator} />
       ) : (
         // Authentication flow
         <>
           <Stack.Screen name="Welcome" component={WelcomeScreen} />
-          {/* TODO: Add other auth screens */}
+          {/* TODO: Add other auth screens like SignIn, SignUp */}
         </>
       )}
     </Stack.Navigator>

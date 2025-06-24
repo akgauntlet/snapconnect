@@ -10,11 +10,11 @@ module.exports = {
   presets: [require("nativewind/preset")],
   theme: {
     extend: {
-      // Custom fonts for gaming aesthetic
+      // Custom fonts for gaming aesthetic (using system fonts for now)
       fontFamily: {
-        'orbitron': ['Orbitron', 'sans-serif'], // Gaming display font
-        'inter': ['Inter', 'sans-serif'], // Body text font
-        'mono': ['JetBrains Mono', 'monospace'], // Technical content
+        'orbitron': ['system-ui', 'sans-serif'], // Gaming display font (system fallback)
+        'inter': ['system-ui', 'sans-serif'], // Body text font (system fallback)
+        'mono': ['SpaceMono-Regular', 'monospace'], // Technical content (available custom font)
       },
       
       // Cyber gaming color palette

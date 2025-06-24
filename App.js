@@ -21,6 +21,9 @@
  * Integrates with gaming platform detection and user preference learning.
  */
 
+// URL polyfill for React Native
+import 'react-native-url-polyfill/auto';
+
 import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
@@ -33,9 +36,10 @@ import AppNavigator from './src/navigation/AppNavigator';
 import './global.css';
 
 // Import services for initialization
-// TODO: Import AI services, Firebase, and other services
-// import { aiService } from './src/services/ai';
-// import { authService } from './src/services/firebase';
+import { loadFonts } from './src/config/fonts';
+// TODO: Re-enable when fixing Firebase integration
+// import { initializeFirebase } from './src/config/firebase';
+// import { useAuthStore } from './src/stores/authStore';
 
 /**
  * Root application component with navigation and global providers
@@ -54,6 +58,8 @@ import './global.css';
  */
 const App = () => {
   const [isInitialized, setIsInitialized] = useState(false);
+  // TODO: Re-enable when fixing Firebase integration
+  // const initializeAuth = useAuthStore((state) => state.initializeAuth);
 
   /**
    * Initialize app services and AI components
@@ -61,20 +67,19 @@ const App = () => {
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        // TODO: Initialize Firebase services
-        // await authService.initialize();
+        // Load custom fonts
+        await loadFonts();
+        console.log('Fonts loaded successfully');
         
+        // TODO: Initialize Firebase services (after fixing compatibility)
         // TODO: Initialize AI services
-        // await aiService.initialize();
-        
         // TODO: Initialize gaming platform integrations
-        // await gamingService.initialize();
         
         setIsInitialized(true);
       } catch (error) {
         console.error('Failed to initialize app:', error);
-        // TODO: Implement proper error handling and recovery
-        setIsInitialized(true); // Allow app to continue with limited functionality
+        // Allow app to continue with limited functionality
+        setIsInitialized(true);
       }
     };
 
