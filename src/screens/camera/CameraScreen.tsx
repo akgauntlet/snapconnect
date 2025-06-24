@@ -24,6 +24,7 @@
  * Supports smart filter recommendations based on content analysis.
  */
 
+// Web API declarations for React Native Web compatibility
 import { Ionicons } from '@expo/vector-icons';
 import { CameraType, CameraView, FlashMode, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
@@ -36,6 +37,7 @@ import {
   Dimensions,
   Image,
   Modal,
+  Platform,
   Pressable,
   SafeAreaView,
   StatusBar,
@@ -102,19 +104,155 @@ const CameraScreen: React.FC = () => {
   const recordingPromise = useRef<Promise<any> | null>(null);
   const captureButtonScale = useRef(new Animated.Value(1)).current;
 
+  // Web-specific recording refs
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const videoStreamRef = useRef<MediaStream | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
+
+  // Web camera device selection (for automatic selection)
+  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
+
+  /**
+   * Check if web recording is supported in the current browser
+   */
+  const isWebRecordingSupported = (): boolean => {
+    if (Platform.OS !== 'web') return false;
+    
+    return !!(
+      typeof navigator !== 'undefined' &&
+      navigator.mediaDevices &&
+      'getUserMedia' in navigator.mediaDevices &&
+      typeof window !== 'undefined' &&
+      window.MediaRecorder
+    );
+  };
+
+  /**
+   * Enumerate available camera devices and select the best one
+   */
+  const enumerateCameras = async (): Promise<void> => {
+    if (Platform.OS !== 'web' || typeof navigator === 'undefined' || !navigator.mediaDevices) {
+      return;
+    }
+
+    try {
+      // First, request permission to get device labels
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        stream.getTracks().forEach(track => track.stop()); // Stop immediately to just get permissions
+      } catch (permError) {
+        console.warn('Could not get permissions for device enumeration:', permError);
+      }
+
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      
+      setAvailableCameras(videoDevices);
+      
+      // Auto-select the best camera (avoid virtual cameras)
+      if (videoDevices.length > 0) {
+        const preferredCamera = selectBestCamera(videoDevices);
+        setSelectedCameraId(preferredCamera.deviceId);
+      }
+    } catch (error) {
+      console.error('Failed to enumerate cameras:', error);
+    }
+  };
+
+  /**
+   * Select the best camera device, avoiding virtual cameras
+   */
+  const selectBestCamera = (devices: MediaDeviceInfo[]): MediaDeviceInfo => {
+    // Prioritize cameras that are NOT virtual/OBS cameras
+    const realCameras = devices.filter(device => {
+      const label = device.label.toLowerCase();
+      const isVirtual = label.includes('obs') || 
+                       label.includes('virtual') || 
+                       label.includes('software') ||
+                       label.includes('screen') ||
+                       label.includes('capture') ||
+                       label.includes('streamlabs') ||
+                       label.includes('xsplit');
+      
+      return !isVirtual;
+    });
+    
+    if (realCameras.length > 0) {
+      // Prefer built-in cameras or webcams
+      const builtInCamera = realCameras.find(device => {
+        const label = device.label.toLowerCase();
+        return label.includes('built-in') || 
+               label.includes('integrated') || 
+               label.includes('facetime') ||
+               label.includes('webcam') ||
+               label.includes('camera');
+      });
+      
+      const selected = builtInCamera || realCameras[0];
+      return selected;
+    }
+    
+    // Fall back to any available camera if no "real" cameras found
+    return devices[0];
+  };
+
   /**
    * Request media library and microphone permissions on component mount
    */
   useEffect(() => {
     requestMediaLibraryPermissions();
     requestAllPermissions();
+    
+    // Enumerate cameras for web platform
+    if (Platform.OS === 'web') {
+      // Small delay to ensure permissions are processed first
+      setTimeout(() => {
+        enumerateCameras();
+      }, 1000);
+    }
+  }, []);
+
+  /**
+   * Re-enumerate cameras when permissions change
+   */
+  useEffect(() => {
+    if (Platform.OS === 'web' && cameraPermission?.granted && microphonePermission?.granted) {
+      setTimeout(() => {
+        enumerateCameras();
+      }, 500);
+    }
+  }, [cameraPermission?.granted, microphonePermission?.granted]);
+
+  /**
+   * Cleanup web media streams on unmount
+   */
+  useEffect(() => {
+    return () => {
+      // Cleanup web recording resources
+      if (Platform.OS === 'web') {
+        if (videoStreamRef.current) {
+          videoStreamRef.current.getTracks().forEach(track => track.stop());
+          videoStreamRef.current = null;
+        }
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+          mediaRecorderRef.current.stop();
+        }
+      }
+      
+      // Clear recording interval
+      if (recordingInterval.current) {
+        clearInterval(recordingInterval.current);
+        recordingInterval.current = null;
+      }
+    };
   }, []);
 
   /**
    * Debug camera state changes
    */
   useEffect(() => {
-    console.log('📷 Camera state changed - Ready:', cameraReady, 'Facing:', facing, 'Flash:', flash);
+    // Camera state logging for debugging if needed
   }, [cameraReady, facing, flash]);
 
   /**
@@ -300,6 +438,17 @@ const CameraScreen: React.FC = () => {
 
     try {
       console.log('🎬 Starting video recording...');
+      
+      // Check web recording support
+      if (Platform.OS === 'web' && !isWebRecordingSupported()) {
+        Alert.alert(
+          'Recording Not Supported',
+          'Video recording is not supported in your current browser. Please try using a modern browser like Chrome, Firefox, or Safari.',
+          [{ text: 'OK', style: 'default' }]
+        );
+        return;
+      }
+      
       const startTime = Date.now();
       setRecordingStartTime(startTime);
       setIsRecording(true);
@@ -313,11 +462,46 @@ const CameraScreen: React.FC = () => {
       // Haptic feedback
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
       
+      if (Platform.OS === 'web') {
+        // Web-specific recording using MediaRecorder API
+        await startWebRecording();
+      } else {
+        // Mobile recording using Expo Camera
+        await startMobileRecording();
+      }
+        
+    } catch (error) {
+      console.error('🎬 Start recording failed:', error);
+      setIsRecording(false);
+      setRecordingDuration(0);
+      setRecordingStartTime(0);
+      if (recordingInterval.current) {
+        clearInterval(recordingInterval.current);
+        recordingInterval.current = null;
+      }
+      
+      // Provide more specific error messages
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      if (Platform.OS === 'web' && errorMessage.includes('MediaDevices API not available')) {
+        Alert.alert('Camera Access Required', 'Please allow camera and microphone access in your browser to record videos.');
+      } else if (Platform.OS === 'web' && errorMessage.includes('MediaRecorder API not available')) {
+        Alert.alert('Browser Not Supported', 'Your browser does not support video recording. Please try using Chrome, Firefox, or Safari.');
+      } else {
+        Alert.alert('Error', `Failed to start recording: ${errorMessage}`);
+      }
+    }
+  };
+
+  /**
+   * Start mobile recording using Expo Camera
+   */
+  const startMobileRecording = async () => {
+    try {
       // Small delay to ensure camera is ready
       await new Promise(resolve => setTimeout(resolve, 100));
       
       // Start recording - don't await here!
-      recordingPromise.current = cameraRef.current.recordAsync({
+      recordingPromise.current = cameraRef.current!.recordAsync({
         maxDuration: 60, // 60 seconds max
       });
       
@@ -345,17 +529,115 @@ const CameraScreen: React.FC = () => {
             recordingInterval.current = null;
           }
         });
-        
     } catch (error) {
-      console.error('🎬 Start recording failed:', error);
-      setIsRecording(false);
-      setRecordingDuration(0);
-      setRecordingStartTime(0);
-      if (recordingInterval.current) {
-        clearInterval(recordingInterval.current);
-        recordingInterval.current = null;
+      console.error('🎬 Mobile recording failed:', error);
+      throw error;
+    }
+  };
+
+  /**
+   * Start web recording using MediaRecorder API
+   */
+  const startWebRecording = async () => {
+    try {
+      // Check if web APIs are available
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('MediaDevices API not available');
       }
-      Alert.alert('Error', 'Failed to start recording. Please try again.');
+
+      if (typeof window === 'undefined' || !window.MediaRecorder) {
+        throw new Error('MediaRecorder API not available');
+      }
+
+      // Build video constraints
+      const videoConstraints: any = {
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
+      };
+
+      // Use specific device ID if available, otherwise use facingMode
+      if (selectedCameraId) {
+        videoConstraints.deviceId = { exact: selectedCameraId };
+      } else {
+        videoConstraints.facingMode = facing === 'front' ? 'user' : 'environment';
+      }
+
+      // Get user media for web recording
+      let stream: MediaStream;
+      
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: videoConstraints,
+          audio: true
+        });
+      } catch (exactError) {
+        // If exact fails, try ideal
+        if (selectedCameraId && videoConstraints.deviceId) {
+          videoConstraints.deviceId = { ideal: selectedCameraId };
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: videoConstraints,
+              audio: true
+            });
+          } catch {
+            // Final fallback - use facingMode
+            delete videoConstraints.deviceId;
+            videoConstraints.facingMode = facing === 'front' ? 'user' : 'environment';
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: videoConstraints,
+              audio: true
+            });
+          }
+        } else {
+          throw exactError;
+        }
+      }
+
+      videoStreamRef.current = stream;
+      recordedChunksRef.current = [];
+
+      // Create MediaRecorder with type assertion for React Native Web
+      const mediaRecorder = new (window as any).MediaRecorder(stream, {
+        mimeType: 'video/webm;codecs=vp9' // Use VP9 for better compression
+      });
+
+      mediaRecorderRef.current = mediaRecorder;
+
+      // Handle data available event
+      mediaRecorder.ondataavailable = (event: any) => {
+        if (event.data && event.data.size > 0) {
+          recordedChunksRef.current.push(event.data);
+        }
+      };
+
+      // Handle recording stop
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
+        const videoUrl = (window as any).URL.createObjectURL(blob);
+        
+        setCapturedMedia(videoUrl);
+        setMediaType('video');
+        
+        // Cleanup
+        if (videoStreamRef.current) {
+          videoStreamRef.current.getTracks().forEach(track => track.stop());
+          videoStreamRef.current = null;
+        }
+        
+        setIsRecording(false);
+        setRecordingDuration(0);
+        if (recordingInterval.current) {
+          clearInterval(recordingInterval.current);
+          recordingInterval.current = null;
+        }
+      };
+
+      // Start recording
+      mediaRecorder.start(1000); // Record in 1-second chunks
+      
+    } catch (error) {
+      console.error('Web recording setup failed:', error);
+      throw error;
     }
   };
 
@@ -363,7 +645,7 @@ const CameraScreen: React.FC = () => {
    * Stop video recording with minimum duration check
    */
   const stopRecording = async () => {
-    if (!isRecording || !cameraRef.current) return;
+    if (!isRecording) return;
 
     try {
       const currentTime = Date.now();
@@ -385,8 +667,17 @@ const CameraScreen: React.FC = () => {
       
       console.log('🛑 Stopping video recording...');
       
-      // Stop recording
-      cameraRef.current.stopRecording();
+      if (Platform.OS === 'web') {
+        // Stop web recording using MediaRecorder
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+          mediaRecorderRef.current.stop();
+        }
+      } else {
+        // Stop mobile recording using Expo Camera
+        if (cameraRef.current) {
+          cameraRef.current.stopRecording();
+        }
+      }
       
       // Haptic feedback
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -931,7 +1222,10 @@ const CameraScreen: React.FC = () => {
               
               {/* Mode Instructions */}
               <Text className="text-white font-inter text-xs mt-2 opacity-80 text-center">
-                {isStoryMode ? 'TAP FOR STORY' : 'TAP • HOLD FOR VIDEO'}
+                {isStoryMode ? 'TAP FOR STORY' : Platform.OS === 'web' ? 
+                  (isWebRecordingSupported() ? 'TAP • HOLD FOR VIDEO' : 'TAP FOR PHOTO ONLY') : 
+                  'TAP • HOLD FOR VIDEO'
+                }
               </Text>
             </View>
             
