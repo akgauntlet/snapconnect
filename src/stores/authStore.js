@@ -9,7 +9,7 @@
  * 
  * @dependencies
  * - zustand: State management
- * - @react-native-firebase/auth: Firebase authentication
+ * - authService: Firebase authentication service
  * 
  * @usage
  * import { useAuthStore } from '@/stores/authStore';
@@ -19,29 +19,35 @@
  * Supports gaming profile synchronization and preference learning.
  */
 
-import { auth } from '@/config/firebase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { authService } from '../services/firebase/authService';
 
 /**
  * Authentication store with persistent state
  * 
  * @typedef {Object} AuthState
  * @property {Object|null} user - Current user object
+ * @property {Object|null} profile - User profile from database
  * @property {boolean} isAuthenticated - Authentication status
  * @property {boolean} isLoading - Loading state
  * @property {string|null} error - Error message
  * @property {Object} preferences - User preferences
+ * @property {Object|null} phoneVerification - Phone verification state
  */
 export const useAuthStore = create(
   persist(
     (set, get) => ({
       // Authentication state
       user: null,
+      profile: null,
       isAuthenticated: false,
       isLoading: false,
       error: null,
+      
+      // Phone verification state
+      phoneVerification: null,
       
       // User preferences
       preferences: {
@@ -57,22 +63,15 @@ export const useAuthStore = create(
        * @param {string} password - User password
        * @returns {Promise<void>}
        */
-      signIn: async (email, password) => {
+      signInWithEmail: async (email, password) => {
         set({ isLoading: true, error: null });
         
         try {
-          const userCredential = await auth().signInWithEmailAndPassword(email, password);
-          const user = userCredential.user;
+          const { user, profile } = await authService.signInWithEmail(email, password);
           
           set({
-            user: {
-              uid: user.uid,
-              email: user.email,
-              displayName: user.displayName,
-              photoURL: user.photoURL,
-              emailVerified: user.emailVerified,
-              createdAt: user.metadata.creationTime,
-            },
+            user,
+            profile,
             isAuthenticated: true,
             isLoading: false,
             error: null,
@@ -94,27 +93,23 @@ export const useAuthStore = create(
        * @param {string} email - User email
        * @param {string} password - User password
        * @param {string} displayName - User display name
+       * @param {Object} additionalData - Additional profile data
        * @returns {Promise<void>}
        */
-      signUp: async (email, password, displayName) => {
+      signUpWithEmail: async (email, password, displayName, additionalData = {}) => {
         set({ isLoading: true, error: null });
         
         try {
-          const userCredential = await auth().createUserWithEmailAndPassword(email, password);
-          const user = userCredential.user;
-          
-          // Update user profile
-          await user.updateProfile({ displayName });
+          const { user, profile } = await authService.signUpWithEmail(
+            email, 
+            password, 
+            displayName, 
+            additionalData
+          );
           
           set({
-            user: {
-              uid: user.uid,
-              email: user.email,
-              displayName: displayName,
-              photoURL: user.photoURL,
-              emailVerified: user.emailVerified,
-              createdAt: user.metadata.creationTime,
-            },
+            user,
+            profile,
             isAuthenticated: true,
             isLoading: false,
             error: null,
@@ -132,6 +127,82 @@ export const useAuthStore = create(
       },
 
       /**
+       * Start phone number authentication
+       * @param {string} phoneNumber - Phone number in E.164 format
+       * @returns {Promise<string>} Verification ID
+       */
+      signInWithPhoneNumber: async (phoneNumber) => {
+        set({ isLoading: true, error: null });
+        
+        try {
+          const { confirmation, verificationId } = await authService.signInWithPhoneNumber(phoneNumber);
+          
+          set({
+            phoneVerification: {
+              confirmation,
+              verificationId,
+              phoneNumber
+            },
+            isLoading: false,
+            error: null,
+          });
+          
+          console.log('Phone verification sent:', phoneNumber);
+          return verificationId;
+        } catch (error) {
+          set({
+            isLoading: false,
+            error: error.message,
+          });
+          console.error('Phone sign in failed:', error.message);
+          throw error;
+        }
+      },
+
+      /**
+       * Verify phone number with SMS code
+       * @param {string} code - SMS verification code
+       * @param {Object} additionalData - Additional profile data for new users
+       * @returns {Promise<void>}
+       */
+      verifyPhoneNumber: async (code, additionalData = {}) => {
+        const { phoneVerification } = get();
+        
+        if (!phoneVerification) {
+          throw new Error('No phone verification in progress');
+        }
+        
+        set({ isLoading: true, error: null });
+        
+        try {
+          const { user, profile, isNewUser } = await authService.verifyPhoneNumber(
+            phoneVerification.verificationId,
+            code,
+            additionalData
+          );
+          
+          set({
+            user,
+            profile,
+            isAuthenticated: true,
+            isLoading: false,
+            error: null,
+            phoneVerification: null,
+          });
+          
+          console.log('Phone verification successful:', user.phoneNumber);
+          return { isNewUser };
+        } catch (error) {
+          set({
+            isLoading: false,
+            error: error.message,
+          });
+          console.error('Phone verification failed:', error.message);
+          throw error;
+        }
+      },
+
+      /**
        * Sign out current user
        * @returns {Promise<void>}
        */
@@ -139,13 +210,15 @@ export const useAuthStore = create(
         set({ isLoading: true });
         
         try {
-          await auth().signOut();
+          await authService.signOut();
           
           set({
             user: null,
+            profile: null,
             isAuthenticated: false,
             isLoading: false,
             error: null,
+            phoneVerification: null,
           });
           
           console.log('User signed out successfully');
@@ -155,6 +228,91 @@ export const useAuthStore = create(
             error: error.message,
           });
           console.error('Sign out failed:', error.message);
+          throw error;
+        }
+      },
+
+      /**
+       * Update user profile
+       * @param {Object} updates - Profile updates
+       * @returns {Promise<void>}
+       */
+      updateProfile: async (updates) => {
+        const { user } = get();
+        
+        if (!user) {
+          throw new Error('No authenticated user');
+        }
+        
+        set({ isLoading: true, error: null });
+        
+        try {
+          const updatedProfile = await authService.updateUserProfile(user.uid, updates);
+          
+          set({
+            profile: updatedProfile,
+            isLoading: false,
+            error: null,
+          });
+          
+          console.log('Profile updated successfully');
+        } catch (error) {
+          set({
+            isLoading: false,
+            error: error.message,
+          });
+          console.error('Profile update failed:', error.message);
+          throw error;
+        }
+      },
+
+      /**
+       * Check username availability
+       * @param {string} username - Username to check
+       * @returns {Promise<boolean>} True if available
+       */
+      checkUsernameAvailability: async (username) => {
+        try {
+          return await authService.isUsernameAvailable(username);
+        } catch (error) {
+          console.error('Username check failed:', error.message);
+          return false;
+        }
+      },
+
+      /**
+       * Reserve username for current user
+       * @param {string} username - Username to reserve
+       * @returns {Promise<void>}
+       */
+      reserveUsername: async (username) => {
+        const { user } = get();
+        
+        if (!user) {
+          throw new Error('No authenticated user');
+        }
+        
+        set({ isLoading: true, error: null });
+        
+        try {
+          await authService.reserveUsername(user.uid, username);
+          
+          // Update local profile
+          const updatedProfile = await authService.getUserProfile(user.uid);
+          
+          set({
+            profile: updatedProfile,
+            isLoading: false,
+            error: null,
+          });
+          
+          console.log('Username reserved successfully:', username);
+        } catch (error) {
+          set({
+            isLoading: false,
+            error: error.message,
+          });
+          console.error('Username reservation failed:', error.message);
           throw error;
         }
       },
@@ -182,27 +340,43 @@ export const useAuthStore = create(
       },
 
       /**
+       * Clear phone verification state
+       * @returns {void}
+       */
+      clearPhoneVerification: () => {
+        set({ phoneVerification: null });
+      },
+
+      /**
        * Initialize authentication listener
        * @returns {function} Unsubscribe function
        */
       initializeAuth: () => {
-        return auth().onAuthStateChanged((user) => {
-          if (user) {
-            set({
-              user: {
-                uid: user.uid,
-                email: user.email,
-                displayName: user.displayName,
-                photoURL: user.photoURL,
-                emailVerified: user.emailVerified,
-                createdAt: user.metadata.creationTime,
-              },
-              isAuthenticated: true,
-              isLoading: false,
-            });
+        return authService.onAuthStateChanged(async (firebaseUser) => {
+          if (firebaseUser) {
+            try {
+              // Get user profile from database
+              const profile = await authService.getUserProfile(firebaseUser.uid);
+              
+              set({
+                user: authService.formatUserData(firebaseUser),
+                profile,
+                isAuthenticated: true,
+                isLoading: false,
+              });
+            } catch (error) {
+              console.error('Failed to load user profile:', error);
+              set({
+                user: authService.formatUserData(firebaseUser),
+                profile: null,
+                isAuthenticated: true,
+                isLoading: false,
+              });
+            }
           } else {
             set({
               user: null,
+              profile: null,
               isAuthenticated: false,
               isLoading: false,
             });
@@ -225,7 +399,9 @@ export const useAuthStore = create(
  * Selector hooks for specific auth state
  */
 export const useAuthUser = () => useAuthStore((state) => state.user);
+export const useAuthProfile = () => useAuthStore((state) => state.profile);
 export const useIsAuthenticated = () => useAuthStore((state) => state.isAuthenticated);
 export const useAuthLoading = () => useAuthStore((state) => state.isLoading);
 export const useAuthError = () => useAuthStore((state) => state.error);
-export const useUserPreferences = () => useAuthStore((state) => state.preferences); 
+export const useUserPreferences = () => useAuthStore((state) => state.preferences);
+export const usePhoneVerification = () => useAuthStore((state) => state.phoneVerification); 

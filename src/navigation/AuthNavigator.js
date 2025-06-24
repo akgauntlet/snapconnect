@@ -23,11 +23,13 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 
 // Import authentication screens
+import LoginScreen from '../screens/auth/LoginScreen';
+import PhoneVerificationScreen from '../screens/auth/PhoneVerificationScreen';
 import WelcomeScreen from '../screens/auth/WelcomeScreen';
 // TODO: Import other auth screens when created
-// import LoginScreen from '../screens/auth/LoginScreen';
 // import SignupScreen from '../screens/auth/SignupScreen';
 // import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
+// import ProfileSetupScreen from '../screens/auth/ProfileSetupScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -65,11 +67,28 @@ const AuthNavigator = () => {
         }}
       />
       
-      {/* TODO: Add authentication screens */}
+      <Stack.Screen 
+        name="Login" 
+        component={LoginScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      
+      <Stack.Screen 
+        name="PhoneVerification" 
+        component={PhoneVerificationScreen}
+        options={{
+          animation: 'slide_from_right',
+          gestureEnabled: false, // Prevent accidental back navigation during verification
+        }}
+      />
+      
+      {/* TODO: Add additional authentication screens */}
       {/*
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Signup" component={SignupScreen} />
+      <Stack.Screen name="SignUp" component={SignupScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
       */}
     </Stack.Navigator>
   );

@@ -20,16 +20,16 @@
  * Supports dynamic tab configuration based on gaming context and user behavior.
  */
 
-import { useThemeStore } from '@/stores/themeStore';
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import React from 'react';
+import { useThemeStore } from '../stores/themeStore';
 
 // Import screens
-import CameraScreen from '@/screens/camera/CameraScreen';
-import MessagesScreen from '@/screens/messaging/MessagesScreen';
-import ProfileScreen from '@/screens/profile/ProfileScreen';
-import StoriesScreen from '@/screens/stories/StoriesScreen';
+import CameraScreen from '../screens/camera/CameraScreen';
+import MessagesScreen from '../screens/messaging/MessagesScreen';
+import ProfileScreen from '../screens/profile/ProfileScreen';
+import StoriesScreen from '../screens/stories/StoriesScreen';
 
 const Tab = createBottomTabNavigator();
 

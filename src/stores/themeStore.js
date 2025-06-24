@@ -19,10 +19,10 @@
  * Supports dynamic color schemes based on user behavior patterns.
  */
 
-import { CyberTheme } from '@/config/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { CyberTheme } from '../config/theme';
 
 /**
  * Theme store with persistent state

@@ -61,10 +61,15 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = () => {
    * Handles navigation to login screen
    */
   const handleGetStarted = () => {
-    // TODO: Add AI-powered user preference detection
-    // TODO: Integrate with gaming platform detection
-    // navigation.navigate('Login');
-    console.log('Get started pressed - Navigation to be implemented');
+    navigation.navigate('Login');
+  };
+
+  /**
+   * Navigate to sign up flow (placeholder for now)
+   */
+  const handleSignUp = () => {
+    // TODO: Navigate to signup when implemented
+    navigation.navigate('Login');
   };
 
   return (
@@ -82,23 +87,47 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = () => {
         {/* Gaming Aesthetic Elements */}
         <View className="w-full h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
         
-        {/* Call to Action */}
-        <TouchableOpacity
-          onPress={handleGetStarted}
-          className="bg-gradient-to-r from-cyan-500 to-blue-500 px-8 py-4 rounded-lg shadow-lg"
-          accessible={true}
-          accessibilityLabel="Get Started"
-          accessibilityRole="button"
-        >
-          <Text className="text-black font-bold text-lg font-orbitron">
-            GET STARTED
-          </Text>
-        </TouchableOpacity>
+        {/* Call to Action Buttons */}
+        <View className="w-full space-y-4">
+          <TouchableOpacity
+            onPress={handleGetStarted}
+            className="bg-gradient-to-r from-cyan-500 to-blue-500 px-8 py-4 rounded-lg shadow-lg"
+            accessible={true}
+            accessibilityLabel="Sign In"
+            accessibilityRole="button"
+          >
+            <Text className="text-black font-bold text-lg font-orbitron text-center">
+              SIGN IN
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleSignUp}
+            className="border-2 border-cyan-500 px-8 py-4 rounded-lg"
+            accessible={true}
+            accessibilityLabel="Create Account"
+            accessibilityRole="button"
+          >
+            <Text className="text-cyan-400 font-bold text-lg font-orbitron text-center">
+              CREATE ACCOUNT
+            </Text>
+          </TouchableOpacity>
+        </View>
         
         {/* Status Indicator */}
         <Text className="text-green-400 text-sm font-mono">
           [ SYSTEM READY ]
         </Text>
+
+        {/* Gaming Features Preview */}
+        <View className="mt-8 bg-cyber-dark/30 rounded-lg p-4 border border-cyan-500/20">
+          <Text className="text-gray-300 font-inter text-sm text-center">
+            ✨ Ephemeral messaging with gaming overlay{'\n'}
+            🎮 AI-powered gaming content detection{'\n'}
+            🔒 Secure end-to-end encryption{'\n'}
+            ⚡ Real-time friend activity tracking
+          </Text>
+        </View>
       </View>
     </View>
   );

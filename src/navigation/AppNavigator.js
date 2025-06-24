@@ -10,6 +10,7 @@
  * @dependencies
  * - @react-navigation/native-stack: Stack navigation
  * - react: React hooks
+ * - @/stores/authStore: Authentication state management
  * 
  * @usage
  * Root navigator that determines whether to show auth flow or main app based on user state.
@@ -20,18 +21,35 @@
  */
 
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import React from 'react';
+import React, { useEffect } from 'react';
+import { Text, View } from 'react-native';
 
 // Import navigation stacks
+import AuthNavigator from './AuthNavigator';
 import TabNavigator from './TabNavigator';
 
-// Import screens
-import WelcomeScreen from '../screens/auth/WelcomeScreen';
-
-// TODO: Import auth store when created
-// import { useAuthStore } from '../stores/authStore';
+// Import auth store
+import { useAuthStore } from '../stores/authStore';
 
 const Stack = createNativeStackNavigator();
+
+/**
+ * Loading screen component with gaming aesthetic
+ * @returns {React.ReactElement} Loading screen
+ */
+const LoadingScreen = () => (
+  <View className="flex-1 bg-cyber-black justify-center items-center">
+    <Text className="text-4xl font-bold text-cyber-cyan font-orbitron mb-4">
+      SnapConnect
+    </Text>
+    <Text className="text-cyber-cyan font-inter">
+      [ INITIALIZING SYSTEM ]
+    </Text>
+    <View className="w-32 h-1 bg-cyber-dark rounded-full mt-4">
+      <View className="w-full h-full bg-gradient-to-r from-cyber-cyan to-blue-500 rounded-full animate-pulse" />
+    </View>
+  </View>
+);
 
 /**
  * Main application navigator with authentication flow
@@ -49,16 +67,19 @@ const Stack = createNativeStackNavigator();
  * - Supports dynamic routing based on AI recommendations
  */
 const AppNavigator = () => {
-  // TODO: Implement authentication state management
-  // const { isAuthenticated, isLoading } = useAuthStore();
-  
-  // Temporarily showing main app to test Phase 1 features
-  const isAuthenticated = true; // Changed to true to access main app
-  const isLoading = false;
+  const { isAuthenticated, isLoading, initializeAuth } = useAuthStore();
 
+  /**
+   * Initialize authentication listener on mount
+   */
+  useEffect(() => {
+    const unsubscribe = initializeAuth();
+    return unsubscribe;
+  }, [initializeAuth]);
+
+  // Show loading screen while initializing
   if (isLoading) {
-    // TODO: Implement proper loading screen with gaming aesthetic
-    return null;
+    return <LoadingScreen />;
   }
 
   return (
@@ -70,14 +91,23 @@ const AppNavigator = () => {
       }}
     >
       {isAuthenticated ? (
-        // Main app navigation
-        <Stack.Screen name="MainApp" component={TabNavigator} />
+        // Main app navigation for authenticated users
+        <Stack.Screen 
+          name="MainApp" 
+          component={TabNavigator}
+          options={{
+            animation: 'fade',
+          }}
+        />
       ) : (
-        // Authentication flow
-        <>
-          <Stack.Screen name="Welcome" component={WelcomeScreen} />
-          {/* TODO: Add other auth screens like SignIn, SignUp */}
-        </>
+        // Authentication flow for unauthenticated users
+        <Stack.Screen 
+          name="Auth" 
+          component={AuthNavigator}
+          options={{
+            animation: 'fade',
+          }}
+        />
       )}
     </Stack.Navigator>
   );

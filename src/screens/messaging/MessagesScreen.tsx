@@ -20,10 +20,10 @@
  * Smart conversation prioritization based on gaming activity.
  */
 
-import { useThemeStore } from '@/stores/themeStore';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { SafeAreaView, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { useThemeStore } from '../../stores/themeStore';
 
 /**
  * Messages screen component

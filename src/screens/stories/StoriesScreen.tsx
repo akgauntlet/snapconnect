@@ -20,10 +20,10 @@
  * Gaming achievement and highlight detection and promotion.
  */
 
-import { useThemeStore } from '@/stores/themeStore';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { SafeAreaView, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { useThemeStore } from '../../stores/themeStore';
 
 /**
  * Stories screen component
