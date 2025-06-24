@@ -26,35 +26,59 @@ import 'firebase/compat/firestore';
 import 'firebase/compat/storage';
 
 /**
+ * Validate that all required Firebase environment variables are set
+ * @throws {Error} If any required environment variable is missing
+ */
+function validateFirebaseConfig() {
+  const requiredVars = [
+    'EXPO_PUBLIC_FIREBASE_API_KEY',
+    'EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN',
+    'EXPO_PUBLIC_FIREBASE_PROJECT_ID',
+    'EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET',
+    'EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID',
+    'EXPO_PUBLIC_FIREBASE_APP_ID',
+  ];
+
+  const missingVars = requiredVars.filter(varName => !process.env[varName]);
+  
+  if (missingVars.length > 0) {
+    throw new Error(
+      `❌ Missing required Firebase environment variables: ${missingVars.join(', ')}\n` +
+      'Please check your .env file and ensure all Firebase configuration variables are set.'
+    );
+  }
+}
+
+/**
  * Firebase configuration object for different environments
- * Real Firebase configuration for SnapConnect project
+ * Configuration loaded from environment variables for security
  */
 const firebaseConfig = {
   development: {
-    apiKey: "***REMOVED***",
-    authDomain: "***REMOVED***",
-    projectId: "snapconnect-dev",
-    storageBucket: "snapconnect-dev.firebasestorage.app",
-    messagingSenderId: "***REMOVED***",
-    appId: "***REMOVED***",
+    apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
   },
   staging: {
-    // TODO: Set up staging environment
-    apiKey: "***REMOVED***",
-    authDomain: "***REMOVED***",
-    projectId: "snapconnect-dev",
-    storageBucket: "snapconnect-dev.firebasestorage.app",
-    messagingSenderId: "***REMOVED***",
-    appId: "***REMOVED***",
+    // TODO: Set up staging environment with separate Firebase project
+    apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
   },
   production: {
-    // TODO: Set up production environment
-    apiKey: "***REMOVED***",
-    authDomain: "***REMOVED***",
-    projectId: "snapconnect-dev",
-    storageBucket: "snapconnect-dev.firebasestorage.app",
-    messagingSenderId: "***REMOVED***",
-    appId: "***REMOVED***",
+    // TODO: Set up production environment with separate Firebase project
+    apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
   },
 };
 
@@ -79,6 +103,9 @@ function getCurrentEnvironment() {
  */
 export const initializeFirebaseServices = async () => {
   try {
+    // Validate environment variables before initialization
+    validateFirebaseConfig();
+    
     // Check if Firebase is already initialized
     if (!firebase.apps.length) {
       const environment = getCurrentEnvironment();

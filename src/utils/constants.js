@@ -38,7 +38,9 @@ export const APP_CONFIG = {
 
 // API Configuration
 export const API_CONFIG = {
-  BASE_URL: __DEV__ ? 'http://localhost:3000' : 'https://api.snapconnect.com',
+  BASE_URL: __DEV__ 
+    ? (process.env.EXPO_PUBLIC_API_BASE_URL_DEV || 'http://localhost:3000')
+    : (process.env.EXPO_PUBLIC_API_BASE_URL_PROD || 'https://api.snapconnect.com'),
   TIMEOUT: 30000, // 30 seconds
   MAX_RETRIES: 3,
   

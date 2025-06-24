@@ -5,18 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="91f2d82c-fdb7-4442-aede-2811908de7d2" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app.json" beforeDir="false" afterPath="$PROJECT_DIR$/app.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/firestore.rules" beforeDir="false" afterPath="$PROJECT_DIR$/firestore.rules" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/common/FirebaseTest.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/common/FirebaseTest.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/config/firebase.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/config/firebase.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/screens/camera/CameraScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/camera/CameraScreen.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/screens/messaging/MessagesScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/messaging/MessagesScreen.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/services/firebase/messagingService.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/firebase/messagingService.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/constants.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/constants.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/storage.rules" beforeDir="false" afterPath="$PROJECT_DIR$/storage.rules" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users.json" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

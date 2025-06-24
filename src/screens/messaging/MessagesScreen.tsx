@@ -26,7 +26,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Modal, SafeAreaView, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
-import FirebaseTest from '../../components/common/FirebaseTest';
+
 import MediaViewer from '../../components/common/MediaViewer';
 import { messagingService } from '../../services/firebase/messagingService';
 import { realtimeService } from '../../services/firebase/realtimeService';
@@ -87,7 +87,7 @@ const MessagesScreen: React.FC = () => {
   const [incomingMessages, setIncomingMessages] = useState<IncomingMessage[]>([]);
   const [selectedMedia, setSelectedMedia] = useState<IncomingMessage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [showFirebaseTest, setShowFirebaseTest] = useState(false);
+
 
   /**
    * Initialize real-time listeners on component mount
@@ -278,14 +278,6 @@ const MessagesScreen: React.FC = () => {
         <View className="flex-row justify-between items-center px-6 py-4 border-b border-cyber-gray">
           <Text className="text-white font-orbitron text-xl">Messages</Text>
           <View className="flex-row items-center">
-            {/* Firebase Test Button */}
-            <TouchableOpacity 
-              onPress={() => setShowFirebaseTest(!showFirebaseTest)} 
-              className="p-2 mr-2"
-            >
-              <Ionicons name="bug-outline" size={24} color={accentColor} />
-            </TouchableOpacity>
-            
             {/* Unread media indicator */}
             {incomingMessages.length > 0 && (
               <View className="bg-red-500 w-6 h-6 rounded-full justify-center items-center mr-3">
@@ -299,13 +291,6 @@ const MessagesScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         </View>
-
-        {/* Firebase Test Panel */}
-        {showFirebaseTest && (
-          <View className="border-b border-cyber-gray/30">
-            <FirebaseTest />
-          </View>
-        )}
 
         {/* Unread Snaps Section */}
         {incomingMessages.length > 0 && (
