@@ -8,8 +8,8 @@
  * @modified 2024-01-20
  * 
  * @dependencies
- * - @react-native-firebase/database: Realtime Database
- * - @react-native-firebase/storage: File storage
+ * - firebase/firestore: Firestore Web SDK
+ * - firebase/storage: Firebase Storage Web SDK
  * 
  * @usage
  * import { storiesService } from '@/services/firebase/storiesService';
@@ -18,12 +18,28 @@
  * Integrates with AI services for content moderation and story engagement analytics.
  */
 
-import { database, storage } from '../../config/firebase';
+import { getFirebaseDB, getFirebaseStorage } from '../../config/firebase';
 
 /**
  * Stories service class for story management
  */
 class StoriesService {
+  /**
+   * Get Firestore instance (lazy-loaded)
+   * @returns {object} Firestore instance
+   */
+  getDB() {
+    return getFirebaseDB();
+  }
+
+  /**
+   * Get Firebase Storage instance (lazy-loaded)
+   * @returns {object} Firebase Storage instance
+   */
+  getStorage() {
+    return getFirebaseStorage();
+  }
+
   /**
    * Create a new story
    * @param {string} userId - User ID creating the story
@@ -35,37 +51,9 @@ class StoriesService {
    */
   async createStory(userId, mediaData, text = '', privacy = 'friends', allowedUsers = []) {
     try {
-      // Upload media to Firebase Storage
-      const mediaUrl = await this.uploadStoryMedia(mediaData, userId);
-      
-      // Create story object
-      const storyId = database().ref('stories').push().key;
-      const expiresAt = Date.now() + (24 * 60 * 60 * 1000); // 24 hours from now
-      
-      const story = {
-        id: storyId,
-        userId,
-        mediaUrl,
-        mediaType: mediaData.type,
-        text: text || null,
-        privacy,
-        allowedUsers: privacy === 'custom' ? allowedUsers : null,
-        createdAt: database.ServerValue.TIMESTAMP,
-        expiresAt,
-        viewers: {},
-        viewCount: 0
-      };
-      
-      // Save story to database
-      await database().ref(`stories/${storyId}`).set(story);
-      
-      // Add to user's stories list
-      await database().ref(`userStories/${userId}/${storyId}`).set(true);
-      
-      // Schedule automatic deletion
-      this.scheduleStoryDeletion(storyId, 24 * 60 * 60 * 1000);
-      
-      return storyId;
+      // TODO: Implement story creation with Firestore
+      console.log('Story creation not yet implemented with Firestore');
+      throw new Error('Story creation not yet implemented');
     } catch (error) {
       console.error('Create story failed:', error);
       throw error;
@@ -80,40 +68,9 @@ class StoriesService {
    */
   async viewStory(storyId, viewerId) {
     try {
-      const storyRef = database().ref(`stories/${storyId}`);
-      const snapshot = await storyRef.once('value');
-      const story = snapshot.val();
-      
-      if (!story) {
-        throw new Error('Story not found');
-      }
-      
-      // Check if story has expired
-      if (Date.now() > story.expiresAt) {
-        await this.deleteStory(storyId);
-        throw new Error('Story has expired');
-      }
-      
-      // Check privacy permissions
-      const canView = await this.canUserViewStory(story, viewerId);
-      if (!canView) {
-        throw new Error('Not authorized to view this story');
-      }
-      
-      // Record the view if not already viewed by this user
-      if (!story.viewers || !story.viewers[viewerId]) {
-        await storyRef.update({
-          [`viewers/${viewerId}`]: database.ServerValue.TIMESTAMP,
-          viewCount: (story.viewCount || 0) + 1
-        });
-        
-        // Notify story owner of the view (if not viewing own story)
-        if (story.userId !== viewerId) {
-          await this.notifyStoryViewed(story.userId, viewerId, storyId);
-        }
-      }
-      
-      return story;
+      // TODO: Implement story viewing with Firestore
+      console.log('Story viewing not yet implemented with Firestore');
+      throw new Error('Story viewing not yet implemented');
     } catch (error) {
       console.error('View story failed:', error);
       throw error;
@@ -127,62 +84,9 @@ class StoriesService {
    */
   async getFriendsStories(userId) {
     try {
-      // Get user's friends
-      const friendsSnapshot = await database().ref(`friends/${userId}`).once('value');
-      const friends = friendsSnapshot.val() || {};
-      const friendIds = Object.keys(friends);
-      
-      // Add own user ID to see own stories
-      friendIds.push(userId);
-      
-      const storiesByUser = [];
-      
-      // Get stories for each friend
-      for (const friendId of friendIds) {
-        const userStoriesSnapshot = await database().ref(`userStories/${friendId}`).once('value');
-        const userStoryIds = userStoriesSnapshot.val() || {};
-        
-        const userStories = [];
-        
-        // Get story details for each story ID
-        for (const storyId of Object.keys(userStoryIds)) {
-          const storySnapshot = await database().ref(`stories/${storyId}`).once('value');
-          const story = storySnapshot.val();
-          
-          if (story && Date.now() <= story.expiresAt) {
-            // Check if user can view this story
-            const canView = await this.canUserViewStory(story, userId);
-            if (canView) {
-              userStories.push(story);
-            }
-          } else if (story && Date.now() > story.expiresAt) {
-            // Clean up expired story
-            this.deleteStory(storyId);
-          }
-        }
-        
-        if (userStories.length > 0) {
-          // Get user data
-          const userSnapshot = await database().ref(`users/${friendId}`).once('value');
-          const userData = userSnapshot.val();
-          
-          storiesByUser.push({
-            user: userData,
-            stories: userStories.sort((a, b) => a.createdAt - b.createdAt),
-            hasUnviewed: this.hasUnviewedStories(userStories, userId)
-          });
-        }
-      }
-      
-      // Sort by most recent story and prioritize unviewed
-      return storiesByUser.sort((a, b) => {
-        if (a.hasUnviewed && !b.hasUnviewed) return -1;
-        if (!a.hasUnviewed && b.hasUnviewed) return 1;
-        
-        const latestA = Math.max(...a.stories.map(s => s.createdAt));
-        const latestB = Math.max(...b.stories.map(s => s.createdAt));
-        return latestB - latestA;
-      });
+      // TODO: Implement friends stories retrieval with Firestore
+      console.log('Friends stories retrieval not yet implemented with Firestore');
+      return [];
     } catch (error) {
       console.error('Get friends stories failed:', error);
       throw error;
@@ -196,25 +100,9 @@ class StoriesService {
    */
   async getUserStories(userId) {
     try {
-      const userStoriesSnapshot = await database().ref(`userStories/${userId}`).once('value');
-      const storyIds = userStoriesSnapshot.val() || {};
-      
-      const stories = [];
-      
-      // Get story details for each story ID
-      for (const storyId of Object.keys(storyIds)) {
-        const storySnapshot = await database().ref(`stories/${storyId}`).once('value');
-        const story = storySnapshot.val();
-        
-        if (story && Date.now() <= story.expiresAt) {
-          stories.push(story);
-        } else if (story && Date.now() > story.expiresAt) {
-          // Clean up expired story
-          this.deleteStory(storyId);
-        }
-      }
-      
-      return stories.sort((a, b) => b.createdAt - a.createdAt);
+      // TODO: Implement user stories retrieval with Firestore
+      console.log('User stories retrieval not yet implemented with Firestore');
+      return [];
     } catch (error) {
       console.error('Get user stories failed:', error);
       throw error;
@@ -229,30 +117,9 @@ class StoriesService {
    */
   async getStoryViewers(storyId, ownerId) {
     try {
-      const storySnapshot = await database().ref(`stories/${storyId}`).once('value');
-      const story = storySnapshot.val();
-      
-      if (!story || story.userId !== ownerId) {
-        throw new Error('Not authorized to view story viewers');
-      }
-      
-      const viewers = [];
-      const viewerIds = story.viewers || {};
-      
-      // Get user data for each viewer
-      for (const [viewerId, viewedAt] of Object.entries(viewerIds)) {
-        const userSnapshot = await database().ref(`users/${viewerId}`).once('value');
-        const userData = userSnapshot.val();
-        
-        if (userData) {
-          viewers.push({
-            ...userData,
-            viewedAt
-          });
-        }
-      }
-      
-      return viewers.sort((a, b) => b.viewedAt - a.viewedAt);
+      // TODO: Implement story viewers retrieval with Firestore
+      console.log('Story viewers retrieval not yet implemented with Firestore');
+      return [];
     } catch (error) {
       console.error('Get story viewers failed:', error);
       throw error;
@@ -266,24 +133,8 @@ class StoriesService {
    */
   async deleteStory(storyId) {
     try {
-      // Get story data first
-      const storySnapshot = await database().ref(`stories/${storyId}`).once('value');
-      const story = storySnapshot.val();
-      
-      if (story) {
-        // Delete media file from storage
-        if (story.mediaUrl) {
-          await this.deleteStoryMedia(story.mediaUrl);
-        }
-        
-        // Remove from user's stories list
-        await database().ref(`userStories/${story.userId}/${storyId}`).remove();
-      }
-      
-      // Delete story from database
-      await database().ref(`stories/${storyId}`).remove();
-      
-      console.log(`Story ${storyId} deleted`);
+      // TODO: Implement story deletion with Firestore
+      console.log('Story deletion not yet implemented with Firestore');
     } catch (error) {
       console.error('Delete story failed:', error);
       throw error;
@@ -298,21 +149,9 @@ class StoriesService {
    */
   async uploadStoryMedia(mediaData, userId) {
     try {
-      const timestamp = Date.now();
-      const fileExtension = mediaData.type === 'video' ? 'mp4' : 'jpg';
-      const fileName = `${userId}_${timestamp}.${fileExtension}`;
-      const storagePath = `stories/${userId}/${fileName}`;
-      
-      const reference = storage().ref(storagePath);
-      const uploadTask = reference.putFile(mediaData.uri);
-      
-      // Wait for upload completion
-      await uploadTask;
-      
-      // Get download URL
-      const downloadURL = await reference.getDownloadURL();
-      
-      return downloadURL;
+      // TODO: Implement media upload with Firebase Storage Web SDK
+      console.log('Story media upload not yet implemented with Firebase Storage Web SDK');
+      throw new Error('Story media upload not yet implemented');
     } catch (error) {
       console.error('Upload story media failed:', error);
       throw error;
@@ -326,8 +165,8 @@ class StoriesService {
    */
   async deleteStoryMedia(mediaUrl) {
     try {
-      const reference = storage().refFromURL(mediaUrl);
-      await reference.delete();
+      // TODO: Implement media deletion with Firebase Storage Web SDK
+      console.log('Story media deletion not yet implemented with Firebase Storage Web SDK');
     } catch (error) {
       console.error('Delete story media failed:', error);
       // Don't throw - file might already be deleted
@@ -342,28 +181,9 @@ class StoriesService {
    */
   async canUserViewStory(story, userId) {
     try {
-      // Story owner can always view
-      if (story.userId === userId) {
-        return true;
-      }
-      
-      // Check privacy settings
-      switch (story.privacy) {
-        case 'public':
-          return true;
-          
-        case 'friends':
-          // Check if users are friends
-          const friendshipSnapshot = await database().ref(`friends/${story.userId}/${userId}`).once('value');
-          return friendshipSnapshot.exists();
-          
-        case 'custom':
-          // Check if user is in allowed list
-          return story.allowedUsers && story.allowedUsers.includes(userId);
-          
-        default:
-          return false;
-      }
+      // TODO: Implement privacy check with Firestore
+      console.log('Story privacy check not yet implemented with Firestore');
+      return false;
     } catch (error) {
       console.error('Check story view permission failed:', error);
       return false;
@@ -405,12 +225,8 @@ class StoriesService {
    */
   async notifyStoryViewed(ownerId, viewerId, storyId) {
     try {
-      await database().ref(`userNotifications/${ownerId}`).push({
-        type: 'story_viewed',
-        viewerId,
-        storyId,
-        timestamp: database.ServerValue.TIMESTAMP
-      });
+      // TODO: Implement notification with Firestore
+      console.log('Story view notification not yet implemented with Firestore');
     } catch (error) {
       console.error('Notify story viewed failed:', error);
     }
@@ -422,25 +238,8 @@ class StoriesService {
    */
   async cleanupExpiredStories() {
     try {
-      const storiesSnapshot = await database().ref('stories').once('value');
-      const stories = storiesSnapshot.val() || {};
-      
-      const currentTime = Date.now();
-      const expiredStories = [];
-      
-      // Find expired stories
-      Object.entries(stories).forEach(([storyId, story]) => {
-        if (currentTime > story.expiresAt) {
-          expiredStories.push(storyId);
-        }
-      });
-      
-      // Delete expired stories
-      for (const storyId of expiredStories) {
-        await this.deleteStory(storyId);
-      }
-      
-      console.log(`Cleaned up ${expiredStories.length} expired stories`);
+      // TODO: Implement cleanup with Firestore
+      console.log('Story cleanup not yet implemented with Firestore');
     } catch (error) {
       console.error('Cleanup expired stories failed:', error);
     }

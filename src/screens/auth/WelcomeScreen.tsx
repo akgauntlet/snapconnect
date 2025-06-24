@@ -26,6 +26,7 @@ import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import '../../../global.css';
+import FirebaseTest from '../../components/common/FirebaseTest';
 
 // Type definitions
 type WelcomeScreenNavigationProp = NativeStackNavigationProp<any, 'Welcome'>;
@@ -118,6 +119,9 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = () => {
         <Text className="text-green-400 text-sm font-mono">
           [ SYSTEM READY ]
         </Text>
+
+        {/* Firebase Status Component */}
+        <FirebaseTest />
 
         {/* Gaming Features Preview */}
         <View className="mt-8 bg-cyber-dark/30 rounded-lg p-4 border border-cyan-500/20">

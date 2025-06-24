@@ -1,15 +1,14 @@
 /**
  * @file authService.js
  * @description Firebase authentication service for SnapConnect Phase 2.
- * Handles phone and email authentication, user profiles, and verification using Firebase v9+ Web SDK.
+ * Handles phone and email authentication, user profiles, and verification using Firebase compat SDK.
  * 
  * @author SnapConnect Team
  * @created 2024-01-20
- * @modified 2024-01-20
+ * @modified 2024-01-24
  * 
  * @dependencies
- * - firebase/auth: Firebase Authentication Web SDK
- * - firebase/database: Realtime Database Web SDK
+ * - firebase/compat: Firebase Authentication Compat SDK
  * 
  * @usage
  * import { authService } from '@/services/firebase/authService';
@@ -18,28 +17,36 @@
  * Integrates with AI services for user behavior analytics and gaming preference detection.
  */
 
-import {
-  createUserWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  updateProfile
-} from 'firebase/auth';
-import {
-  get,
-  ref,
-  serverTimestamp,
-  set,
-  update
-} from 'firebase/database';
-import { auth, database } from '../../config/firebase';
-
 /**
  * Authentication service class for Firebase integration
+ * 
+ * NOTE: This class is designed to be completely safe during module import.
+ * No Firebase services are accessed until methods are actually called.
  */
 class AuthService {
   constructor() {
     this.recaptchaVerifier = null;
+    // Do NOT access Firebase services here - only when methods are called
+  }
+
+  /**
+   * Get Firebase Auth instance (lazy-loaded)
+   * @returns {object} Firebase Auth instance
+   */
+  getAuth() {
+    // Dynamic import to avoid circular dependencies and early Firebase access
+    const { getFirebaseAuth } = require('../../config/firebase');
+    return getFirebaseAuth();
+  }
+
+  /**
+   * Get Firestore instance (lazy-loaded)
+   * @returns {object} Firestore instance
+   */
+  getDB() {
+    // Dynamic import to avoid circular dependencies and early Firebase access
+    const { getFirebaseDB } = require('../../config/firebase');
+    return getFirebaseDB();
   }
 
   /**
@@ -50,7 +57,8 @@ class AuthService {
    */
   async signInWithEmail(email, password) {
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const auth = this.getAuth();
+      const userCredential = await auth.signInWithEmailAndPassword(email, password);
       const user = userCredential.user;
       
       // Get user profile from database
@@ -76,11 +84,12 @@ class AuthService {
    */
   async signUpWithEmail(email, password, displayName, additionalData = {}) {
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const auth = this.getAuth();
+      const userCredential = await auth.createUserWithEmailAndPassword(email, password);
       const user = userCredential.user;
       
       // Update Firebase Auth profile
-      await updateProfile(user, { displayName });
+      await user.updateProfile({ displayName });
       
       // Create user profile in database
       const profile = await this.createUserProfile(user.uid, {
@@ -204,7 +213,8 @@ class AuthService {
    */
   async signOut() {
     try {
-      await firebaseSignOut(auth);
+      const auth = this.getAuth();
+      await auth.signOut();
     } catch (error) {
       console.error('Sign out failed:', error);
       throw this.handleAuthError(error);
@@ -219,6 +229,7 @@ class AuthService {
    */
   async createUserProfile(uid, profileData) {
     try {
+      const db = this.getDB();
       const profile = {
         uid,
         username: profileData.username || null,
@@ -228,8 +239,8 @@ class AuthService {
         profilePhoto: profileData.profilePhoto || null,
         authMethod: profileData.authMethod,
         gamingPlatform: profileData.gamingPlatform || null,
-        createdAt: serverTimestamp(),
-        lastActive: serverTimestamp(),
+        createdAt: db.FieldValue.serverTimestamp(),
+        lastActive: db.FieldValue.serverTimestamp(),
         status: 'active',
         preferences: {
           theme: 'cyber',
@@ -238,8 +249,8 @@ class AuthService {
         }
       };
       
-      const userRef = ref(database, `users/${uid}`);
-      await set(userRef, profile);
+      const userRef = db.collection('users').doc(uid);
+      await userRef.set(profile);
       
       return profile;
     } catch (error) {
@@ -255,9 +266,10 @@ class AuthService {
    */
   async getUserProfile(uid) {
     try {
-      const userRef = ref(database, `users/${uid}`);
-      const snapshot = await get(userRef);
-      return snapshot.val();
+      const db = this.getDB();
+      const userRef = db.collection('users').doc(uid);
+      const snapshot = await userRef.get();
+      return snapshot.data();
     } catch (error) {
       console.error('Get user profile failed:', error);
       throw error;
@@ -272,13 +284,14 @@ class AuthService {
    */
   async updateUserProfile(uid, updates) {
     try {
+      const db = this.getDB();
       const updateData = {
         ...updates,
-        lastActive: serverTimestamp()
+        lastActive: db.FieldValue.serverTimestamp()
       };
       
-      const userRef = ref(database, `users/${uid}`);
-      await update(userRef, updateData);
+      const userRef = db.collection('users').doc(uid);
+      await userRef.update(updateData);
       
       return await this.getUserProfile(uid);
     } catch (error) {
@@ -294,10 +307,11 @@ class AuthService {
    */
   async isUsernameAvailable(username) {
     try {
-      const usernameRef = ref(database, `usernames/${username.toLowerCase()}`);
-      const snapshot = await get(usernameRef);
+      const db = this.getDB();
+      const usernameRef = db.collection('usernames').doc(username.toLowerCase());
+      const snapshot = await usernameRef.get();
       
-      return !snapshot.exists();
+      return !snapshot.exists;
     } catch (error) {
       console.error('Username check failed:', error);
       return false;
@@ -312,11 +326,12 @@ class AuthService {
    */
   async reserveUsername(uid, username) {
     try {
-      const usernameRef = ref(database, `usernames/${username.toLowerCase()}`);
-      await set(usernameRef, uid);
+      const db = this.getDB();
+      const usernameRef = db.collection('usernames').doc(username.toLowerCase());
+      await usernameRef.set({ uid });
       
-      const userRef = ref(database, `users/${uid}`);
-      await update(userRef, { username });
+      const userRef = db.collection('users').doc(uid);
+      await userRef.update({ username });
     } catch (error) {
       console.error('Username reservation failed:', error);
       throw error;
@@ -370,9 +385,11 @@ class AuthService {
    * @returns {Function} Unsubscribe function
    */
   onAuthStateChanged(callback) {
-    return onAuthStateChanged(auth, callback);
+    const auth = this.getAuth();
+    return auth.onAuthStateChanged(callback);
   }
 }
 
+// Create a single instance that's safe to import
 export const authService = new AuthService();
 export default authService; 

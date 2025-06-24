@@ -21,7 +21,7 @@
  */
 
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Text, View } from 'react-native';
 
 // Import navigation stacks
@@ -43,7 +43,7 @@ const LoadingScreen = () => (
       SnapConnect
     </Text>
     <Text className="text-cyber-cyan font-inter">
-      [ INITIALIZING SYSTEM ]
+      [ LOADING SYSTEM ]
     </Text>
     <View className="w-32 h-1 bg-cyber-dark rounded-full mt-4">
       <View className="w-full h-full bg-gradient-to-r from-cyber-cyan to-blue-500 rounded-full animate-pulse" />
@@ -67,17 +67,9 @@ const LoadingScreen = () => (
  * - Supports dynamic routing based on AI recommendations
  */
 const AppNavigator = () => {
-  const { isAuthenticated, isLoading, initializeAuth } = useAuthStore();
+  const { isAuthenticated, isLoading } = useAuthStore();
 
-  /**
-   * Initialize authentication listener on mount
-   */
-  useEffect(() => {
-    const unsubscribe = initializeAuth();
-    return unsubscribe;
-  }, [initializeAuth]);
-
-  // Show loading screen while initializing
+  // Show loading screen while checking authentication
   if (isLoading) {
     return <LoadingScreen />;
   }

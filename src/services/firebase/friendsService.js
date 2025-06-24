@@ -8,7 +8,7 @@
  * @modified 2024-01-20
  * 
  * @dependencies
- * - @react-native-firebase/database: Realtime Database
+ * - firebase/firestore: Firestore Web SDK
  * 
  * @usage
  * import { friendsService } from '@/services/firebase/friendsService';
@@ -17,12 +17,20 @@
  * Integrates with AI services for smart friend suggestions and social graph analysis.
  */
 
-import { database } from '../../config/firebase';
+import { getFirebaseDB } from '../../config/firebase';
 
 /**
  * Friends service class for friend management
  */
 class FriendsService {
+  /**
+   * Get Firestore instance (lazy-loaded)
+   * @returns {object} Firestore instance
+   */
+  getDB() {
+    return getFirebaseDB();
+  }
+
   /**
    * Send a friend request
    * @param {string} fromUserId - Requesting user ID
@@ -31,37 +39,9 @@ class FriendsService {
    */
   async sendFriendRequest(fromUserId, toUserId) {
     try {
-      // Check if users are already friends
-      const existingFriendship = await this.areFriends(fromUserId, toUserId);
-      if (existingFriendship) {
-        throw new Error('Users are already friends');
-      }
-      
-      // Check if request already exists
-      const existingRequest = await this.getFriendRequest(fromUserId, toUserId);
-      if (existingRequest) {
-        throw new Error('Friend request already sent');
-      }
-      
-      // Create friend request
-      const requestId = database().ref('friendRequests').push().key;
-      const request = {
-        id: requestId,
-        fromUserId,
-        toUserId,
-        status: 'pending',
-        sentAt: database.ServerValue.TIMESTAMP
-      };
-      
-      await database().ref(`friendRequests/${requestId}`).set(request);
-      
-      // Add to recipient's pending requests
-      await database().ref(`userFriendRequests/${toUserId}/${requestId}`).set(true);
-      
-      // Send notification to recipient
-      await this.sendFriendRequestNotification(toUserId, fromUserId);
-      
-      return requestId;
+      // TODO: Implement friend request with Firestore
+      console.log('Friend request not yet implemented with Firestore');
+      throw new Error('Friend request not yet implemented');
     } catch (error) {
       console.error('Send friend request failed:', error);
       throw error;
@@ -76,33 +56,8 @@ class FriendsService {
    */
   async acceptFriendRequest(requestId, userId) {
     try {
-      // Get request details
-      const requestSnapshot = await database().ref(`friendRequests/${requestId}`).once('value');
-      const request = requestSnapshot.val();
-      
-      if (!request || request.toUserId !== userId) {
-        throw new Error('Invalid friend request');
-      }
-      
-      const { fromUserId, toUserId } = request;
-      const timestamp = database.ServerValue.TIMESTAMP;
-      
-      // Create friendship records
-      await database().ref(`friends/${fromUserId}/${toUserId}`).set(timestamp);
-      await database().ref(`friends/${toUserId}/${fromUserId}`).set(timestamp);
-      
-      // Update request status
-      await database().ref(`friendRequests/${requestId}`).update({
-        status: 'accepted',
-        acceptedAt: timestamp
-      });
-      
-      // Clean up pending request
-      await database().ref(`userFriendRequests/${userId}/${requestId}`).remove();
-      
-      // Notify requester
-      await this.sendFriendAcceptedNotification(fromUserId, toUserId);
-      
+      // TODO: Implement friend request acceptance with Firestore
+      console.log('Friend request acceptance not yet implemented with Firestore');
     } catch (error) {
       console.error('Accept friend request failed:', error);
       throw error;
@@ -117,23 +72,8 @@ class FriendsService {
    */
   async declineFriendRequest(requestId, userId) {
     try {
-      // Get request details
-      const requestSnapshot = await database().ref(`friendRequests/${requestId}`).once('value');
-      const request = requestSnapshot.val();
-      
-      if (!request || request.toUserId !== userId) {
-        throw new Error('Invalid friend request');
-      }
-      
-      // Update request status
-      await database().ref(`friendRequests/${requestId}`).update({
-        status: 'declined',
-        declinedAt: database.ServerValue.TIMESTAMP
-      });
-      
-      // Clean up pending request
-      await database().ref(`userFriendRequests/${userId}/${requestId}`).remove();
-      
+      // TODO: Implement friend request decline with Firestore
+      console.log('Friend request decline not yet implemented with Firestore');
     } catch (error) {
       console.error('Decline friend request failed:', error);
       throw error;
@@ -148,10 +88,8 @@ class FriendsService {
    */
   async removeFriend(userId, friendId) {
     try {
-      // Remove friendship records
-      await database().ref(`friends/${userId}/${friendId}`).remove();
-      await database().ref(`friends/${friendId}/${userId}`).remove();
-      
+      // TODO: Implement friend removal with Firestore
+      console.log('Friend removal not yet implemented with Firestore');
     } catch (error) {
       console.error('Remove friend failed:', error);
       throw error;
@@ -165,25 +103,9 @@ class FriendsService {
    */
   async getFriends(userId) {
     try {
-      const friendsSnapshot = await database().ref(`friends/${userId}`).once('value');
-      const friendIds = friendsSnapshot.val() || {};
-      
-      const friends = [];
-      
-      // Get user data for each friend
-      for (const [friendId, friendshipTimestamp] of Object.entries(friendIds)) {
-        const userSnapshot = await database().ref(`users/${friendId}`).once('value');
-        const userData = userSnapshot.val();
-        
-        if (userData) {
-          friends.push({
-            ...userData,
-            friendshipTimestamp
-          });
-        }
-      }
-      
-      return friends.sort((a, b) => b.friendshipTimestamp - a.friendshipTimestamp);
+      // TODO: Implement friends list retrieval with Firestore
+      console.log('Friends list retrieval not yet implemented with Firestore');
+      return [];
     } catch (error) {
       console.error('Get friends failed:', error);
       throw error;
@@ -197,29 +119,9 @@ class FriendsService {
    */
   async getPendingFriendRequests(userId) {
     try {
-      const requestsSnapshot = await database().ref(`userFriendRequests/${userId}`).once('value');
-      const requestIds = requestsSnapshot.val() || {};
-      
-      const requests = [];
-      
-      // Get request details for each ID
-      for (const requestId of Object.keys(requestIds)) {
-        const requestSnapshot = await database().ref(`friendRequests/${requestId}`).once('value');
-        const request = requestSnapshot.val();
-        
-        if (request && request.status === 'pending') {
-          // Get sender user data
-          const senderSnapshot = await database().ref(`users/${request.fromUserId}`).once('value');
-          const senderData = senderSnapshot.val();
-          
-          requests.push({
-            ...request,
-            sender: senderData
-          });
-        }
-      }
-      
-      return requests.sort((a, b) => b.sentAt - a.sentAt);
+      // TODO: Implement pending requests retrieval with Firestore
+      console.log('Pending friend requests retrieval not yet implemented with Firestore');
+      return [];
     } catch (error) {
       console.error('Get pending friend requests failed:', error);
       throw error;
@@ -234,45 +136,9 @@ class FriendsService {
    */
   async searchUsers(query, currentUserId) {
     try {
-      const users = [];
-      
-      // Search by username
-      if (query.length >= 3) {
-        const usernameSnapshot = await database()
-          .ref('users')
-          .orderByChild('username')
-          .startAt(query.toLowerCase())
-          .endAt(query.toLowerCase() + '\uf8ff')
-          .limitToFirst(20)
-          .once('value');
-        
-        const usernameResults = usernameSnapshot.val() || {};
-        
-        Object.values(usernameResults).forEach(user => {
-          if (user.uid !== currentUserId) {
-            users.push(user);
-          }
-        });
-      }
-      
-      // Search by phone number (exact match only)
-      if (query.startsWith('+')) {
-        const phoneSnapshot = await database()
-          .ref('users')
-          .orderByChild('phoneNumber')
-          .equalTo(query)
-          .once('value');
-        
-        const phoneResults = phoneSnapshot.val() || {};
-        
-        Object.values(phoneResults).forEach(user => {
-          if (user.uid !== currentUserId && !users.find(u => u.uid === user.uid)) {
-            users.push(user);
-          }
-        });
-      }
-      
-      return users;
+      // TODO: Implement user search with Firestore
+      console.log('User search not yet implemented with Firestore');
+      return [];
     } catch (error) {
       console.error('Search users failed:', error);
       throw error;
@@ -287,41 +153,9 @@ class FriendsService {
    */
   async getFriendSuggestions(userId, contactNumbers = []) {
     try {
-      const suggestions = [];
-      const currentFriends = await this.getFriendIds(userId);
-      
-      // Get suggestions from contacts
-      if (contactNumbers.length > 0) {
-        for (const phoneNumber of contactNumbers) {
-          const userSnapshot = await database()
-            .ref('users')
-            .orderByChild('phoneNumber')
-            .equalTo(phoneNumber)
-            .once('value');
-          
-          const users = userSnapshot.val() || {};
-          
-          Object.values(users).forEach(user => {
-            if (user.uid !== userId && !currentFriends.includes(user.uid)) {
-              suggestions.push({
-                ...user,
-                reason: 'contact'
-              });
-            }
-          });
-        }
-      }
-      
-      // Get mutual friend suggestions
-      const mutualSuggestions = await this.getMutualFriendSuggestions(userId, currentFriends);
-      suggestions.push(...mutualSuggestions);
-      
-      // Remove duplicates and limit results
-      const uniqueSuggestions = suggestions.filter((suggestion, index, self) =>
-        index === self.findIndex(s => s.uid === suggestion.uid)
-      );
-      
-      return uniqueSuggestions.slice(0, 20);
+      // TODO: Implement friend suggestions with Firestore
+      console.log('Friend suggestions not yet implemented with Firestore');
+      return [];
     } catch (error) {
       console.error('Get friend suggestions failed:', error);
       throw error;
@@ -336,8 +170,9 @@ class FriendsService {
    */
   async areFriends(userId1, userId2) {
     try {
-      const friendshipSnapshot = await database().ref(`friends/${userId1}/${userId2}`).once('value');
-      return friendshipSnapshot.exists();
+      // TODO: Implement friendship check with Firestore
+      console.log('Friendship check not yet implemented with Firestore');
+      return false;
     } catch (error) {
       console.error('Check friendship failed:', error);
       return false;
@@ -352,20 +187,8 @@ class FriendsService {
    */
   async getFriendRequest(fromUserId, toUserId) {
     try {
-      const requestsSnapshot = await database()
-        .ref('friendRequests')
-        .orderByChild('fromUserId')
-        .equalTo(fromUserId)
-        .once('value');
-      
-      const requests = requestsSnapshot.val() || {};
-      
-      for (const request of Object.values(requests)) {
-        if (request.toUserId === toUserId && request.status === 'pending') {
-          return request;
-        }
-      }
-      
+      // TODO: Implement friend request retrieval with Firestore
+      console.log('Friend request retrieval not yet implemented with Firestore');
       return null;
     } catch (error) {
       console.error('Get friend request failed:', error);
@@ -380,9 +203,9 @@ class FriendsService {
    */
   async getFriendIds(userId) {
     try {
-      const friendsSnapshot = await database().ref(`friends/${userId}`).once('value');
-      const friends = friendsSnapshot.val() || {};
-      return Object.keys(friends);
+      // TODO: Implement friend IDs retrieval with Firestore
+      console.log('Friend IDs retrieval not yet implemented with Firestore');
+      return [];
     } catch (error) {
       console.error('Get friend IDs failed:', error);
       return [];
@@ -397,39 +220,9 @@ class FriendsService {
    */
   async getMutualFriendSuggestions(userId, currentFriends) {
     try {
-      const suggestions = [];
-      const mutualCounts = {};
-      
-      // For each friend, get their friends
-      for (const friendId of currentFriends) {
-        const friendsFriendsSnapshot = await database().ref(`friends/${friendId}`).once('value');
-        const friendsFriends = friendsFriendsSnapshot.val() || {};
-        
-        // Count mutual connections
-        Object.keys(friendsFriends).forEach(mutualFriendId => {
-          if (mutualFriendId !== userId && !currentFriends.includes(mutualFriendId)) {
-            mutualCounts[mutualFriendId] = (mutualCounts[mutualFriendId] || 0) + 1;
-          }
-        });
-      }
-      
-      // Get user data for suggestions with mutual friends
-      for (const [mutualFriendId, count] of Object.entries(mutualCounts)) {
-        if (count >= 2) { // At least 2 mutual friends
-          const userSnapshot = await database().ref(`users/${mutualFriendId}`).once('value');
-          const userData = userSnapshot.val();
-          
-          if (userData) {
-            suggestions.push({
-              ...userData,
-              reason: 'mutual_friends',
-              mutualCount: count
-            });
-          }
-        }
-      }
-      
-      return suggestions.sort((a, b) => b.mutualCount - a.mutualCount);
+      // TODO: Implement mutual friend suggestions with Firestore
+      console.log('Mutual friend suggestions not yet implemented with Firestore');
+      return [];
     } catch (error) {
       console.error('Get mutual friend suggestions failed:', error);
       return [];
@@ -444,11 +237,8 @@ class FriendsService {
    */
   async sendFriendRequestNotification(recipientId, senderId) {
     try {
-      await database().ref(`userNotifications/${recipientId}`).push({
-        type: 'friend_request',
-        senderId,
-        timestamp: database.ServerValue.TIMESTAMP
-      });
+      // TODO: Implement notification with Firestore
+      console.log('Friend request notification not yet implemented with Firestore');
     } catch (error) {
       console.error('Send friend request notification failed:', error);
     }
@@ -462,11 +252,8 @@ class FriendsService {
    */
   async sendFriendAcceptedNotification(recipientId, accepterId) {
     try {
-      await database().ref(`userNotifications/${recipientId}`).push({
-        type: 'friend_accepted',
-        accepterId,
-        timestamp: database.ServerValue.TIMESTAMP
-      });
+      // TODO: Implement notification with Firestore
+      console.log('Friend accepted notification not yet implemented with Firestore');
     } catch (error) {
       console.error('Send friend accepted notification failed:', error);
     }

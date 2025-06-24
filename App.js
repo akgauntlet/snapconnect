@@ -27,7 +27,7 @@ import 'react-native-url-polyfill/auto';
 import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
-import { AppRegistry, StatusBar } from 'react-native';
+import { AppRegistry, StatusBar, Text, View } from 'react-native';
 
 // Import navigation components
 import AppNavigator from './src/navigation/AppNavigator';
@@ -36,10 +36,8 @@ import AppNavigator from './src/navigation/AppNavigator';
 import './global.css';
 
 // Import services for initialization
+import { initializeFirebaseServices } from './src/config/firebase';
 import { loadFonts } from './src/config/fonts';
-// TODO: Re-enable when fixing Firebase integration
-// import { initializeFirebase } from './src/config/firebase';
-// import { useAuthStore } from './src/stores/authStore';
 
 /**
  * Root application component with navigation and global providers
@@ -58,8 +56,7 @@ import { loadFonts } from './src/config/fonts';
  */
 const App = () => {
   const [isInitialized, setIsInitialized] = useState(false);
-  // TODO: Re-enable when fixing Firebase integration
-  // const initializeAuth = useAuthStore((state) => state.initializeAuth);
+  const [initError, setInitError] = useState(null);
 
   /**
    * Initialize app services and AI components
@@ -67,17 +64,33 @@ const App = () => {
   useEffect(() => {
     const initializeApp = async () => {
       try {
+        console.log('🚀 Starting app initialization...');
+        
         // Load custom fonts
         await loadFonts();
-        console.log('Fonts loaded successfully');
+        console.log('✅ Fonts loaded successfully');
         
-        // TODO: Initialize Firebase services (after fixing compatibility)
+        // Initialize Firebase services FIRST
+        await initializeFirebaseServices();
+        console.log('✅ Firebase services initialized');
+        
+        // Now it's safe to import and initialize auth store
+        const { useAuthStore } = await import('./src/stores/authStore');
+        const { initializeAuth } = useAuthStore.getState();
+        const unsubscribe = initializeAuth();
+        console.log('✅ Auth listener initialized');
+        
+        // Store unsubscribe function for cleanup
+        useAuthStore.getState().setAuthUnsubscribe = unsubscribe;
+        
         // TODO: Initialize AI services
         // TODO: Initialize gaming platform integrations
         
         setIsInitialized(true);
+        console.log('🎉 App initialization complete');
       } catch (error) {
-        console.error('Failed to initialize app:', error);
+        console.error('❌ Failed to initialize app:', error);
+        setInitError(error.message);
         // Allow app to continue with limited functionality
         setIsInitialized(true);
       }
@@ -87,8 +100,22 @@ const App = () => {
   }, []);
 
   if (!isInitialized) {
-    // TODO: Implement proper loading screen with gaming aesthetic
-    return null;
+    // Loading screen with gaming aesthetic
+    return (
+      <View style={{ flex: 1, backgroundColor: '#000000', justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#00FFFF', marginBottom: 16 }}>
+          SnapConnect
+        </Text>
+        <Text style={{ fontSize: 16, color: '#00FFFF', marginBottom: 8 }}>
+          [ INITIALIZING FIREBASE ]
+        </Text>
+        {initError && (
+          <Text style={{ fontSize: 12, color: '#FF6B6B', textAlign: 'center', paddingHorizontal: 20 }}>
+            Error: {initError}
+          </Text>
+        )}
+      </View>
+    );
   }
 
   return (

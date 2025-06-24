@@ -35,6 +35,7 @@ import { authService } from '../services/firebase/authService';
  * @property {string|null} error - Error message
  * @property {Object} preferences - User preferences
  * @property {Object|null} phoneVerification - Phone verification state
+ * @property {Function|null} authUnsubscribe - Auth state listener unsubscribe function
  */
 export const useAuthStore = create(
   persist(
@@ -49,12 +50,23 @@ export const useAuthStore = create(
       // Phone verification state
       phoneVerification: null,
       
+      // Auth listener unsubscribe function
+      authUnsubscribe: null,
+      
       // User preferences
       preferences: {
         theme: 'cyber',
         gamingPlatform: null,
         notifications: true,
         privacy: 'friends',
+      },
+
+      /**
+       * Store auth unsubscribe function
+       * @param {Function} unsubscribe - Unsubscribe function
+       */
+      setAuthUnsubscribe: (unsubscribe) => {
+        set({ authUnsubscribe: unsubscribe });
       },
 
       /**
@@ -349,39 +361,68 @@ export const useAuthStore = create(
 
       /**
        * Initialize authentication listener
+       * Must be called after Firebase is initialized
        * @returns {function} Unsubscribe function
        */
       initializeAuth: () => {
-        return authService.onAuthStateChanged(async (firebaseUser) => {
-          if (firebaseUser) {
-            try {
-              // Get user profile from database
-              const profile = await authService.getUserProfile(firebaseUser.uid);
-              
+        try {
+          console.log('🔄 Initializing auth state listener...');
+          
+          const unsubscribe = authService.onAuthStateChanged(async (firebaseUser) => {
+            console.log('🔄 Auth state changed:', firebaseUser ? 'User signed in' : 'User signed out');
+            
+            if (firebaseUser) {
+              try {
+                // Get user profile from database
+                const profile = await authService.getUserProfile(firebaseUser.uid);
+                
+                set({
+                  user: authService.formatUserData(firebaseUser),
+                  profile,
+                  isAuthenticated: true,
+                  isLoading: false,
+                });
+                
+                console.log('✅ User profile loaded successfully');
+              } catch (error) {
+                console.error('⚠️ Failed to load user profile:', error);
+                set({
+                  user: authService.formatUserData(firebaseUser),
+                  profile: null,
+                  isAuthenticated: true,
+                  isLoading: false,
+                });
+              }
+            } else {
               set({
-                user: authService.formatUserData(firebaseUser),
-                profile,
-                isAuthenticated: true,
-                isLoading: false,
-              });
-            } catch (error) {
-              console.error('Failed to load user profile:', error);
-              set({
-                user: authService.formatUserData(firebaseUser),
+                user: null,
                 profile: null,
-                isAuthenticated: true,
+                isAuthenticated: false,
                 isLoading: false,
               });
             }
-          } else {
-            set({
-              user: null,
-              profile: null,
-              isAuthenticated: false,
-              isLoading: false,
-            });
-          }
-        });
+          });
+          
+          console.log('✅ Auth state listener initialized successfully');
+          return unsubscribe;
+          
+        } catch (error) {
+          console.error('❌ Failed to initialize auth listener:', error.message);
+          
+          // Set default unauthenticated state if Firebase isn't ready
+          set({
+            user: null,
+            profile: null,
+            isAuthenticated: false,
+            isLoading: false,
+            error: `Auth initialization failed: ${error.message}`,
+          });
+          
+          // Return a no-op unsubscribe function
+          return () => {
+            console.log('No-op auth unsubscribe called');
+          };
+        }
       },
     }),
     {

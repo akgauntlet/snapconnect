@@ -1,59 +1,59 @@
 /**
  * @file firebase.js
- * @description Firebase configuration and initialization for SnapConnect using Firebase v9+ Web SDK.
- * Handles environment-specific configurations and service initialization for Expo compatibility.
+ * @description Firebase configuration and initialization for SnapConnect using Firebase compat mode.
+ * Uses compatibility layer for better React Native support and stability.
  * 
  * @author SnapConnect Team
  * @created 2024-01-20
- * @modified 2024-01-20
+ * @modified 2024-01-24
  * 
  * @dependencies
- * - firebase: Firebase v9+ Web SDK
+ * - firebase: Firebase v9+ Compat SDK
+ * - @react-native-async-storage/async-storage: For Auth persistence
  * 
  * @usage
- * import { auth, database, storage } from '@/config/firebase';
+ * import { getFirebaseAuth, getFirebaseDB, getFirebaseStorage, initializeFirebaseServices } from '@/config/firebase';
  * 
  * @ai_context
  * Integrates with AI services for user behavior analytics and personalization.
  * Supports real-time data synchronization for AI-powered features.
  */
 
-import { getApp, getApps, initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getDatabase } from 'firebase/database';
-import { getStorage } from 'firebase/storage';
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/auth';
+import 'firebase/compat/firestore';
+import 'firebase/compat/storage';
 
 /**
  * Firebase configuration object for different environments
- * Using mock configuration for development - replace with real config when setting up Firebase project
+ * Real Firebase configuration for SnapConnect project
  */
 const firebaseConfig = {
   development: {
-    apiKey: "mock-api-key-for-development",
+    apiKey: "***REMOVED***",
     authDomain: "***REMOVED***",
-    databaseURL: "https://snapconnect-dev-default-rtdb.firebaseio.com",
     projectId: "snapconnect-dev",
     storageBucket: "snapconnect-dev.appspot.com",
-    messagingSenderId: "123456789",
-    appId: "1:123456789:web:mock-app-id-dev",
+    messagingSenderId: "***REMOVED***",
+    appId: "***REMOVED***",
   },
   staging: {
-    apiKey: "mock-api-key-for-staging",
-    authDomain: "snapconnect-staging.firebaseapp.com",
-    databaseURL: "https://snapconnect-staging-default-rtdb.firebaseio.com",
-    projectId: "snapconnect-staging",
-    storageBucket: "snapconnect-staging.appspot.com",
-    messagingSenderId: "123456789",
-    appId: "1:123456789:web:mock-app-id-staging",
+    // TODO: Set up staging environment
+    apiKey: "***REMOVED***",
+    authDomain: "***REMOVED***",
+    projectId: "snapconnect-dev",
+    storageBucket: "snapconnect-dev.appspot.com",
+    messagingSenderId: "***REMOVED***",
+    appId: "***REMOVED***",
   },
   production: {
-    apiKey: "mock-api-key-for-production",
-    authDomain: "snapconnect.firebaseapp.com",
-    databaseURL: "https://snapconnect-default-rtdb.firebaseio.com",
-    projectId: "snapconnect",
-    storageBucket: "snapconnect.appspot.com",
-    messagingSenderId: "123456789",
-    appId: "1:123456789:web:mock-app-id-prod",
+    // TODO: Set up production environment
+    apiKey: "***REMOVED***",
+    authDomain: "***REMOVED***",
+    projectId: "snapconnect-dev",
+    storageBucket: "snapconnect-dev.appspot.com",
+    messagingSenderId: "***REMOVED***",
+    appId: "***REMOVED***",
   },
 };
 
@@ -62,103 +62,104 @@ const firebaseConfig = {
  * @returns {string} Current environment (development, staging, production)
  */
 function getCurrentEnvironment() {
-  return __DEV__ ? 'development' : 'production';
+  // Check if running in React Native environment
+  if (typeof __DEV__ !== 'undefined') {
+    return __DEV__ ? 'development' : 'production';
+  }
+  
+  // Fallback for Node.js environment
+  return process.env.NODE_ENV === 'production' ? 'production' : 'development';
 }
 
 /**
- * Initialize Firebase with environment-specific configuration
- * @returns {object} Firebase app instance
+ * Initialize Firebase services
+ * Must be called before using any Firebase services
+ * @returns {Promise<void>}
  */
-export const initializeFirebase = () => {
+export const initializeFirebaseServices = async () => {
   try {
-    const environment = getCurrentEnvironment();
-    const config = firebaseConfig[environment];
-    
     // Check if Firebase is already initialized
-    let app;
-    if (getApps().length === 0) {
-      app = initializeApp(config);
-      console.log(`🔥 Firebase initialized for ${environment} environment (mock config)`);
+    if (!firebase.apps.length) {
+      const environment = getCurrentEnvironment();
+      const config = firebaseConfig[environment];
+      
+      // Initialize Firebase app
+      firebase.initializeApp(config);
+      console.log(`🔥 Firebase initialized for ${environment} environment`);
     } else {
-      app = getApp();
-      console.log(`🔥 Firebase already initialized for ${environment} environment`);
+      console.log('🔥 Firebase already initialized');
     }
     
-    return app;
+    // Configure Auth persistence with AsyncStorage
+    try {
+      await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+      console.log('✅ Firebase Auth persistence configured');
+    } catch (persistenceError) {
+      console.warn('⚠️ Firebase Auth persistence configuration warning:', persistenceError.message);
+      // Continue without persistence if it fails
+    }
+    
+    console.log('✅ Firebase services initialized successfully');
   } catch (error) {
-    console.error('Firebase initialization failed:', error);
-    // Return a mock app for development
-    return {
-      name: '[DEFAULT]',
-      options: firebaseConfig[getCurrentEnvironment()]
-    };
+    console.error('Firebase services initialization failed:', error);
+    throw error;
   }
 };
 
-// Initialize Firebase
-const app = initializeFirebase();
-
-// Initialize Firebase services with error handling
-let auth, database, storage;
-
-try {
-  auth = getAuth(app);
-  database = getDatabase(app);
-  storage = getStorage(app);
-  console.log('✅ Firebase services initialized successfully');
-} catch (error) {
-  console.warn('⚠️ Firebase services initialization failed, using mock services:', error.message);
-  
-  // Create mock services for development
-  auth = {
-    currentUser: null,
-    onAuthStateChanged: (callback) => {
-      // Mock auth state - no user initially
-      setTimeout(() => callback(null), 100);
-      return () => {}; // unsubscribe function
-    }
-  };
-  
-  database = {
-    ref: (path) => ({
-      set: async (value) => console.log('Mock database set:', path, value),
-      get: async () => ({ val: () => null, exists: () => false }),
-      update: async (value) => console.log('Mock database update:', path, value),
-      on: () => {},
-      off: () => {}
-    })
-  };
-  
-  storage = {
-    ref: (path) => ({
-      put: async () => ({ ref: { getDownloadURL: async () => 'mock-url' } }),
-      getDownloadURL: async () => 'mock-url',
-      delete: async () => console.log('Mock storage delete:', path)
-    })
-  };
-}
-
-// Export services
-export { auth, database, storage };
-
 /**
- * Database reference helpers
+ * Get Firebase Auth instance
+ * @returns {object} Firebase Auth instance
  */
-export const dbRefs = {
-  users: () => database,
-  messages: () => database,
-  stories: () => database,
-  gaming: () => database,
+export const getFirebaseAuth = () => {
+  if (!firebase.apps.length) {
+    throw new Error('Firebase not initialized. Call initializeFirebaseServices() first.');
+  }
+  return firebase.auth();
 };
 
 /**
- * Storage reference helpers
+ * Get Firestore instance
+ * @returns {object} Firestore instance
  */
-export const storageRefs = {
-  avatars: () => storage,
-  messages: () => storage,
-  stories: () => storage,
-  gaming: () => storage,
+export const getFirebaseDB = () => {
+  if (!firebase.apps.length) {
+    throw new Error('Firebase not initialized. Call initializeFirebaseServices() first.');
+  }
+  return firebase.firestore();
 };
 
-export default app; 
+/**
+ * Get Firebase Storage instance
+ * @returns {object} Firebase Storage instance
+ */
+export const getFirebaseStorage = () => {
+  if (!firebase.apps.length) {
+    throw new Error('Firebase not initialized. Call initializeFirebaseServices() first.');
+  }
+  return firebase.storage();
+};
+
+/**
+ * Get Firebase App instance
+ * @returns {object} Firebase App instance
+ */
+export const getFirebaseApp = () => {
+  if (!firebase.apps.length) {
+    throw new Error('Firebase not initialized. Call initializeFirebaseServices() first.');
+  }
+  return firebase.app();
+};
+
+/**
+ * Helper function to check if Firebase is initialized
+ * @returns {boolean} True if Firebase is initialized
+ */
+export const isFirebaseInitialized = () => {
+  return firebase.apps.length > 0;
+};
+
+// Export the firebase object for direct access when needed
+export { firebase };
+
+// Export the app as default
+export default firebase; 

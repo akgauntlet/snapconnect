@@ -8,8 +8,8 @@
  * @modified 2024-01-20
  * 
  * @dependencies
- * - @react-native-firebase/database: Realtime Database
- * - @react-native-firebase/storage: File storage
+ * - firebase/firestore: Firestore Web SDK
+ * - firebase/storage: Firebase Storage Web SDK
  * 
  * @usage
  * import { messagingService } from '@/services/firebase/messagingService';
@@ -18,12 +18,28 @@
  * Integrates with AI services for content moderation and smart message suggestions.
  */
 
-import { database, storage } from '../../config/firebase';
+import { getFirebaseDB, getFirebaseStorage } from '../../config/firebase';
 
 /**
  * Messaging service class for ephemeral messaging
  */
 class MessagingService {
+  /**
+   * Get Firestore instance (lazy-loaded)
+   * @returns {object} Firestore instance
+   */
+  getDB() {
+    return getFirebaseDB();
+  }
+
+  /**
+   * Get Firebase Storage instance (lazy-loaded)
+   * @returns {object} Firebase Storage instance
+   */
+  getStorage() {
+    return getFirebaseStorage();
+  }
+
   /**
    * Send an ephemeral message
    * @param {string} senderId - Sender user ID
@@ -35,36 +51,9 @@ class MessagingService {
    */
   async sendMessage(senderId, recipientId, mediaData, timer = 5, text = '') {
     try {
-      // Upload media to Firebase Storage
-      const mediaUrl = await this.uploadMedia(mediaData, senderId);
-      
-      // Create message object
-      const messageId = database().ref('messages').push().key;
-      const message = {
-        id: messageId,
-        senderId,
-        recipientId,
-        mediaUrl,
-        mediaType: mediaData.type,
-        text: text || null,
-        timer,
-        sentAt: database.ServerValue.TIMESTAMP,
-        viewedAt: null,
-        expiresAt: null,
-        status: 'sent',
-        screenshotDetected: false
-      };
-      
-      // Save message to database
-      await database().ref(`messages/${messageId}`).set(message);
-      
-      // Add to user's message lists
-      await this.addToMessageLists(senderId, recipientId, messageId);
-      
-      // Send push notification (placeholder)
-      await this.sendPushNotification(recipientId, senderId, 'message');
-      
-      return messageId;
+      // TODO: Implement message sending with Firestore
+      console.log('Message sending not yet implemented with Firestore');
+      throw new Error('Message sending not yet implemented');
     } catch (error) {
       console.error('Send message failed:', error);
       throw error;
@@ -79,44 +68,9 @@ class MessagingService {
    */
   async viewMessage(messageId, viewerId) {
     try {
-      const messageRef = database().ref(`messages/${messageId}`);
-      const snapshot = await messageRef.once('value');
-      const message = snapshot.val();
-      
-      if (!message) {
-        throw new Error('Message not found');
-      }
-      
-      // Verify user can view this message
-      if (message.recipientId !== viewerId) {
-        throw new Error('Unauthorized to view this message');
-      }
-      
-      // Start timer if not already viewed
-      if (!message.viewedAt) {
-        const viewedAt = Date.now();
-        const expiresAt = viewedAt + (message.timer * 1000);
-        
-        await messageRef.update({
-          viewedAt,
-          expiresAt,
-          status: 'viewed'
-        });
-        
-        // Schedule automatic deletion
-        this.scheduleMessageDeletion(messageId, message.timer * 1000);
-        
-        // Notify sender that message was viewed
-        await this.notifyMessageViewed(message.senderId, messageId);
-        
-        return {
-          ...message,
-          viewedAt,
-          expiresAt
-        };
-      }
-      
-      return message;
+      // TODO: Implement message viewing with Firestore
+      console.log('Message viewing not yet implemented with Firestore');
+      throw new Error('Message viewing not yet implemented');
     } catch (error) {
       console.error('View message failed:', error);
       throw error;
@@ -132,34 +86,9 @@ class MessagingService {
    */
   async getConversationMessages(userId, otherUserId, limit = 50) {
     try {
-      const messagesRef = database().ref('messages');
-      
-      // Query messages where user is sender or recipient
-      const snapshot = await messagesRef
-        .orderByChild('sentAt')
-        .limitToLast(limit)
-        .once('value');
-      
-      const allMessages = snapshot.val() || {};
-      
-      // Filter messages for this conversation
-      const conversationMessages = Object.values(allMessages).filter(
-        message => 
-          (message.senderId === userId && message.recipientId === otherUserId) ||
-          (message.senderId === otherUserId && message.recipientId === userId)
-      );
-      
-      // Remove expired messages
-      const validMessages = conversationMessages.filter(message => {
-        if (message.expiresAt && Date.now() > message.expiresAt) {
-          // Delete expired message
-          this.deleteMessage(message.id);
-          return false;
-        }
-        return true;
-      });
-      
-      return validMessages.sort((a, b) => a.sentAt - b.sentAt);
+      // TODO: Implement conversation retrieval with Firestore
+      console.log('Conversation messages retrieval not yet implemented with Firestore');
+      return [];
     } catch (error) {
       console.error('Get conversation messages failed:', error);
       throw error;
@@ -173,15 +102,9 @@ class MessagingService {
    */
   async getRecentConversations(userId) {
     try {
-      const conversationsRef = database().ref(`userConversations/${userId}`);
-      const snapshot = await conversationsRef
-        .orderByChild('lastMessageAt')
-        .limitToLast(20)
-        .once('value');
-      
-      const conversations = snapshot.val() || {};
-      
-      return Object.values(conversations).sort((a, b) => b.lastMessageAt - a.lastMessageAt);
+      // TODO: Implement recent conversations retrieval with Firestore
+      console.log('Recent conversations retrieval not yet implemented with Firestore');
+      return [];
     } catch (error) {
       console.error('Get recent conversations failed:', error);
       throw error;
@@ -196,18 +119,8 @@ class MessagingService {
    */
   async reportScreenshot(messageId, viewerId) {
     try {
-      await database().ref(`messages/${messageId}`).update({
-        screenshotDetected: true,
-        screenshotAt: database.ServerValue.TIMESTAMP
-      });
-      
-      // Get message to notify sender
-      const messageSnapshot = await database().ref(`messages/${messageId}`).once('value');
-      const message = messageSnapshot.val();
-      
-      if (message) {
-        await this.notifyScreenshot(message.senderId, viewerId, messageId);
-      }
+      // TODO: Implement screenshot reporting with Firestore
+      console.log('Screenshot reporting not yet implemented with Firestore');
     } catch (error) {
       console.error('Report screenshot failed:', error);
       throw error;
@@ -221,19 +134,8 @@ class MessagingService {
    */
   async deleteMessage(messageId) {
     try {
-      // Get message data first
-      const messageSnapshot = await database().ref(`messages/${messageId}`).once('value');
-      const message = messageSnapshot.val();
-      
-      if (message && message.mediaUrl) {
-        // Delete media file from storage
-        await this.deleteMediaFile(message.mediaUrl);
-      }
-      
-      // Delete message from database
-      await database().ref(`messages/${messageId}`).remove();
-      
-      console.log(`Message ${messageId} deleted`);
+      // TODO: Implement message deletion with Firestore
+      console.log('Message deletion not yet implemented with Firestore');
     } catch (error) {
       console.error('Delete message failed:', error);
       throw error;
@@ -248,21 +150,9 @@ class MessagingService {
    */
   async uploadMedia(mediaData, userId) {
     try {
-      const timestamp = Date.now();
-      const fileExtension = mediaData.type === 'video' ? 'mp4' : 'jpg';
-      const fileName = `${userId}_${timestamp}.${fileExtension}`;
-      const storagePath = `messages/${userId}/${fileName}`;
-      
-      const reference = storage().ref(storagePath);
-      const uploadTask = reference.putFile(mediaData.uri);
-      
-      // Wait for upload completion
-      await uploadTask;
-      
-      // Get download URL
-      const downloadURL = await reference.getDownloadURL();
-      
-      return downloadURL;
+      // TODO: Implement media upload with Firebase Storage Web SDK
+      console.log('Media upload not yet implemented with Firebase Storage Web SDK');
+      throw new Error('Media upload not yet implemented');
     } catch (error) {
       console.error('Upload media failed:', error);
       throw error;
@@ -276,8 +166,8 @@ class MessagingService {
    */
   async deleteMediaFile(mediaUrl) {
     try {
-      const reference = storage().refFromURL(mediaUrl);
-      await reference.delete();
+      // TODO: Implement media deletion with Firebase Storage Web SDK
+      console.log('Media deletion not yet implemented with Firebase Storage Web SDK');
     } catch (error) {
       console.error('Delete media file failed:', error);
       // Don't throw - file might already be deleted
@@ -293,20 +183,8 @@ class MessagingService {
    */
   async addToMessageLists(senderId, recipientId, messageId) {
     try {
-      const conversationData = {
-        lastMessageId: messageId,
-        lastMessageAt: database.ServerValue.TIMESTAMP
-      };
-      
-      // Update sender's conversation list
-      await database()
-        .ref(`userConversations/${senderId}/${recipientId}`)
-        .update(conversationData);
-      
-      // Update recipient's conversation list
-      await database()
-        .ref(`userConversations/${recipientId}/${senderId}`)
-        .update(conversationData);
+      // TODO: Implement conversation list updates with Firestore
+      console.log('Message list updates not yet implemented with Firestore');
     } catch (error) {
       console.error('Add to message lists failed:', error);
       throw error;
@@ -353,12 +231,8 @@ class MessagingService {
    */
   async notifyMessageViewed(senderId, messageId) {
     try {
-      // Add to sender's notifications
-      await database().ref(`userNotifications/${senderId}`).push({
-        type: 'message_viewed',
-        messageId,
-        timestamp: database.ServerValue.TIMESTAMP
-      });
+      // TODO: Implement notification with Firestore
+      console.log('Message view notification not yet implemented with Firestore');
     } catch (error) {
       console.error('Notify message viewed failed:', error);
     }
@@ -373,16 +247,8 @@ class MessagingService {
    */
   async notifyScreenshot(senderId, viewerId, messageId) {
     try {
-      // Add to sender's notifications
-      await database().ref(`userNotifications/${senderId}`).push({
-        type: 'screenshot_detected',
-        viewerId,
-        messageId,
-        timestamp: database.ServerValue.TIMESTAMP
-      });
-      
-      // Send push notification
-      await this.sendPushNotification(senderId, viewerId, 'screenshot');
+      // TODO: Implement screenshot notification with Firestore
+      console.log('Screenshot notification not yet implemented with Firestore');
     } catch (error) {
       console.error('Notify screenshot failed:', error);
     }
