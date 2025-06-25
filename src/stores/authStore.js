@@ -23,6 +23,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { authService } from '../services/firebase/authService';
+import { realtimeService } from '../services/firebase/realtimeService';
 
 /**
  * Authentication store with persistent state
@@ -222,6 +223,11 @@ export const useAuthStore = create(
         set({ isLoading: true });
         
         try {
+          // Clean up real-time services first to prevent permission errors
+          console.log('🔄 Cleaning up real-time services...');
+          await realtimeService.cleanup();
+          
+          // Sign out from Firebase Auth
           await authService.signOut();
           
           set({
@@ -233,13 +239,13 @@ export const useAuthStore = create(
             phoneVerification: null,
           });
           
-          console.log('User signed out successfully');
+          console.log('✅ User signed out successfully');
         } catch (error) {
           set({
             isLoading: false,
             error: error.message,
           });
-          console.error('Sign out failed:', error.message);
+          console.error('❌ Sign out failed:', error.message);
           throw error;
         }
       },
@@ -394,6 +400,15 @@ export const useAuthStore = create(
                 });
               }
             } else {
+              // User signed out - clean up real-time services
+              console.log('🔄 User signed out, cleaning up real-time services...');
+              try {
+                await realtimeService.cleanup();
+                console.log('✅ Real-time services cleaned up');
+              } catch (error) {
+                console.error('⚠️ Failed to cleanup real-time services:', error);
+              }
+              
               set({
                 user: null,
                 profile: null,
@@ -432,6 +447,7 @@ export const useAuthStore = create(
         preferences: state.preferences,
         // Don't persist sensitive authentication data
       }),
+
     }
   )
 );

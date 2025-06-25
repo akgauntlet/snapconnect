@@ -23,7 +23,7 @@
 
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Alert, SafeAreaView, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
 
@@ -71,37 +71,18 @@ const ProfileScreen: React.FC = () => {
   ];
 
   /**
-   * Handle sign out with confirmation
+   * Handle sign out directly without confirmation
    */
-  const handleSignOut = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out of your account?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await signOut();
-              console.log('User signed out successfully');
-            } catch (error) {
-              Alert.alert(
-                'Sign Out Failed',
-                'There was an error signing out. Please try again.',
-                [{ text: 'OK' }]
-              );
-              console.error('Sign out error:', error);
-            }
-          },
-        },
-      ],
-      { cancelable: true }
-    );
+  const handleSignOut = async () => {
+    try {
+      console.log('Starting sign out process...');
+      await signOut();
+      console.log('Sign out completed successfully');
+    } catch (error) {
+      console.error('Sign out error:', error);
+      // For web compatibility, use console.error instead of Alert
+      console.error('Sign out failed. Please try again.');
+    }
   };
   
   return (

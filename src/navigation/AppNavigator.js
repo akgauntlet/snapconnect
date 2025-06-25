@@ -31,6 +31,8 @@ import TabNavigator from './TabNavigator';
 // Import auth store
 import { useAuthStore } from '../stores/authStore';
 
+
+
 const Stack = createNativeStackNavigator();
 
 /**

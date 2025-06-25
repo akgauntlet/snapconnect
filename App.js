@@ -71,7 +71,7 @@ const App = () => {
         console.log('✅ Auth listener initialized');
         
         // Store unsubscribe function for cleanup
-        useAuthStore.getState().setAuthUnsubscribe = unsubscribe;
+        useAuthStore.getState().setAuthUnsubscribe(unsubscribe);
         
         setIsInitialized(true);
         console.log('🎉 Full SnapConnect app initialization complete!');
