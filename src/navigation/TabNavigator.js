@@ -1,14 +1,15 @@
 /**
  * @file TabNavigator.js
- * @description Main bottom tab navigation for SnapConnect with cyber gaming aesthetic.
- * Manages navigation between Camera, Messages, Stories, and Profile sections.
+ * @description Main navigation with bottom tabs and friend management screens for SnapConnect.
+ * Manages navigation between Camera, Messages, Stories, Profile and friend-related screens.
  * 
  * @author SnapConnect Team
  * @created 2024-01-20
- * @modified 2024-01-20
+ * @modified 2024-01-24
  * 
  * @dependencies
  * - @react-navigation/bottom-tabs: Bottom tab navigation
+ * - @react-navigation/native-stack: Stack navigation for modal screens
  * - @expo/vector-icons: Icons for tabs
  * - react: React hooks
  * 
@@ -22,34 +23,32 @@
 
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeStore } from '../stores/themeStore';
 
-// Import screens
+// Import main screens
 import CameraScreen from '../screens/camera/CameraScreen';
 import MessagesScreen from '../screens/messaging/MessagesScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import StoriesScreen from '../screens/stories/StoriesScreen';
 
+// Import friend management screens
+import AddFriendsScreen from '../screens/friends/AddFriendsScreen';
+import FriendProfileScreen from '../screens/friends/FriendProfileScreen';
+import FriendRequestsScreen from '../screens/friends/FriendRequestsScreen';
+import FriendsListScreen from '../screens/friends/FriendsListScreen';
+
 const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator();
 
 /**
- * Main bottom tab navigator with cyber gaming styling
+ * Bottom tab navigator with cyber gaming styling
  * 
  * @returns {React.ReactElement} Rendered tab navigation
- * 
- * @performance
- * - Lazy loads tab screens for optimal performance
- * - Uses efficient icon rendering with vector icons
- * - Gaming-optimized 60fps animations
- * 
- * @ai_integration
- * - Tab order adapts to user behavior patterns
- * - Gaming context influences tab visibility
- * - AI-powered navigation suggestions
  */
-const TabNavigator = () => {
+const TabsNavigator = () => {
   const insets = useSafeAreaInsets();
   const currentTheme = useThemeStore((state) => state.theme);
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
@@ -166,6 +165,75 @@ const TabNavigator = () => {
         }}
       />
     </Tab.Navigator>
+  );
+};
+
+/**
+ * Main navigation stack that includes tabs and friend management screens
+ * 
+ * @returns {React.ReactElement} Rendered navigation stack
+ * 
+ * @performance
+ * - Lazy loads screens for optimal performance
+ * - Uses efficient navigation transitions
+ * - Gaming-optimized 60fps animations
+ * 
+ * @ai_integration
+ * - Screen order adapts to user behavior patterns
+ * - Gaming context influences navigation flow
+ * - AI-powered screen suggestions and shortcuts
+ */
+const TabNavigator = () => {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: '#000000' },
+        animation: 'slide_from_right',
+      }}
+    >
+      {/* Main Tabs */}
+      <Stack.Screen 
+        name="MainTabs" 
+        component={TabsNavigator}
+        options={{
+          animation: 'none',
+        }}
+      />
+      
+      {/* Friend Management Screens */}
+      <Stack.Screen 
+        name="FriendsList" 
+        component={FriendsListScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      
+      <Stack.Screen 
+        name="AddFriends" 
+        component={AddFriendsScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      
+      <Stack.Screen 
+        name="FriendRequests" 
+        component={FriendRequestsScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      
+      <Stack.Screen 
+        name="FriendProfile" 
+        component={FriendProfileScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+    </Stack.Navigator>
   );
 };
 

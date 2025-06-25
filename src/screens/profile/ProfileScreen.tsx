@@ -22,6 +22,8 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React from 'react';
 import { SafeAreaView, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { useAuthStore } from '../../stores/authStore';
@@ -43,6 +45,7 @@ import { useThemeStore } from '../../stores/themeStore';
  * - Automated gaming achievement tracking
  */
 const ProfileScreen: React.FC = () => {
+  const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const theme = useThemeStore((state) => state.theme);
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
   
@@ -60,6 +63,35 @@ const ProfileScreen: React.FC = () => {
       friends: profile?.stats?.friends || 156,
       achievements: profile?.stats?.achievements || 42,
     },
+  };
+  
+  /**
+   * Handle menu item navigation
+   */
+  const handleMenuItemPress = (title: string) => {
+    switch (title) {
+      case 'Friends':
+        navigation.navigate('FriendsList', { sourceTab: 'Profile' });
+        break;
+      case 'Settings':
+        // TODO: Navigate to settings
+        console.log('Navigate to Settings');
+        break;
+      case 'Achievements':
+        // TODO: Navigate to achievements
+        console.log('Navigate to Achievements');
+        break;
+      case 'Privacy':
+        // TODO: Navigate to privacy
+        console.log('Navigate to Privacy');
+        break;
+      case 'Help':
+        // TODO: Navigate to help
+        console.log('Navigate to Help');
+        break;
+      default:
+        console.log(`Navigate to ${title}`);
+    }
   };
   
   const menuItems = [
@@ -136,6 +168,7 @@ const ProfileScreen: React.FC = () => {
           {menuItems.map((item) => (
             <TouchableOpacity
               key={item.title}
+              onPress={() => handleMenuItemPress(item.title)}
               className="flex-row items-center py-4 px-4 mb-2 bg-cyber-dark rounded-lg"
             >
               <View className="w-10 h-10 bg-cyber-cyan/20 rounded-full justify-center items-center mr-4">

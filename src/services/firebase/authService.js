@@ -130,7 +130,7 @@ class AuthService {
       await user.updateProfile({ displayName });
       console.log('✅ Firebase Auth profile updated');
       
-      // Create user profile in database
+      // Create user profile in database (includes username reservation)
       const profile = await this.createUserProfile(user.uid, {
         email,
         displayName,
@@ -242,7 +242,7 @@ class AuthService {
         
         let profile;
         if (isNewUser) {
-          // Create new user profile
+          // Create new user profile (includes username reservation)
           profile = await this.createUserProfile(mockUser.uid, {
             phoneNumber: mockUser.phoneNumber,
             authMethod: 'phone',
@@ -292,6 +292,12 @@ class AuthService {
     try {
       const db = this.getDB();
       const { firebase } = require('../../config/firebase');
+      
+      // Reserve username if provided
+      if (profileData.username) {
+        await this.reserveUsername(uid, profileData.username);
+        console.log('✅ Username reserved:', profileData.username);
+      }
       
       const profile = {
         uid,

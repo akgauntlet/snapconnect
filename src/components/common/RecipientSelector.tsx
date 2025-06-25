@@ -1,10 +1,11 @@
 /**
  * @file RecipientSelector.tsx
- * @description Recipient selection component for sending snaps to friends.
- * Handles friend list, search, and multiple recipient selection.
+ * @description Enhanced recipient selection component for sending snaps to friends.
+ * Handles real Firebase friend list, search, and multiple recipient selection.
  * 
  * @author SnapConnect Team
  * @created 2024-01-20
+ * @modified 2024-01-24
  * 
  * @dependencies
  * - react: React hooks
@@ -30,15 +31,18 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Alert,
-  FlatList,
-  Modal,
-  SafeAreaView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Modal,
+    SafeAreaView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
+import { friendsService } from '../../services/firebase/friendsService';
+import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
 
 /**
@@ -46,10 +50,10 @@ import { useThemeStore } from '../../stores/themeStore';
  */
 interface Friend {
   id: string;
-  name: string;
+  displayName: string;
   username: string;
-  avatar?: string;
-  lastSeen?: Date;
+  profilePhoto?: string;
+  lastActive?: Date;
   isOnline?: boolean;
 }
 
@@ -73,7 +77,7 @@ interface RecipientSelectorProps {
 }
 
 /**
- * Recipient selector component for choosing snap recipients
+ * Enhanced recipient selector component for choosing snap recipients
  */
 const RecipientSelector: React.FC<RecipientSelectorProps> = ({
   visible,
@@ -83,6 +87,7 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
 }) => {
   const theme = useThemeStore((state) => state.theme);
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
+  const { user } = useAuthStore();
   
   // Component state
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -92,18 +97,57 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
   const [selectedTimer, setSelectedTimer] = useState(5);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Timer options
   const timerOptions = [1, 3, 5, 10];
 
   /**
+   * Load friends from Firebase
+   */
+  const loadFriends = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Get friends from Firebase
+      const friendsData = await friendsService.getFriends(user.uid);
+      
+      // Transform to our interface format
+      const formattedFriends: Friend[] = friendsData.map(friend => ({
+        id: friend.id,
+        displayName: friend.displayName || friend.username || 'Unknown',
+        username: friend.username || 'no-username',
+        profilePhoto: friend.profilePhoto,
+        lastActive: friend.lastActive?.toDate(),
+        isOnline: Math.random() > 0.5, // TODO: Implement real presence detection
+      }));
+      
+      setFriends(formattedFriends);
+      
+      // If no friends, show helpful message
+      if (formattedFriends.length === 0) {
+        setError('No friends found. Add friends to start sending snaps!');
+      }
+      
+    } catch (error) {
+      console.error('Load friends failed:', error);
+      setError('Failed to load friends. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user]);
+
+  /**
    * Load friends list on component mount
    */
   useEffect(() => {
-    if (visible) {
+    if (visible && user) {
       loadFriends();
     }
-  }, [visible]);
+  }, [visible, user, loadFriends]);
 
   /**
    * Filter friends based on search query
@@ -113,59 +157,12 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
       setFilteredFriends(friends);
     } else {
       const filtered = friends.filter(friend =>
-        friend.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        friend.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         friend.username.toLowerCase().includes(searchQuery.toLowerCase())
       );
       setFilteredFriends(filtered);
     }
   }, [friends, searchQuery]);
-
-  /**
-   * Load friends from Firebase
-   */
-  const loadFriends = async () => {
-    try {
-      setIsLoading(true);
-      
-      // TODO: Implement actual friends loading from Firebase
-      // For now, using mock data
-      const mockFriends: Friend[] = [
-        {
-          id: 'friend-1',
-          name: 'Alex Johnson',
-          username: 'alexj',
-          isOnline: true,
-        },
-        {
-          id: 'friend-2',
-          name: 'Sarah Williams',
-          username: 'sarahw',
-          isOnline: false,
-          lastSeen: new Date(Date.now() - 300000), // 5 minutes ago
-        },
-        {
-          id: 'friend-3',
-          name: 'Mike Chen',
-          username: 'mikec',
-          isOnline: true,
-        },
-        {
-          id: 'friend-4',
-          name: 'Emma Davis',
-          username: 'emmad',
-          isOnline: false,
-          lastSeen: new Date(Date.now() - 3600000), // 1 hour ago
-        },
-      ];
-      
-      setFriends(mockFriends);
-    } catch (error) {
-      console.error('Load friends failed:', error);
-      Alert.alert('Error', 'Failed to load friends list.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   /**
    * Toggle recipient selection
@@ -234,6 +231,7 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
       // Clear selections
       setSelectedRecipients([]);
       setSearchQuery('');
+      setError(null);
       
       onClose();
     } catch (error) {
@@ -244,9 +242,9 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
   /**
    * Format last seen time
    */
-  const formatLastSeen = (lastSeen: Date) => {
+  const formatLastSeen = (lastActive: Date) => {
     const now = new Date();
-    const diffMs = now.getTime() - lastSeen.getTime();
+    const diffMs = now.getTime() - lastActive.getTime();
     const diffMins = Math.floor(diffMs / 60000);
     
     if (diffMins < 1) return 'Just now';
@@ -260,6 +258,14 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
   };
 
   /**
+   * Get friend's initials for avatar
+   */
+  const getFriendInitials = (friend: Friend) => {
+    const name = friend.displayName || friend.username;
+    return name.split(' ').map(n => n.charAt(0).toUpperCase()).join('').slice(0, 2);
+  };
+
+  /**
    * Render friend item
    */
   const renderFriendItem = ({ item }: { item: Friend }) => {
@@ -269,16 +275,16 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
       <TouchableOpacity
         onPress={() => toggleRecipient(item.id)}
         className={`flex-row items-center p-4 mx-4 mb-2 rounded-lg ${
-          isSelected ? 'bg-cyber-cyan/20 border border-cyber-cyan' : 'bg-cyber-gray/20'
+          isSelected ? 'bg-cyber-cyan/20 border border-cyber-cyan' : 'bg-cyber-gray/10'
         }`}
         disabled={isSending}
       >
         {/* Avatar */}
         <View className={`w-12 h-12 rounded-full justify-center items-center mr-3 ${
-          item.isOnline ? 'bg-green-500/20 border border-green-500' : 'bg-gray-500/20 border border-gray-500'
+          item.isOnline ? 'bg-green-500/20 border-2 border-green-500' : 'bg-gray-500/20 border-2 border-gray-500'
         }`}>
-          <Text className="text-white font-inter font-semibold text-lg">
-            {item.name.charAt(0).toUpperCase()}
+          <Text className="text-white font-inter font-semibold text-sm">
+            {getFriendInitials(item)}
           </Text>
           
           {/* Online indicator */}
@@ -290,18 +296,83 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
         {/* Friend info */}
         <View className="flex-1">
           <Text className="text-white font-inter font-medium text-base">
-            {item.name}
+            {item.displayName}
           </Text>
           <Text className="text-white/60 font-inter text-sm">
-            @{item.username} • {item.isOnline ? 'Online' : formatLastSeen(item.lastSeen!)}
+            @{item.username} • {item.isOnline ? 'Online' : (item.lastActive ? formatLastSeen(item.lastActive) : 'Offline')}
           </Text>
         </View>
         
         {/* Selection indicator */}
-        {isSelected && (
-          <Ionicons name="checkmark-circle" size={24} color={accentColor} />
-        )}
+        <View className="ml-3">
+          {isSelected ? (
+            <Ionicons name="checkmark-circle" size={24} color={accentColor} />
+          ) : (
+            <View className="w-6 h-6 border-2 border-white/30 rounded-full" />
+          )}
+        </View>
       </TouchableOpacity>
+    );
+  };
+
+  /**
+   * Render empty state
+   */
+  const renderEmptyState = () => {
+    if (isLoading) {
+      return (
+        <View className="items-center py-20">
+          <ActivityIndicator size="large" color={accentColor} />
+          <Text className="text-white/60 font-inter text-base mt-4">
+            Loading friends...
+          </Text>
+        </View>
+      );
+    }
+
+    if (error) {
+      return (
+        <View className="items-center py-20">
+          <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
+          <Text className="text-white/70 font-inter text-lg mt-4 mb-2">
+            {error}
+          </Text>
+          <TouchableOpacity
+            onPress={loadFriends}
+            className="bg-cyber-cyan/20 px-6 py-3 rounded-lg mt-4"
+          >
+            <Text className="text-cyber-cyan font-inter font-semibold">
+              Try Again
+            </Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (searchQuery && filteredFriends.length === 0) {
+      return (
+        <View className="items-center py-20">
+          <Ionicons name="search-outline" size={48} color="rgba(255,255,255,0.3)" />
+          <Text className="text-white/60 font-inter text-lg mt-4 mb-2">
+            No friends found
+          </Text>
+          <Text className="text-white/40 font-inter text-sm text-center px-8">
+            Try searching with a different name or username
+          </Text>
+        </View>
+      );
+    }
+
+    return (
+      <View className="items-center py-20">
+        <Ionicons name="people-outline" size={48} color="rgba(255,255,255,0.3)" />
+        <Text className="text-white/60 font-inter text-lg mt-4 mb-2">
+          No friends yet
+        </Text>
+        <Text className="text-white/40 font-inter text-sm text-center px-8">
+          Add friends to start sending snaps!
+        </Text>
+      </View>
     );
   };
 
@@ -358,6 +429,11 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
                 autoCapitalize="none"
                 autoCorrect={false}
               />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <Ionicons name="close-circle" size={20} color="rgba(255,255,255,0.5)" />
+                </TouchableOpacity>
+              )}
             </View>
           </View>
 
@@ -405,19 +481,7 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
             keyExtractor={item => item.id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 20 }}
-            ListEmptyComponent={
-              <View className="items-center py-12">
-                <Ionicons name="people-outline" size={48} color="rgba(255,255,255,0.3)" />
-                <Text className="text-white/60 font-inter text-lg mt-4 mb-2">
-                  {isLoading ? 'Loading friends...' : 'No friends found'}
-                </Text>
-                {!isLoading && searchQuery && (
-                  <Text className="text-white/40 font-inter text-sm text-center px-8">
-                    Try searching with a different name or username
-                  </Text>
-                )}
-              </View>
-            }
+            ListEmptyComponent={renderEmptyState}
           />
         </View>
       </SafeAreaView>

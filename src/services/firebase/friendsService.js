@@ -207,6 +207,7 @@ class FriendsService {
   async getFriends(userId) {
     try {
       const db = this.getDB();
+      const { firebase } = require('../../config/firebase');
       
       // Get friendship records from user's subcollection
       const friendsSnapshot = await db
@@ -224,6 +225,7 @@ class FriendsService {
       
       // Get friend user data (batch get for efficiency)
       const friends = [];
+      const danglingFriendships = []; // Track friendships pointing to non-existent users
       
       // Firestore has a limit of 10 items for 'in' queries, so we need to batch
       const batchSize = 10;
@@ -232,18 +234,56 @@ class FriendsService {
         
         const usersSnapshot = await db
           .collection('users')
-          .where(db.FieldPath.documentId(), 'in', batch)
+          .where(firebase.firestore.FieldPath.documentId(), 'in', batch)
           .get();
         
+        // Track which users were found
+        const foundUserIds = new Set();
         usersSnapshot.forEach(doc => {
           friends.push({ id: doc.id, ...doc.data() });
+          foundUserIds.add(doc.id);
         });
+        
+        // Find dangling friendships (friend IDs that don't have user documents)
+        const missingUserIds = batch.filter(friendId => !foundUserIds.has(friendId));
+        if (missingUserIds.length > 0) {
+          danglingFriendships.push(...missingUserIds);
+        }
+      }
+      
+      // Clean up dangling friendships
+      if (danglingFriendships.length > 0) {
+        await this.cleanupDanglingFriendships(userId, danglingFriendships);
       }
       
       return friends;
     } catch (error) {
       console.error('❌ Get friends failed:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Clean up friendship documents that point to non-existent users
+   * @param {string} userId - Current user ID
+   * @param {Array} danglingFriendIds - Array of friend IDs that don't exist
+   * @returns {Promise<void>}
+   */
+  async cleanupDanglingFriendships(userId, danglingFriendIds) {
+    try {
+      const db = this.getDB();
+      const batch = db.batch();
+      
+      for (const friendId of danglingFriendIds) {
+        const friendshipRef = db.collection('users').doc(userId).collection('friends').doc(friendId);
+        batch.delete(friendshipRef);
+      }
+      
+      await batch.commit();
+      console.log('✅ Cleaned up', danglingFriendIds.length, 'dangling friendships');
+    } catch (error) {
+      console.error('❌ Failed to clean up dangling friendships:', error);
+      // Don't throw - this is cleanup, main function should continue
     }
   }
 

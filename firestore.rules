@@ -12,6 +12,12 @@ service cloud.firestore {
       allow read: if request.auth != null;
     }
     
+    // Username reservations - allow reading for availability checks, writing for reservations
+    match /usernames/{username} {
+      allow read: if true; // Allow unauthenticated users to check availability
+      allow write: if request.auth != null; // Allow authenticated users to reserve usernames
+    }
+    
     // User presence - users can write their own presence, read others' presence
     match /users/{userId}/presence/{document=**} {
       allow read: if request.auth != null;
@@ -55,7 +61,8 @@ service cloud.firestore {
     // Notifications - users can read their own notifications
     match /notifications/{notificationId} {
       allow read: if request.auth != null && request.auth.uid == resource.data.userId;
-      allow write: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      allow create: if request.auth != null; // Anyone can send notifications
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
     }
     
     // Screenshots tracking - for security monitoring
@@ -95,17 +102,21 @@ service cloud.firestore {
     
     // Friends collections - users can manage their own friends
     match /users/{userId}/friends/{friendId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null; // Allow reading for mutual friend suggestions
+      allow write: if request.auth != null && 
+        (request.auth.uid == userId || request.auth.uid == friendId);
     }
     
     // Friend requests - users can send and receive friend requests
     match /friendRequests/{requestId} {
       allow read: if request.auth != null && 
-        (request.auth.uid == resource.data.senderId || 
-         request.auth.uid == resource.data.recipientId);
+        (request.auth.uid == resource.data.fromUserId || 
+         request.auth.uid == resource.data.toUserId);
       allow write: if request.auth != null && 
-        (request.auth.uid == resource.data.senderId || 
-         request.auth.uid == request.resource.data.senderId);
+        (request.auth.uid == resource.data.fromUserId || 
+         request.auth.uid == resource.data.toUserId);
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.fromUserId;
     }
     
     // Typing indicators - temporary real-time status

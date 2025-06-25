@@ -97,22 +97,10 @@ const StoriesScreen: React.FC = () => {
   const [initialUserIndex, setInitialUserIndex] = useState(0);
   const [initialStoryIndex, setInitialStoryIndex] = useState(0);
 
-
-
-  /**
-   * Load stories when screen is focused
-   */
-  useFocusEffect(
-    useCallback(() => {
-      loadStories();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user])
-  );
-
   /**
    * Load all stories (friends' and user's own)
    */
-  const loadStories = async () => {
+  const loadStories = useCallback(async () => {
     if (!user) return;
     
     try {
@@ -138,7 +126,16 @@ const StoriesScreen: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user]);
+
+  /**
+   * Load stories when screen is focused
+   */
+  useFocusEffect(
+    useCallback(() => {
+      loadStories();
+    }, [loadStories])
+  );
 
   /**
    * Handle refresh
@@ -147,8 +144,7 @@ const StoriesScreen: React.FC = () => {
     setRefreshing(true);
     await loadStories();
     setRefreshing(false);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadStories]);
 
   /**
    * Handle story press to view
@@ -192,6 +188,20 @@ const StoriesScreen: React.FC = () => {
   }, []);
 
   /**
+   * Handle story deletion
+   */
+  const handleDeleteStory = useCallback(async (storyId: string) => {
+    try {
+      await storiesService.deleteStory(storyId);
+      Alert.alert('Success', 'Story deleted successfully.');
+      loadStories(); // Refresh the list
+    } catch (error) {
+      console.error('❌ Delete story failed:', error);
+      Alert.alert('Error', 'Failed to delete story.');
+    }
+  }, [loadStories]);
+
+  /**
    * Handle my story press
    */
   const handleMyStoryPress = useCallback(async (story: MyStory) => {
@@ -213,23 +223,7 @@ const StoriesScreen: React.FC = () => {
       console.error('❌ Get story stats failed:', error);
       Alert.alert('Error', 'Failed to load story stats.');
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
-
-  /**
-   * Handle story deletion
-   */
-  const handleDeleteStory = useCallback(async (storyId: string) => {
-    try {
-      await storiesService.deleteStory(storyId);
-      Alert.alert('Success', 'Story deleted successfully.');
-      loadStories(); // Refresh the list
-    } catch (error) {
-      console.error('❌ Delete story failed:', error);
-      Alert.alert('Error', 'Failed to delete story.');
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user, handleDeleteStory]);
 
   /**
    * Handle create story (navigate to camera)

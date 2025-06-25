@@ -21,18 +21,19 @@
 
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useAuthStore } from '../../stores/authStore';
+import { REGEX_PATTERNS } from '../../utils/constants';
 
 // Type definitions
 type SignupScreenNavigationProp = NativeStackNavigationProp<any, 'SignUp'>;
@@ -53,6 +54,7 @@ const SignupScreen: React.FC<SignupScreenProps> = () => {
   // Auth store
   const { 
     signUpWithEmail, 
+    checkUsernameAvailability,
     isLoading, 
     error, 
     clearError 
@@ -63,13 +65,88 @@ const SignupScreen: React.FC<SignupScreenProps> = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [username, setUsername] = useState('');
+  const [usernameError, setUsernameError] = useState('');
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  
+  // Timeout ref for debouncing username checks
+  const usernameTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  /**
+   * Validate username format
+   * @param {string} username - Username to validate
+   * @returns {boolean} True if valid format
+   */
+  const isValidUsernameFormat = (username: string): boolean => {
+    return REGEX_PATTERNS.USERNAME.test(username);
+  };
+
+  /**
+   * Check username availability with debouncing
+   * @param {string} username - Username to check
+   */
+  const checkUsernameAvailabilityDebounced = async (username: string) => {
+    if (!username) {
+      setUsernameError('');
+      return;
+    }
+
+    if (!isValidUsernameFormat(username)) {
+      setUsernameError('Username must be 3-20 characters, letters, numbers, and underscores only');
+      return;
+    }
+
+    setIsCheckingUsername(true);
+    setUsernameError('');
+
+    try {
+      const isAvailable = await checkUsernameAvailability(username);
+      if (!isAvailable) {
+        setUsernameError('Username is already taken');
+      }
+    } catch (error) {
+      console.error('Username check failed:', error);
+      setUsernameError('Unable to check username availability');
+    } finally {
+      setIsCheckingUsername(false);
+    }
+  };
+
+  /**
+   * Handle username input change
+   * @param {string} text - New username value
+   */
+  const handleUsernameChange = (text: string) => {
+    setUsername(text.toLowerCase().trim());
+    setUsernameError('');
+    
+    // Clear previous timeout
+    if (usernameTimeoutRef.current) {
+      clearTimeout(usernameTimeoutRef.current);
+    }
+    
+    // Set new timeout for debounced availability check
+    usernameTimeoutRef.current = setTimeout(() => {
+      checkUsernameAvailabilityDebounced(text.toLowerCase().trim());
+    }, 500);
+  };
 
   /**
    * Handle email signup
    */
   const handleEmailSignup = async () => {
-    if (!email || !password || !confirmPassword || !displayName) {
+    if (!email || !password || !confirmPassword || !displayName || !username) {
       Alert.alert('Error', 'Please fill in all fields.');
+      return;
+    }
+
+    if (!isValidUsernameFormat(username)) {
+      Alert.alert('Error', 'Username must be 3-20 characters, letters, numbers, and underscores only.');
+      return;
+    }
+
+    if (usernameError) {
+      Alert.alert('Error', 'Please resolve username issues before continuing.');
       return;
     }
 
@@ -83,8 +160,24 @@ const SignupScreen: React.FC<SignupScreenProps> = () => {
       return;
     }
 
+    // Final username availability check
+    setIsCheckingUsername(true);
     try {
-      await signUpWithEmail(email, password, displayName);
+      const isAvailable = await checkUsernameAvailability(username);
+      if (!isAvailable) {
+        setUsernameError('Username is already taken');
+        setIsCheckingUsername(false);
+        return;
+      }
+    } catch (error) {
+      setIsCheckingUsername(false);
+      Alert.alert('Error', 'Unable to verify username availability. Please try again.');
+      return;
+    }
+    setIsCheckingUsername(false);
+
+    try {
+      await signUpWithEmail(email, password, displayName, { username });
       // Navigation will be handled by auth state change
     } catch (error: any) {
       Alert.alert('Sign Up Failed', error.message);
@@ -130,8 +223,8 @@ const SignupScreen: React.FC<SignupScreenProps> = () => {
           </View>
 
           {/* Form */}
-          <View className="space-y-4 mb-6">
-            <View>
+          <View className="mb-6">
+            <View className="mb-4">
               <Text className="text-cyber-cyan font-inter mb-2">Display Name</Text>
               <TextInput
                 value={displayName}
@@ -148,7 +241,40 @@ const SignupScreen: React.FC<SignupScreenProps> = () => {
               />
             </View>
 
-            <View>
+            <View className="mb-4">
+              <Text className="text-cyber-cyan font-inter mb-2">
+                Username <Text className="text-red-400">*</Text>
+              </Text>
+              <TextInput
+                value={username}
+                onChangeText={handleUsernameChange}
+                placeholder="Choose a unique username"
+                placeholderTextColor="#6B7280"
+                className={`bg-cyber-dark border rounded-lg px-4 py-3 text-white font-inter ${
+                  usernameError ? 'border-red-500' : 'border-cyber-gray'
+                }`}
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!isLoading && !isCheckingUsername}
+              />
+              {isCheckingUsername ? (
+                <Text className="text-yellow-400 text-sm font-inter mt-1">
+                  Checking availability...
+                </Text>
+              ) : null}
+              {usernameError ? (
+                <Text className="text-red-400 text-sm font-inter mt-1">
+                  {usernameError}
+                </Text>
+              ) : null}
+              {username && !usernameError && !isCheckingUsername ? (
+                <Text className="text-green-400 text-sm font-inter mt-1">
+                  ✓ Username available
+                </Text>
+              ) : null}
+            </View>
+
+            <View className="mb-4">
               <Text className="text-cyber-cyan font-inter mb-2">Email</Text>
               <TextInput
                 value={email}
@@ -166,7 +292,7 @@ const SignupScreen: React.FC<SignupScreenProps> = () => {
               />
             </View>
 
-            <View>
+            <View className="mb-4">
               <Text className="text-cyber-cyan font-inter mb-2">Password</Text>
               <TextInput
                 value={password}
@@ -202,18 +328,18 @@ const SignupScreen: React.FC<SignupScreenProps> = () => {
           </View>
 
           {/* Error Display */}
-          {error && (
+          {error ? (
             <View className="bg-red-500/20 border border-red-500 rounded-lg p-3 mb-4">
               <Text className="text-red-400 font-inter text-center">{error}</Text>
             </View>
-          )}
+          ) : null}
 
           {/* Sign Up Button */}
           <TouchableOpacity
             onPress={handleEmailSignup}
-            disabled={isLoading}
+            disabled={isLoading || isCheckingUsername || !!usernameError}
             className={`bg-cyber-cyan py-4 rounded-lg shadow-lg ${
-              isLoading ? 'opacity-50' : ''
+              isLoading || isCheckingUsername || usernameError ? 'opacity-50' : ''
             }`}
             style={{
               shadowColor: '#00ffff',
@@ -238,9 +364,9 @@ const SignupScreen: React.FC<SignupScreenProps> = () => {
           {/* Sign In Link */}
           <View className="flex-row justify-center items-center">
             <Text className="text-gray-300 font-inter">
-              Already have an account? 
+              Already have an account?{' '}
             </Text>
-            <TouchableOpacity onPress={handleSignIn} className="ml-2">
+            <TouchableOpacity onPress={handleSignIn}>
               <Text className="text-cyber-cyan font-inter font-medium">
                 Sign In
               </Text>

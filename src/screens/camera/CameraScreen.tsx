@@ -32,7 +32,7 @@ import { CameraType, CameraView, FlashMode, useCameraPermissions, useMicrophoneP
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
@@ -147,7 +147,7 @@ const CameraScreen: React.FC = () => {
   /**
    * Enumerate available camera devices and select the best one
    */
-  const enumerateCameras = async (): Promise<void> => {
+  const enumerateCameras = useCallback(async (): Promise<void> => {
     if (Platform.OS !== 'web' || typeof navigator === 'undefined' || !navigator.mediaDevices) {
       return;
     }
@@ -172,7 +172,7 @@ const CameraScreen: React.FC = () => {
     } catch (error) {
       console.error('Failed to enumerate cameras:', error);
     }
-  };
+  }, []);
 
   /**
    * Select the best camera device, avoiding virtual cameras
@@ -212,6 +212,39 @@ const CameraScreen: React.FC = () => {
   };
 
   /**
+   * Request media library permissions
+   */
+  const requestMediaLibraryPermissions = useCallback(async () => {
+    try {
+      const { status: mediaLibraryStatus } = await MediaLibrary.requestPermissionsAsync();
+      if (mediaLibraryStatus !== 'granted') {
+        console.warn('Media library permission not granted');
+      }
+    } catch (error) {
+      console.error('Media library permission request failed:', error);
+    }
+  }, []);
+
+  /**
+   * Request all necessary permissions
+   */
+  const requestAllPermissions = useCallback(async () => {
+    try {
+      // Request camera permission for photo/video capture
+      if (cameraPermission && !cameraPermission.granted) {
+        await requestCameraPermission();
+      }
+      
+      // Request microphone permission for video recording
+      if (microphonePermission && !microphonePermission.granted) {
+        await requestMicrophonePermission();
+      }
+    } catch (error) {
+      console.error('Permission request failed:', error);
+    }
+  }, [cameraPermission, microphonePermission, requestCameraPermission, requestMicrophonePermission]);
+
+  /**
    * Request media library and microphone permissions on component mount
    */
   useEffect(() => {
@@ -225,8 +258,7 @@ const CameraScreen: React.FC = () => {
         enumerateCameras();
       }, 1000);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [enumerateCameras, requestAllPermissions, requestMediaLibraryPermissions]);
 
   /**
    * Re-enumerate cameras when permissions change
@@ -237,8 +269,7 @@ const CameraScreen: React.FC = () => {
         enumerateCameras();
       }, 500);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cameraPermission?.granted, microphonePermission?.granted]);
+  }, [cameraPermission?.granted, microphonePermission?.granted, enumerateCameras]);
 
   /**
    * Cleanup web media streams on unmount
@@ -263,41 +294,6 @@ const CameraScreen: React.FC = () => {
       }
     };
   }, []);
-
-
-
-  /**
-   * Request media library permissions
-   */
-  const requestMediaLibraryPermissions = async () => {
-    try {
-      const { status: mediaLibraryStatus } = await MediaLibrary.requestPermissionsAsync();
-      if (mediaLibraryStatus !== 'granted') {
-        console.warn('Media library permission not granted');
-      }
-    } catch (error) {
-      console.error('Media library permission request failed:', error);
-    }
-  };
-
-  /**
-   * Request all necessary permissions
-   */
-  const requestAllPermissions = async () => {
-    try {
-      // Request camera permission for photo/video capture
-      if (cameraPermission && !cameraPermission.granted) {
-        await requestCameraPermission();
-      }
-      
-      // Request microphone permission for video recording
-      if (microphonePermission && !microphonePermission.granted) {
-        await requestMicrophonePermission();
-      }
-    } catch (error) {
-      console.error('Permission request failed:', error);
-    }
-  };
 
   /**
    * Handle camera ready state with additional delay for stability
@@ -712,8 +708,6 @@ const CameraScreen: React.FC = () => {
     Alert.alert('Coming Soon', 'Messages feature will be implemented next!');
   };
 
-
-
   /**
    * Handle sending to multiple recipients  
    */
@@ -829,8 +823,6 @@ const CameraScreen: React.FC = () => {
       console.error('Show story options failed:', error);
     }
   };
-
-
 
   /**
    * Show recipient selector
@@ -1060,6 +1052,68 @@ const CameraScreen: React.FC = () => {
           onSend={handleSendToRecipients}
           onClose={() => setShowRecipientSelector(false)}
         />
+        
+        {/* Story Options Modal */}
+        {showStoryOptions && (
+          <Modal
+            visible={showStoryOptions}
+            animationType="slide"
+            presentationStyle="pageSheet"
+            onRequestClose={() => setShowStoryOptions(false)}
+          >
+            <SafeAreaView className="flex-1 bg-cyber-black">
+              <View className="flex-1">
+                {/* Header */}
+                <View className="flex-row justify-between items-center px-6 py-4 border-b border-cyber-gray/20">
+                  <TouchableOpacity onPress={() => setShowStoryOptions(false)} className="p-2">
+                    <Ionicons name="close" size={24} color="white" />
+                  </TouchableOpacity>
+                  
+                  <Text className="text-white font-orbitron text-lg">
+                    Share Story
+                  </Text>
+                  
+                  <View className="w-8" />
+                </View>
+                
+                {/* Story Privacy Options */}
+                <View className="px-6 py-8">
+                  <Text className="text-white font-inter font-medium text-lg mb-6">
+                    Who can see this story?
+                  </Text>
+                  
+                  <TouchableOpacity
+                    onPress={() => {
+                      handleCreateStory('friends');
+                      setShowStoryOptions(false);
+                    }}
+                    className="flex-row items-center p-4 bg-cyber-gray/20 rounded-lg mb-3"
+                  >
+                    <Ionicons name="people" size={24} color={accentColor} />
+                    <View className="ml-4">
+                      <Text className="text-white font-inter font-medium">Friends</Text>
+                      <Text className="text-white/60 font-inter text-sm">Only your friends can see</Text>
+                    </View>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    onPress={() => {
+                      handleCreateStory('public');
+                      setShowStoryOptions(false);
+                    }}
+                    className="flex-row items-center p-4 bg-cyber-gray/20 rounded-lg mb-3"
+                  >
+                    <Ionicons name="globe" size={24} color={accentColor} />
+                    <View className="ml-4">
+                      <Text className="text-white font-inter font-medium">Public</Text>
+                      <Text className="text-white/60 font-inter text-sm">Everyone can see</Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </SafeAreaView>
+          </Modal>
+        )}
       </>
     );
   }
@@ -1292,95 +1346,6 @@ const CameraScreen: React.FC = () => {
             </View>
           </SafeAreaView>
         </Modal>
-      )}
-
-      {/* Story Privacy Options Modal */}
-      {showStoryOptions && (
-        <Modal
-          visible={showStoryOptions}
-          animationType="slide"
-          presentationStyle="pageSheet"
-          onRequestClose={() => setShowStoryOptions(false)}
-        >
-          <SafeAreaView className="flex-1 bg-cyber-black">
-            <View className="flex-1">
-              {/* Header */}
-              <View className="flex-row justify-between items-center px-6 py-4 border-b border-cyber-gray/20">
-                <TouchableOpacity onPress={() => setShowStoryOptions(false)} className="p-2">
-                  <Ionicons name="close" size={24} color="white" />
-                </TouchableOpacity>
-                
-                <Text className="text-white font-orbitron text-lg">
-                  Story Privacy
-                </Text>
-                
-                <View className="w-8" />
-              </View>
-
-              {/* Privacy Options */}
-              <View className="px-6 py-8">
-                <TouchableOpacity
-                  onPress={() => handleCreateStory('friends')}
-                  className="flex-row items-center p-4 bg-cyber-gray/20 rounded-lg mb-4"
-                >
-                  <Ionicons name="people" size={24} color={accentColor} />
-                  <View className="ml-4 flex-1">
-                    <Text className="text-white font-inter font-medium text-lg">
-                      Friends
-                    </Text>
-                    <Text className="text-white/60 font-inter text-sm">
-                      Share with all your friends
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => handleCreateStory('public')}
-                  className="flex-row items-center p-4 bg-cyber-gray/20 rounded-lg mb-4"
-                >
-                  <Ionicons name="globe" size={24} color={accentColor} />
-                  <View className="ml-4 flex-1">
-                    <Text className="text-white font-inter font-medium text-lg">
-                      Public
-                    </Text>
-                    <Text className="text-white/60 font-inter text-sm">
-                      Anyone can view your story
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => Alert.alert('Coming Soon', 'Custom privacy settings will be available soon!')}
-                  className="flex-row items-center p-4 bg-cyber-gray/20 rounded-lg mb-4"
-                >
-                  <Ionicons name="settings" size={24} color={accentColor} />
-                  <View className="ml-4 flex-1">
-                    <Text className="text-white font-inter font-medium text-lg">
-                      Custom
-                    </Text>
-                    <Text className="text-white/60 font-inter text-sm">
-                      Choose specific friends
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </SafeAreaView>
-        </Modal>
-      )}
-
-      {/* Recipient Selector Modal */}
-      {showRecipientSelector && !isStoryMode && (
-        <RecipientSelector
-          visible={showRecipientSelector}
-          mediaData={capturedMedia ? {
-            uri: capturedMedia,
-            type: mediaType!,
-            size: 0
-          } : null}
-          onSend={handleSendToRecipients}
-          onClose={() => setShowRecipientSelector(false)}
-        />
       )}
     </SafeAreaView>
   );

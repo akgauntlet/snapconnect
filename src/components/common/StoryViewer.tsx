@@ -31,13 +31,13 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Animated,
-  Pressable,
-  SafeAreaView,
-  StatusBar,
-  Text,
-  TouchableOpacity,
-  View
+    Animated,
+    Pressable,
+    SafeAreaView,
+    StatusBar,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { storiesService } from '../../services/firebase/storiesService';
 import { useAuthStore } from '../../stores/authStore';
@@ -109,6 +109,27 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
   const currentStory = currentUser?.stories[currentStoryIndex];
 
   /**
+   * Handle next story
+   */
+  const handleNextStory = useCallback(() => {
+    if (currentUserIndex >= storyUsers.length - 1 && 
+        currentStoryIndex >= currentUser.stories.length - 1) {
+      // Last story, close viewer
+      onClose();
+      return;
+    }
+    
+    if (currentStoryIndex < currentUser.stories.length - 1) {
+      // Next story in current user
+      setCurrentStoryIndex(prev => prev + 1);
+    } else {
+      // Next user's first story
+      setCurrentUserIndex(prev => prev + 1);
+      setCurrentStoryIndex(0);
+    }
+  }, [currentUserIndex, currentStoryIndex, currentUser, storyUsers.length, onClose]);
+
+  /**
    * Start story progress timer
    */
   const startProgress = useCallback(() => {
@@ -145,8 +166,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
         }
       }
           }, 50);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPaused, storyDuration, progressAnimation]);
+  }, [isPaused, storyDuration, progressAnimation, handleNextStory]);
 
   /**
    * Pause story progress
@@ -166,27 +186,6 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
     setIsPaused(false);
     startProgress();
   }, [startProgress]);
-
-  /**
-   * Handle next story
-   */
-  const handleNextStory = useCallback(() => {
-    if (currentUserIndex >= storyUsers.length - 1 && 
-        currentStoryIndex >= currentUser.stories.length - 1) {
-      // Last story, close viewer
-      onClose();
-      return;
-    }
-    
-    if (currentStoryIndex < currentUser.stories.length - 1) {
-      // Next story in current user
-      setCurrentStoryIndex(prev => prev + 1);
-    } else {
-      // Next user's first story
-      setCurrentUserIndex(prev => prev + 1);
-      setCurrentStoryIndex(0);
-    }
-  }, [currentUserIndex, currentStoryIndex, currentUser, storyUsers.length, onClose]);
 
   /**
    * Handle previous story
