@@ -22,7 +22,7 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import React, { useCallback, useState } from 'react';
 import { Alert, FlatList, Image, Modal, RefreshControl, SafeAreaView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import StoryViewer from '../../components/common/StoryViewer';
@@ -83,6 +83,7 @@ const StoriesScreen: React.FC = () => {
   const theme = useThemeStore((state) => state.theme);
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
   const { user } = useAuthStore();
+  const navigation = useNavigation();
   
   // Component state
   const [friendsStories, setFriendsStories] = useState<StoryUser[]>([]);
@@ -234,9 +235,20 @@ const StoriesScreen: React.FC = () => {
    * Handle create story (navigate to camera)
    */
   const handleCreateStory = useCallback(() => {
-    // TODO: Navigate to camera with story mode
-    Alert.alert('Create Story', 'Story creation from camera will be implemented next!');
-  }, []);
+    try {
+      // Navigate to Camera tab
+      (navigation as any).navigate('Camera', { mode: 'story' });
+    } catch (error) {
+      console.error('Navigation to camera failed:', error);
+      Alert.alert(
+        'Create Story', 
+        'Switch to the Camera tab to create your story!',
+        [
+          { text: 'OK', style: 'default' }
+        ]
+      );
+    }
+  }, [navigation]);
 
   /**
    * Format time ago

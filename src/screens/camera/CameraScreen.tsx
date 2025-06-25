@@ -26,6 +26,7 @@
 
 // Web API declarations for React Native Web compatibility
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { CameraType, CameraView, FlashMode, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
@@ -45,6 +46,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import RecipientSelector from '../../components/common/RecipientSelector';
 import { messagingService } from '../../services/firebase/messagingService';
 import { storiesService } from '../../services/firebase/storiesService';
@@ -69,9 +71,11 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
  * - Real-time AR effects with AI enhancement
  */
 const CameraScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const theme = useThemeStore((state) => state.theme);
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
   const { user } = useAuthStore();
+  const route = useRoute();
   
   // Camera permissions and state
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
@@ -110,6 +114,19 @@ const CameraScreen: React.FC = () => {
 
   // Web camera device selection (for automatic selection)
   const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
+
+  /**
+   * Handle navigation parameters and story mode
+   */
+  useFocusEffect(
+    React.useCallback(() => {
+      // Check if we're navigating with story mode parameter
+      const params = route.params as { mode?: string } | undefined;
+      if (params?.mode === 'story') {
+        setIsStoryMode(true);
+      }
+    }, [route.params])
+  );
 
   /**
    * Check if web recording is supported in the current browser
@@ -1112,7 +1129,13 @@ const CameraScreen: React.FC = () => {
         )}
 
         {/* Bottom Controls - Absolutely positioned */}
-        <View className="absolute bottom-0 left-0 right-0 z-10 px-6 py-8 bg-black/30">
+        <View 
+          className="absolute bottom-0 left-0 right-0 z-10 px-6 bg-black/30"
+          style={{
+            paddingTop: 32,
+            paddingBottom: Math.max(insets.bottom + 60 + 8, 32), // Tab bar height + bottom safe area + padding
+          }}
+        >
           <View className="flex-row justify-between items-center">
             {/* Media Library Button */}
             <TouchableOpacity 

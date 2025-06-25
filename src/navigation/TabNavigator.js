@@ -23,6 +23,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import React from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeStore } from '../stores/themeStore';
 
 // Import screens
@@ -49,6 +50,7 @@ const Tab = createBottomTabNavigator();
  * - AI-powered navigation suggestions
  */
 const TabNavigator = () => {
+  const insets = useSafeAreaInsets();
   const currentTheme = useThemeStore((state) => state.theme);
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
   const gamingMode = useThemeStore((state) => state.preferences.gamingMode);
@@ -64,8 +66,8 @@ const TabNavigator = () => {
           backgroundColor: currentTheme.colors.background.primary,
           borderTopColor: accentColor,
           borderTopWidth: 1,
-          height: 60,
-          paddingBottom: 8,
+          height: 60 + insets.bottom,
+          paddingBottom: Math.max(insets.bottom, 8),
           paddingTop: 8,
           position: 'absolute',
           left: 0,

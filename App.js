@@ -15,6 +15,9 @@ import { StatusBar, Text, View } from 'react-native';
 // Import navigation components
 import AppNavigator from './src/navigation/AppNavigator';
 
+// Import safe area provider
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+
 // Import global styles
 import './global.css';
 
@@ -91,11 +94,13 @@ const App = () => {
   }
 
   return (
-    <NavigationContainer>
-      <StatusBar barStyle="light-content" backgroundColor="#000000" />
-      <ExpoStatusBar style="light" />
-      <AppNavigator />
-    </NavigationContainer>
+    <SafeAreaProvider>
+      <NavigationContainer>
+        <StatusBar barStyle="light-content" backgroundColor="#000000" />
+        <ExpoStatusBar style="light" />
+        <AppNavigator />
+      </NavigationContainer>
+    </SafeAreaProvider>
   );
 };
 
