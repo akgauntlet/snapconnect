@@ -27,6 +27,7 @@
 // Web API declarations for React Native Web compatibility
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
+import { ResizeMode, Video } from 'expo-av';
 import { CameraType, CameraView, FlashMode, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
@@ -987,12 +988,25 @@ const CameraScreen: React.FC = () => {
               </Text>
               
               {/* Actual Media Preview */}
-              <View className="w-64 h-80 bg-gray-800 rounded-lg overflow-hidden mb-8 border-2 border-cyber-cyan">
+              <View className="w-80 h-96 bg-gray-800 rounded-lg overflow-hidden mb-8 border-2 border-cyber-cyan">
                 {mediaType === 'photo' && capturedMedia ? (
                   <Image
                     source={{ uri: capturedMedia }}
                     className="w-full h-full"
                     resizeMode="cover"
+                  />
+                ) : mediaType === 'video' && capturedMedia ? (
+                  <Video
+                    source={{ uri: capturedMedia }}
+                    style={{ 
+                      width: '100%', 
+                      height: '100%',
+                      backgroundColor: 'transparent'
+                    }}
+                    useNativeControls
+                    resizeMode={ResizeMode.CONTAIN}
+                    shouldPlay={false}
+                    isLooping={false}
                   />
                 ) : (
                   <View className="w-full h-full justify-center items-center">
@@ -1208,16 +1222,38 @@ const CameraScreen: React.FC = () => {
             </View>
 
             {/* Media Display */}
-            <View className="flex-1 justify-center items-center">
+            <View className="flex-1 justify-center items-center px-4">
               {mediaType === 'photo' ? (
                 <Image
                   source={{ uri: capturedMedia }}
                   style={{
-                    width: screenWidth,
+                    width: screenWidth - 32,
                     height: screenHeight * 0.7,
                   }}
                   resizeMode="contain"
                 />
+              ) : mediaType === 'video' && capturedMedia ? (
+                <View 
+                  style={{
+                    width: screenWidth - 32,
+                    height: screenHeight * 0.7,
+                    backgroundColor: '#000',
+                    borderRadius: 8,
+                    overflow: 'hidden'
+                  }}
+                >
+                  <Video
+                    source={{ uri: capturedMedia }}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                    }}
+                    useNativeControls
+                    resizeMode={ResizeMode.CONTAIN}
+                    shouldPlay={false}
+                    isLooping={false}
+                  />
+                </View>
               ) : (
                 <View className="w-full h-96 bg-cyber-dark rounded-lg justify-center items-center">
                   <Ionicons name="play-circle" size={64} color="white" />
