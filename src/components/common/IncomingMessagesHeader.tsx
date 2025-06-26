@@ -38,7 +38,7 @@ export interface IncomingMessage {
   mediaType?: 'photo' | 'video';
   text?: string;
   timer: number;
-  createdAt: Date;
+  createdAt: any; // Firebase Timestamp or Date
   viewed: boolean;
   senderName?: string;
 }
@@ -100,20 +100,48 @@ const IncomingMessagesHeader: React.FC<IncomingMessagesHeaderProps> = ({
   };
 
   /**
-   * Format message time
+   * Format message time - handles Firebase Timestamps and Date objects
    */
-  const formatMessageTime = (createdAt: Date) => {
-    const now = new Date();
-    const diffMs = now.getTime() - createdAt.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m`;
-    
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}h`;
-    
-    return 'Today';
+  const formatMessageTime = (createdAt: any) => {
+    try {
+      let dateObj: Date;
+      
+      // Handle Firebase Timestamp
+      if (createdAt && typeof createdAt.toDate === 'function') {
+        dateObj = createdAt.toDate();
+      } 
+      // Handle JavaScript Date
+      else if (createdAt instanceof Date) {
+        dateObj = createdAt;
+      }
+      // Handle timestamp number
+      else if (typeof createdAt === 'number') {
+        dateObj = new Date(createdAt);
+      }
+      // Handle timestamp seconds (Firebase sometimes returns seconds)
+      else if (createdAt && typeof createdAt.seconds === 'number') {
+        dateObj = new Date(createdAt.seconds * 1000);
+      }
+      // Fallback
+      else {
+        return 'Unknown';
+      }
+      
+      const now = new Date();
+      const diffMs = now.getTime() - dateObj.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      
+      if (diffMins < 1) return 'Just now';
+      if (diffMins < 60) return `${diffMins}m`;
+      
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) return `${diffHours}h`;
+      
+      return 'Today';
+    } catch (error) {
+      console.error('Error formatting message time:', error);
+      return 'Unknown';
+    }
   };
 
   /**
