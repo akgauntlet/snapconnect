@@ -76,9 +76,9 @@ export const CyberTheme = {
   typography: {
     // Font families
     fonts: {
-      display: 'Orbitron',      // Gaming headers (max 20% usage)
-      body: 'Inter',            // Readable content (70% usage)
-      mono: 'JetBrains Mono',   // Technical content (10% usage)
+      display: 'Orbitron-Medium',      // Gaming headers (max 20% usage)
+      body: 'Inter-Regular',           // Readable content (70% usage)
+      mono: 'JetBrainsMono-Regular',   // Technical content (10% usage)
     },
     
     // Font sizes (responsive scale)

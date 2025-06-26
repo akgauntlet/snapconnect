@@ -131,9 +131,9 @@ const TabsNavigator = () => {
         tabBarActiveTintColor: accentColor,
         tabBarInactiveTintColor: currentTheme.colors.text.tertiary,
         tabBarLabelStyle: {
-          fontFamily: currentTheme.typography.fonts.body,
+          fontFamily: 'Inter-Medium',
           fontSize: 12,
-          fontWeight: '500',
+          fontWeight: 'normal', // Weight is built into the font
           // Ensure labels are visible on large screens
           ...(isSamsungGalaxyS20Ultra && {
             fontSize: 13,
