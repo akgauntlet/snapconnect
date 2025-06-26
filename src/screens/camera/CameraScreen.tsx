@@ -51,10 +51,13 @@ import {
   StatusBar,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
+import type { GamingFilterType, OverlayType } from "../../components/ar-filters";
+import { FilterPreview, FilterSelector, GamingOverlay, GamingStickers } from "../../components/ar-filters";
 import RecipientSelector from "../../components/common/RecipientSelector";
 import { useTabBarHeight } from "../../hooks/useTabBarHeight";
+import { arFilterEngine, screenRecorder } from "../../services/ar-filters";
 import { messagingService } from "../../services/firebase/messagingService";
 import { storiesService } from "../../services/firebase/storiesService";
 import { useAuthStore } from "../../stores/authStore";
@@ -113,6 +116,26 @@ const CameraScreen: React.FC = () => {
   // Recipient selector
   const [showRecipientSelector, setShowRecipientSelector] = useState(false);
 
+  // AR Filter state
+  const [showFilterSelector, setShowFilterSelector] = useState(false);
+  const [showGamingStickers, setShowGamingStickers] = useState(false);
+  const [currentFilter, setCurrentFilter] = useState<GamingFilterType | null>(null);
+  const [showGamingOverlay, setShowGamingOverlay] = useState(false);
+  const [overlayType, setOverlayType] = useState<OverlayType>('hud');
+  const [isScreenRecording, setIsScreenRecording] = useState(false);
+  const [filteredMediaUri, setFilteredMediaUri] = useState<string | null>(null);
+
+  // Sticker state
+  const [appliedStickers, setAppliedStickers] = useState<{
+    id: string;
+    emoji: string;
+    name: string;
+    x: number;
+    y: number;
+    scale: number;
+    rotation: number;
+  }[]>([]);
+
   // Refs
   const cameraRef = useRef<CameraView>(null);
   const recordingInterval = useRef<NodeJS.Timeout | null>(null);
@@ -126,6 +149,8 @@ const CameraScreen: React.FC = () => {
 
   // Web camera device selection (for automatic selection)
   const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
+
+  const animationFrameId = useRef<number | null>(null);
 
   /**
    * Handle navigation parameters and story mode
@@ -339,6 +364,17 @@ const CameraScreen: React.FC = () => {
   }, []);
 
   /**
+   * Cleanup animation frames on unmount
+   */
+  useEffect(() => {
+    return () => {
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
+      }
+    };
+  }, []);
+
+  /**
    * Handle camera ready state with additional delay for stability
    */
   const handleCameraReady = () => {
@@ -440,8 +476,20 @@ const CameraScreen: React.FC = () => {
       });
 
       if (photo?.uri) {
-        setCapturedMedia(photo.uri);
+        let finalUri = photo.uri;
+        if (currentFilter) {
+          try {
+            finalUri = await arFilterEngine.applyFilter(photo.uri, currentFilter, 1.0);
+          } catch (filterError) {
+            console.error("Failed to apply filter to captured photo:", filterError);
+            showErrorAlert("Could not apply the selected filter to the photo.");
+          }
+        }
+        setCapturedMedia(finalUri);
         setMediaType("photo");
+        if (currentFilter) {
+          setFilteredMediaUri(finalUri); // Keep track of filtered version
+        }
       } else {
         console.error("Photo capture failed - no image data received");
         showErrorAlert("Photo capture failed - no image data received.");
@@ -570,6 +618,12 @@ const CameraScreen: React.FC = () => {
    * Start web recording using MediaRecorder API
    */
   const startWebRecording = async () => {
+    if (currentFilter) {
+      // Use the new filtered recording flow
+      await startFilteredWebRecording();
+      return;
+    }
+
     try {
       // Get user media stream
       const constraints = {
@@ -637,12 +691,108 @@ const CameraScreen: React.FC = () => {
   };
 
   /**
+   * Start a filtered web recording using a canvas for real-time effects.
+   */
+  const startFilteredWebRecording = async () => {
+    if (!currentFilter) return;
+
+    try {
+      // 1. Get User Media
+      const constraints = {
+        video: {
+          facingMode: 'user',
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          ...(selectedCameraId && { deviceId: { exact: selectedCameraId } }),
+        },
+        audio: true,
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      videoStreamRef.current = stream;
+
+      // 2. Setup Hidden Video and Canvas
+      const hiddenVideo = document.createElement('video');
+      hiddenVideo.srcObject = stream;
+      hiddenVideo.muted = true;
+      hiddenVideo.playsInline = true;
+      hiddenVideo.play();
+
+      const canvas = document.createElement('canvas');
+      const videoTrack = stream.getVideoTracks()[0];
+      const settings = videoTrack.getSettings();
+      canvas.width = settings.width || 1280;
+      canvas.height = settings.height || 720;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Could not get 2D context from canvas');
+
+      // 3. Start Drawing Loop
+      const drawFrame = () => {
+        ctx.drawImage(hiddenVideo, 0, 0, canvas.width, canvas.height);
+        arFilterEngine.applyCanvasFilter(ctx, currentFilter, canvas.width, canvas.height, 1.0);
+        animationFrameId.current = requestAnimationFrame(drawFrame);
+      };
+      drawFrame();
+
+      // 4. Capture Filtered Stream and start MediaRecorder
+      const canvasStream = canvas.captureStream(30); // 30 FPS
+      const audioTracks = stream.getAudioTracks();
+      audioTracks.forEach(track => canvasStream.addTrack(track));
+
+      recordedChunksRef.current = [];
+      const options = { mimeType: 'video/webm;codecs=vp9,opus' };
+      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+        options.mimeType = 'video/webm';
+      }
+      mediaRecorderRef.current = new MediaRecorder(canvasStream, options);
+
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordedChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorderRef.current.onstop = () => {
+        const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        setCapturedMedia(url);
+        setMediaType("video");
+
+        // Full cleanup
+        if (animationFrameId.current) {
+          cancelAnimationFrame(animationFrameId.current);
+          animationFrameId.current = null;
+        }
+        if (videoStreamRef.current) {
+          videoStreamRef.current.getTracks().forEach(track => track.stop());
+          videoStreamRef.current = null;
+        }
+      };
+
+      mediaRecorderRef.current.start();
+
+    } catch (error) {
+      console.error("Filtered web recording failed:", error);
+      showErrorAlert("Failed to start filtered recording. Please try again.");
+      // Ensure we clean up if something fails during startup
+      if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
+      if (videoStreamRef.current) videoStreamRef.current.getTracks().forEach(track => track.stop());
+      setIsRecording(false);
+    }
+  };
+
+  /**
    * Stop video recording
    */
   const stopRecording = async () => {
     if (!isRecording) return;
 
     try {
+      // Stop the animation loop for filtered recordings
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
+        animationFrameId.current = null;
+      }
+
       if (Platform.OS === "web") {
         // Stop web recording
         if (
@@ -873,12 +1023,15 @@ const CameraScreen: React.FC = () => {
   };
 
   /**
-   * Discard captured media
+   * Discard captured media and return to camera
    */
   const discardMedia = async () => {
     try {
       setCapturedMedia(null);
       setMediaType(null);
+      setCurrentFilter(null); // Reset filter
+      setFilteredMediaUri(null);
+      setAppliedStickers([]); // Clear applied stickers
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch (error) {
       console.error("Discard media failed:", error);
@@ -909,6 +1062,149 @@ const CameraScreen: React.FC = () => {
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
+
+  // AR Filter Functions
+
+  /**
+   * Handle filter selection from filter selector
+   */
+  const handleFilterSelect = useCallback(async (filter: GamingFilterType | null) => {
+    try {
+      setCurrentFilter(filter);
+      // We keep the filter selector open to allow for quick changes.
+      // The user can close it manually if needed.
+      // setShowFilterSelector(false); 
+      
+      // If a photo is already taken, re-apply the filter to it
+      if (filter && capturedMedia && mediaType === 'photo') {
+        const filteredUri = await arFilterEngine.applyFilter(capturedMedia, filter, 1.0);
+        setFilteredMediaUri(filteredUri);
+      } else if (!filter) {
+        setFilteredMediaUri(null);
+      }
+      
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch (error) {
+      console.error('Filter selection failed:', error);
+      showErrorAlert('Failed to apply filter. Please try again.');
+    }
+  }, [capturedMedia, mediaType]);
+
+  /**
+   * Handle sticker selection from gaming stickers
+   */
+  const handleStickerSelect = useCallback(async (sticker: any) => {
+    try {
+      setShowGamingStickers(false);
+      
+      // Add sticker to the applied stickers list
+      const newSticker = {
+        id: `sticker_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        emoji: sticker.emoji,
+        name: sticker.name,
+        x: 50, // Center horizontally (percentage)
+        y: 50, // Center vertically (percentage)
+        scale: 1,
+        rotation: 0,
+      };
+      
+      setAppliedStickers(prev => [...prev, newSticker]);
+      
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch (error) {
+      console.error('Sticker selection failed:', error);
+    }
+  }, []);
+
+  /**
+   * Toggle gaming overlay display
+   */
+  const toggleGamingOverlay = useCallback(async () => {
+    try {
+      setShowGamingOverlay(!showGamingOverlay);
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch (error) {
+      console.error('Gaming overlay toggle failed:', error);
+    }
+  }, [showGamingOverlay]);
+
+  /**
+   * Start screen recording for gaming clips
+   */
+  const startScreenRecording = useCallback(async () => {
+    try {
+      const available = await screenRecorder.isAvailable();
+      if (!available) {
+        showAlert(
+          'Screen Recording Unavailable',
+          'Screen recording is not supported on this device or browser.',
+          [{ text: 'OK', style: 'default' }]
+        );
+        return;
+      }
+
+      await screenRecorder.startRecording({
+        quality: 'medium',
+        fps: 30,
+        duration: 60,
+        includeAudio: true,
+        optimizeForGaming: true,
+      });
+
+      setIsScreenRecording(true);
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      
+      showSuccessAlert('Screen recording started! Recording will automatically stop after 60 seconds.');
+    } catch (error) {
+      console.error('Screen recording start failed:', error);
+      showErrorAlert('Failed to start screen recording. Please try again.');
+    }
+  }, []);
+
+  /**
+   * Stop screen recording and save clip
+   */
+  const stopScreenRecording = useCallback(async () => {
+    try {
+      const result = await screenRecorder.stopRecording();
+      if (result) {
+        // Save the recording to device storage
+        await screenRecorder.saveToLibrary(result);
+        
+        setIsScreenRecording(false);
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        
+        showSuccessAlert('Gaming clip saved successfully!');
+      }
+    } catch (error) {
+      console.error('Screen recording stop failed:', error);
+      showErrorAlert('Failed to save screen recording.');
+    }
+  }, []);
+
+  /**
+   * Toggle filter selector visibility
+   */
+  const toggleFilterSelector = useCallback(async () => {
+    try {
+      setShowFilterSelector(!showFilterSelector);
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch (error) {
+      console.error('Filter selector toggle failed:', error);
+    }
+  }, [showFilterSelector]);
+
+  /**
+   * Toggle gaming stickers visibility
+   */
+  const toggleGamingStickers = useCallback(async () => {
+    try {
+      setShowGamingStickers(!showGamingStickers);
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch (error) {
+      console.error('Gaming stickers toggle failed:', error);
+    }
+  }, [showGamingStickers]);
 
   // Show permission request if not granted
   if (!cameraPermission || !microphonePermission) {
@@ -1030,7 +1326,7 @@ const CameraScreen: React.FC = () => {
               </Text>
 
               {/* Actual Media Preview */}
-              <View className="w-80 h-96 bg-gray-800 rounded-lg overflow-hidden mb-8 border-2 border-cyber-cyan">
+              <View className="w-80 h-96 bg-gray-800 rounded-lg overflow-hidden mb-8 border-2 border-cyber-cyan relative">
                 {mediaType === "photo" && capturedMedia ? (
                   <Image
                     source={{ uri: capturedMedia }}
@@ -1059,7 +1355,42 @@ const CameraScreen: React.FC = () => {
                     />
                   </View>
                 )}
+                
+                {/* Sticker Overlay */}
+                {appliedStickers.map((sticker) => (
+                  <Pressable
+                    key={sticker.id}
+                    className="absolute"
+                    style={{
+                      left: `${sticker.x}%`,
+                      top: `${sticker.y}%`,
+                      transform: [
+                        { translateX: -20 }, // Half of sticker size for centering
+                        { translateY: -20 },
+                        { scale: sticker.scale },
+                        { rotate: `${sticker.rotation}deg` },
+                      ],
+                    }}
+                    onPress={() => {
+                      // Remove sticker on tap
+                      setAppliedStickers(prev => 
+                        prev.filter(s => s.id !== sticker.id)
+                      );
+                    }}
+                  >
+                    <View className="w-10 h-10 items-center justify-center bg-white/10 rounded-full">
+                      <Text style={{ fontSize: 24 }}>{sticker.emoji}</Text>
+                    </View>
+                  </Pressable>
+                ))}
               </View>
+              
+              {/* Sticker Instructions */}
+              {appliedStickers.length > 0 && (
+                <Text className="text-white/60 font-inter text-sm text-center mb-4">
+                  💡 Tap stickers to remove them
+                </Text>
+              )}
             </View>
 
             {/* Action Buttons */}
@@ -1219,6 +1550,9 @@ const CameraScreen: React.FC = () => {
           mute={false}
         />
 
+        {/* Real-time Filter Preview */}
+        <FilterPreview filter={currentFilter} />
+
         {/* Top Controls - Absolutely positioned */}
         <View className="absolute top-0 left-0 right-0 z-10 px-6 py-4 bg-black/30">
           {/* First Row: Flash, Title, Messages */}
@@ -1373,22 +1707,63 @@ const CameraScreen: React.FC = () => {
                 {isStoryMode ? "Add to Story" : "Send Snap"}
               </Text>
 
-              <View className="w-8" />
+              {/* AR Filter Controls */}
+              <View className="flex-row">
+                <TouchableOpacity onPress={toggleFilterSelector} className="p-2 mr-2">
+                  <Ionicons name="color-filter" size={20} color={currentFilter ? accentColor : "white"} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={toggleGamingStickers} className="p-2">
+                  <Ionicons name="happy" size={20} color="white" />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Media Display */}
-            <View className="flex-1 justify-center items-center px-4">
+            <View className="flex-1 justify-center items-center px-4 relative">
               {mediaType === "photo" ? (
-                <Image
-                  source={{ uri: capturedMedia }}
-                  style={{
-                    width: screenWidth - 32,
-                    height: screenHeight * 0.7,
-                  }}
-                  resizeMode="contain"
-                />
+                <View className="relative" style={{
+                  width: screenWidth - 32,
+                  height: screenHeight * 0.7,
+                }}>
+                  <Image
+                    source={{ uri: filteredMediaUri || capturedMedia }}
+                    style={{
+                      width: screenWidth - 32,
+                      height: screenHeight * 0.7,
+                    }}
+                    resizeMode="contain"
+                  />
+                  
+                  {/* Sticker Overlay for Photo */}
+                  {appliedStickers.map((sticker) => (
+                    <Pressable
+                      key={sticker.id}
+                      className="absolute"
+                      style={{
+                        left: `${sticker.x}%`,
+                        top: `${sticker.y}%`,
+                        transform: [
+                          { translateX: -20 },
+                          { translateY: -20 },
+                          { scale: sticker.scale },
+                          { rotate: `${sticker.rotation}deg` },
+                        ],
+                      }}
+                      onPress={() => {
+                        setAppliedStickers(prev => 
+                          prev.filter(s => s.id !== sticker.id)
+                        );
+                      }}
+                    >
+                      <View className="w-10 h-10 items-center justify-center bg-white/10 rounded-full">
+                        <Text style={{ fontSize: 32 }}>{sticker.emoji}</Text>
+                      </View>
+                    </Pressable>
+                  ))}
+                </View>
               ) : mediaType === "video" && capturedMedia ? (
                 <View
+                  className="relative"
                   style={{
                     width: screenWidth - 32,
                     height: screenHeight * 0.7,
@@ -1408,6 +1783,33 @@ const CameraScreen: React.FC = () => {
                     shouldPlay={false}
                     isLooping={false}
                   />
+                  
+                  {/* Sticker Overlay for Video */}
+                  {appliedStickers.map((sticker) => (
+                    <Pressable
+                      key={sticker.id}
+                      className="absolute"
+                      style={{
+                        left: `${sticker.x}%`,
+                        top: `${sticker.y}%`,
+                        transform: [
+                          { translateX: -20 },
+                          { translateY: -20 },
+                          { scale: sticker.scale },
+                          { rotate: `${sticker.rotation}deg` },
+                        ],
+                      }}
+                      onPress={() => {
+                        setAppliedStickers(prev => 
+                          prev.filter(s => s.id !== sticker.id)
+                        );
+                      }}
+                    >
+                      <View className="w-10 h-10 items-center justify-center bg-white/10 rounded-full">
+                        <Text style={{ fontSize: 32 }}>{sticker.emoji}</Text>
+                      </View>
+                    </Pressable>
+                  ))}
                 </View>
               ) : (
                 <View className="w-full h-96 bg-cyber-dark rounded-lg justify-center items-center">
@@ -1417,15 +1819,80 @@ const CameraScreen: React.FC = () => {
                   </Text>
                 </View>
               )}
+
+              {/* Gaming Overlay */}
+              {showGamingOverlay && (
+                <GamingOverlay
+                  type={overlayType}
+                  position={{ x: 20, y: 20 }}
+                  size={{ width: 200, height: 100 }}
+                  data={{
+                    gameMode: 'VICTORY',
+                    health: 85,
+                    maxHealth: 100,
+                    score: 12450,
+                    level: 15,
+                    time: '02:45'
+                  }}
+                  animated={true}
+                />
+              )}
+              
+              {/* Sticker Instructions */}
+              {appliedStickers.length > 0 && (
+                <Text className="text-white/60 font-inter text-sm text-center mt-4">
+                  💡 Tap stickers to remove them
+                </Text>
+              )}
             </View>
 
             {/* Action Buttons */}
             <View
               className="px-6"
               style={{
-                paddingBottom: Math.max(tabBarHeight + 8, 32), // Dynamic tab bar height + padding
+                paddingBottom: Math.max(tabBarHeight + 8, 32),
               }}
             >
+              <View className="flex-row justify-between mb-4">
+                {/* Gaming Controls */}
+                <TouchableOpacity
+                  onPress={toggleGamingOverlay}
+                  className={`py-2 px-4 rounded-lg ${
+                    showGamingOverlay 
+                      ? 'bg-cyber-cyan/20 border border-cyber-cyan' 
+                      : 'bg-cyber-gray/20'
+                  }`}
+                >
+                  <Text 
+                    className="text-xs font-medium"
+                    style={{ 
+                      color: showGamingOverlay ? accentColor : theme.colors.text.secondary 
+                    }}
+                  >
+                    🎮 Gaming HUD
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Screen Recording Toggle */}
+                <TouchableOpacity
+                  onPress={isScreenRecording ? stopScreenRecording : startScreenRecording}
+                  className={`py-2 px-4 rounded-lg ${
+                    isScreenRecording 
+                      ? 'bg-red-500/20 border border-red-500' 
+                      : 'bg-cyber-gray/20'
+                  }`}
+                >
+                  <Text 
+                    className="text-xs font-medium"
+                    style={{ 
+                      color: isScreenRecording ? '#ef4444' : theme.colors.text.secondary 
+                    }}
+                  >
+                    📹 {isScreenRecording ? 'Stop Recording' : 'Record Screen'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
               {isStoryMode ? (
                 // Story Mode Actions
                 <TouchableOpacity
@@ -1452,6 +1919,62 @@ const CameraScreen: React.FC = () => {
             </View>
           </SafeAreaView>
         </Modal>
+      )}
+
+      {/* AR Filter Components */}
+      <FilterSelector
+        visible={showFilterSelector}
+        currentFilter={currentFilter}
+        onFilterSelect={handleFilterSelect}
+        onClose={() => setShowFilterSelector(false)}
+      />
+
+      <GamingStickers
+        visible={showGamingStickers}
+        onStickerSelect={handleStickerSelect}
+        onClose={() => setShowGamingStickers(false)}
+      />
+
+      {/* Gaming Overlay Toggle Button */}
+      {!capturedMedia && (
+        <View className="absolute right-6 top-32 z-20">
+          <TouchableOpacity
+            onPress={toggleFilterSelector}
+            className={`w-12 h-12 rounded-full items-center justify-center ${
+              currentFilter 
+                ? 'bg-cyber-cyan/20 border-2 border-cyber-cyan' 
+                : 'bg-black/50'
+            }`}
+          >
+            <Ionicons 
+              name="color-filter" 
+              size={20} 
+              color={currentFilter ? accentColor : "white"} 
+            />
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            onPress={toggleGamingStickers}
+            className="w-12 h-12 bg-black/50 rounded-full items-center justify-center mt-3"
+          >
+            <Ionicons name="happy" size={20} color="white" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={isScreenRecording ? stopScreenRecording : startScreenRecording}
+            className={`w-12 h-12 rounded-full items-center justify-center mt-3 ${
+              isScreenRecording 
+                ? 'bg-red-500/20 border-2 border-red-500' 
+                : 'bg-black/50'
+            }`}
+          >
+            <Ionicons 
+              name="videocam" 
+              size={20} 
+              color={isScreenRecording ? '#ef4444' : "white"} 
+            />
+          </TouchableOpacity>
+        </View>
       )}
     </SafeAreaView>
   );
