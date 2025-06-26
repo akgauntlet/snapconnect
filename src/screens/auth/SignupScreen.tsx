@@ -181,6 +181,14 @@ const SignupScreen: React.FC<SignupScreenProps> = () => {
       await signUpWithEmail(email, password, displayName, { username });
       // Navigation will be handled by auth state change
     } catch (error: any) {
+      // Check if this is the "email already exists" error
+      if (error.message === 'An account already exists with this email address.') {
+        // For email already exists, the error is already set in the store state
+        // and will be displayed inline. Don't show modal.
+        return;
+      }
+      
+      // For all other errors, show the modal as before
       showErrorAlert(error.message, 'Sign Up Failed');
     }
   };

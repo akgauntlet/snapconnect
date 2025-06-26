@@ -24,17 +24,19 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useState } from 'react';
+import { useFocusEffect, useRoute } from '@react-navigation/native';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Modal, RefreshControl, SafeAreaView, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 
 import MediaViewer from '../../components/common/MediaViewer';
+import MessageFriendSelector from '../../components/common/MessageFriendSelector';
 import { useTabBarHeight } from '../../hooks/useTabBarHeight';
+import { friendsService } from '../../services/firebase/friendsService';
 import { messagingService } from '../../services/firebase/messagingService';
 import { realtimeService } from '../../services/firebase/realtimeService';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
-import { showAlert, showConfirmAlert, showDestructiveAlert } from '../../utils/alertService';
+import { showAlert, showConfirmAlert, showDestructiveAlert, showSuccessAlert } from '../../utils/alertService';
 
 /**
  * Interface for conversation data
@@ -68,6 +70,15 @@ interface IncomingMessage {
 }
 
 /**
+ * Route parameters interface
+ */
+interface MessagesScreenParams {
+  friendId?: string;
+  friendName?: string;
+  openConversation?: boolean;
+}
+
+/**
  * Enhanced messages screen component with real-time media sharing
  * 
  * @returns {React.ReactElement} Rendered messages interface
@@ -87,11 +98,16 @@ const MessagesScreen: React.FC = () => {
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
   const { user } = useAuthStore();
   const { tabBarHeight } = useTabBarHeight();
+  const route = useRoute();
+  
+  // Get route parameters
+  const params = route.params as MessagesScreenParams;
   
   // Component state
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [incomingMessages, setIncomingMessages] = useState<IncomingMessage[]>([]);
   const [selectedMedia, setSelectedMedia] = useState<IncomingMessage | null>(null);
+  const [showFriendSelector, setShowFriendSelector] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -137,22 +153,35 @@ const MessagesScreen: React.FC = () => {
   /**
    * Handle conversation updates with better formatting
    */
-  const handleConversationUpdates = useCallback((updatedConversations: any[]) => {
+  const handleConversationUpdates = useCallback(async (updatedConversations: any[]) => {
     if (!user) return;
+    
+    // Get all other participants for presence checking
+    const otherParticipants = updatedConversations.map(conv => 
+      conv.participants.find((p: string) => p !== user.uid)
+    ).filter(Boolean);
+    
+    // Get presence data for all participants
+    const presenceData = await friendsService.getBatchUserPresence(otherParticipants) as Record<string, {
+      status: 'online' | 'offline' | 'away';
+      lastActive: Date;
+      isOnline: boolean;
+    }>;
     
     const formattedConversations: Conversation[] = updatedConversations.map(conv => {
       const otherParticipant = conv.participants.find((p: string) => p !== user.uid);
+      const presence = presenceData[otherParticipant] || { status: 'offline', lastActive: new Date(), isOnline: false };
       
       return {
         id: conv.id,
-        name: otherParticipant || 'Unknown User', // TODO: Fetch actual display name
-        lastMessage: 'New message', // TODO: Show actual last message content
+        name: otherParticipant || 'Unknown User', // TODO: Fetch actual display name from user profiles
+        lastMessage: conv.lastMessage || 'New message', // Use actual last message if available
         time: formatTime(conv.lastMessageAt?.toDate() || new Date()),
-        isOnline: Math.random() > 0.5, // TODO: Get actual presence
+        isOnline: presence.isOnline,
         participants: conv.participants,
         lastMessageAt: conv.lastMessageAt?.toDate() || new Date(),
-        hasUnreadMedia: Math.random() > 0.7, // TODO: Check for actual unread media
-        unreadCount: Math.floor(Math.random() * 5) // TODO: Get actual unread count
+        hasUnreadMedia: conv.hasUnreadMedia || false,
+        unreadCount: conv.unreadCount || 0
       };
     });
     
@@ -192,6 +221,66 @@ const MessagesScreen: React.FC = () => {
       setError('Failed to load conversations.');
     }
   }, [user, handleConversationUpdates]);
+
+  /**
+   * Handle incoming navigation parameters to start a conversation
+   */
+  const handleNavigationParams = useCallback(async () => {
+    if (!user || !params?.friendId || !params?.openConversation) return;
+    
+    try {
+      console.log('🔄 Starting conversation with friend:', params.friendName);
+      
+      // Get or create conversation ID
+      const conversationId = messagingService.getConversationId(user.uid, params.friendId);
+      
+      // Check if conversation already exists
+      const existingConversations = await messagingService.getRecentConversations(user.uid);
+      const existingConversation = existingConversations.find(conv => conv.id === conversationId);
+      
+      if (!existingConversation) {
+        // Create a new conversation
+        const { getFirebaseDB } = require('../../config/firebase');
+        const db = getFirebaseDB();
+        const { firebase } = require('../../config/firebase');
+        
+        await db.collection('conversations').doc(conversationId).set({
+          participants: [user.uid, params.friendId],
+          lastMessageId: null,
+          lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        console.log('✅ Created new conversation:', conversationId);
+      }
+      
+      // Show success message
+      showSuccessAlert(
+        `Ready to chat with ${params.friendName}!`,
+        'Conversation Ready'
+      );
+      
+      // Refresh conversations to show the updated list
+      await loadConversations();
+      
+    } catch (error) {
+      console.error('❌ Failed to start conversation:', error);
+      showAlert(
+        'Failed to Start Conversation',
+        'Please try again later.',
+        [{ text: 'OK', style: 'default' }]
+      );
+    }
+  }, [user, params, loadConversations]);
+
+  /**
+   * Handle navigation parameters when screen receives new params
+   */
+  useEffect(() => {
+    if (params?.openConversation) {
+      handleNavigationParams();
+    }
+  }, [params, handleNavigationParams]);
 
   /**
    * Initialize real-time listeners when screen is focused
@@ -344,17 +433,71 @@ const MessagesScreen: React.FC = () => {
   }, []);
 
   /**
-   * Handle new conversation
+   * Handle new conversation - now opens friend selector
    */
   const handleNewConversation = useCallback(() => {
-    // TODO: Show friends list for new conversation
-    showConfirmAlert(
-      'New Conversation',
-      'Select a friend to start a new conversation',
-      () => {
-        showAlert('Coming Soon', 'Friend selection will be implemented next!');
+    setShowFriendSelector(true);
+  }, []);
+
+  /**
+   * Handle friend selection for new conversation
+   */
+  const handleFriendSelected = useCallback(async (friendId: string, friendData: any) => {
+    if (!user) return;
+    
+    try {
+      // Get or create conversation ID using messaging service method
+      const conversationId = messagingService.getConversationId(user.uid, friendId);
+      
+      // Check if conversation already exists
+      const existingConversations = await messagingService.getRecentConversations(user.uid);
+      const existingConversation = existingConversations.find(conv => conv.id === conversationId);
+      
+      if (existingConversation) {
+        showSuccessAlert(
+          `Conversation with ${friendData.displayName} is ready!`,
+          'Conversation Found'
+        );
+      } else {
+        // Create a new conversation by adding it to the conversations collection
+        const { getFirebaseDB } = require('../../config/firebase');
+        const db = getFirebaseDB();
+        const { firebase } = require('../../config/firebase');
+        
+        await db.collection('conversations').doc(conversationId).set({
+          participants: [user.uid, friendId],
+          lastMessageId: null,
+          lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        showSuccessAlert(
+          `Started conversation with ${friendData.displayName}!`,
+          'Conversation Created'
+        );
       }
-    );
+      
+      // TODO: Navigate to conversation detail screen
+      console.log('Navigate to conversation:', conversationId);
+      
+      // Refresh conversations to show the new one
+      await loadConversations();
+      
+    } catch (error) {
+      console.error('Create conversation failed:', error);
+      showAlert(
+        'Failed to Start Conversation',
+        'Please try again later.',
+        [{ text: 'OK', style: 'default' }]
+      );
+    }
+  }, [user, loadConversations]);
+
+  /**
+   * Close friend selector
+   */
+  const closeFriendSelector = useCallback(() => {
+    setShowFriendSelector(false);
   }, []);
 
   /**
@@ -550,6 +693,13 @@ const MessagesScreen: React.FC = () => {
           />
         </Modal>
       )}
+
+      {/* Friend Selector Modal */}
+      <MessageFriendSelector
+        visible={showFriendSelector}
+        onSelectFriend={handleFriendSelected}
+        onClose={closeFriendSelector}
+      />
     </>
   );
 };

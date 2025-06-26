@@ -29,6 +29,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
+    Image,
     SafeAreaView,
     ScrollView,
     StatusBar,
@@ -65,9 +66,9 @@ interface FriendProfile {
 }
 
 /**
- * Friendship status type
+ * Friendship status type - updated to match service response
  */
-type FriendshipStatus = 'friends' | 'pending' | 'none' | 'blocked';
+type FriendshipStatus = 'friends' | 'pending_sent' | 'pending_received' | 'none' | 'self';
 
 /**
  * Navigation prop types
@@ -113,70 +114,184 @@ const FriendProfileScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   /**
-   * Load friend profile data
+   * Helper function to safely convert Firestore timestamp or Date to Date object
+   */
+  const safeToDate = (dateValue: any): Date => {
+    if (!dateValue) return new Date();
+    
+    // If it's already a Date object, return it
+    if (dateValue instanceof Date) {
+      return dateValue;
+    }
+    
+    // If it's a Firestore Timestamp with toDate method
+    if (dateValue && typeof dateValue.toDate === 'function') {
+      return dateValue.toDate();
+    }
+    
+    // If it's a timestamp number
+    if (typeof dateValue === 'number') {
+      return new Date(dateValue);
+    }
+    
+    // If it's a string that can be parsed
+    if (typeof dateValue === 'string') {
+      const parsed = new Date(dateValue);
+      return isNaN(parsed.getTime()) ? new Date() : parsed;
+    }
+    
+    // Fallback to current date
+    return new Date();
+  };
+
+  /**
+   * Load friend profile data - enhanced to handle all scenarios
    */
   const loadFriendProfile = useCallback(async () => {
     try {
       setError(null);
 
-      // If we have initial friend data, use it
+      if (!user) {
+        setError('Authentication required to view profiles.');
+        setIsLoading(false);
+        return;
+      }
+
+      // If we have initial friend data, use optimized path
       if (initialFriend) {
+        console.log('🔄 Loading profile with initial data for:', initialFriend.displayName);
+        
+        // Get real data in parallel for better performance
+        const [mutualFriendsCount, friendIds, userStats, userPresence] = await Promise.all([
+          friendsService.getMutualFriendsCount(user.uid, initialFriend.id),
+          friendsService.getFriendIds(initialFriend.id),
+          friendsService.getUserStats(initialFriend.id),
+          friendsService.getUserPresence(initialFriend.id)
+        ]);
+        
+        // Type assertions for Firebase data
+        const stats = userStats as {
+          snapsSent?: number;
+          snapsReceived?: number;
+          streaks?: number;
+          storiesShared?: number;
+          joinedDate?: Date;
+          lastActive?: Date;
+        };
+        
+        const presence = userPresence as {
+          status: 'online' | 'offline' | 'away';
+          lastActive: Date;
+          isOnline: boolean;
+        };
+        
         const enrichedProfile: FriendProfile = {
           id: initialFriend.id,
           displayName: initialFriend.displayName || 'Unknown User',
           username: initialFriend.username || 'no-username',
           profilePhoto: initialFriend.profilePhoto,
           bio: initialFriend.bio || 'Gaming enthusiast • SnapConnect user',
-          joinedDate: initialFriend.createdAt?.toDate() || new Date(),
-          lastActive: initialFriend.lastActive?.toDate(),
-          isOnline: Math.random() > 0.5, // TODO: Real presence detection
-          mutualFriends: initialFriend.mutualFriends || Math.floor(Math.random() * 15),
-          totalFriends: Math.floor(Math.random() * 150) + 10,
-          snapsSent: Math.floor(Math.random() * 1000) + 50,
-          snapsReceived: Math.floor(Math.random() * 1000) + 50,
-          streaks: Math.floor(Math.random() * 20),
+          joinedDate: safeToDate(initialFriend.createdAt) || stats.joinedDate || new Date(),
+          lastActive: presence.lastActive,
+          isOnline: presence.isOnline,
+          mutualFriends: mutualFriendsCount,
+          totalFriends: friendIds.length,
+          snapsSent: stats.snapsSent || 0,
+          snapsReceived: stats.snapsReceived || 0,
+          streaks: stats.streaks || 0,
           gamingPlatform: initialFriend.gamingPlatform || 'Multiple Platforms',
-          favoriteGames: initialFriend.favoriteGames || ['Valorant', 'League of Legends', 'Among Us'],
-          achievements: ['Early Adopter', 'Social Butterfly', 'Snap Streak Master'],
-          status: Math.random() > 0.6 ? 'online' : Math.random() > 0.3 ? 'away' : 'offline',
+          favoriteGames: initialFriend.favoriteGames || [],
+          achievements: initialFriend.achievements || [],
+          status: presence.status,
         };
 
         setFriendProfile(enrichedProfile);
       } else {
-        // TODO: Fetch complete profile from Firebase
-        console.log('Fetching profile for:', friendId);
+        // Fallback: fetch complete profile using new enriched method
+        console.log('🔄 Loading complete profile for:', friendId);
+        
+        const enrichedProfileData = await friendsService.getEnrichedUserProfile(user.uid, friendId);
+        
+        if (!enrichedProfileData) {
+          setError('User profile not found.');
+          setIsLoading(false);
+          return;
+        }
+        
+        // Type assertion for the enriched profile data
+        const enrichedProfile = enrichedProfileData as any;
+        
+        // Transform enriched profile to match our interface
+        const transformedProfile: FriendProfile = {
+          id: enrichedProfile.id,
+          displayName: enrichedProfile.displayName || 'Unknown User',
+          username: enrichedProfile.username || 'no-username',
+          profilePhoto: enrichedProfile.profilePhoto,
+          bio: enrichedProfile.bio || 'Gaming enthusiast • SnapConnect user',
+          joinedDate: safeToDate(enrichedProfile.joinedDate),
+          lastActive: safeToDate(enrichedProfile.lastActive),
+          isOnline: enrichedProfile.isOnline || false,
+          mutualFriends: enrichedProfile.mutualFriends || 0,
+          totalFriends: enrichedProfile.totalFriends || 0,
+          snapsSent: enrichedProfile.snapsSent || 0,
+          snapsReceived: enrichedProfile.snapsReceived || 0,  
+          streaks: enrichedProfile.streaks || 0,
+          gamingPlatform: enrichedProfile.gamingPlatform || 'Multiple Platforms',
+          favoriteGames: enrichedProfile.favoriteGames || [],
+          achievements: enrichedProfile.achievements || [],
+          status: enrichedProfile.status || 'offline',
+        };
+        
+        setFriendProfile(transformedProfile);
+        
+        // Set friendship status from enriched data
+        if (enrichedProfile.friendshipStatus) {
+          setFriendshipStatus(enrichedProfile.friendshipStatus);
+        }
       }
     } catch (error) {
-      console.error('Load friend profile failed:', error);
-      setError('Failed to load friend profile.');
+      console.error('❌ Load friend profile failed:', error);
+      setError('Failed to load friend profile. Please check your connection and try again.');
     } finally {
       setIsLoading(false);
     }
-  }, [initialFriend, friendId]);
+  }, [initialFriend, friendId, user]);
 
   /**
-   * Check friendship status
+   * Check friendship status - enhanced to use new service method
    */
   const checkFriendshipStatus = useCallback(async () => {
-    if (!user) return;
+    if (!user || user.uid === friendId) {
+      setFriendshipStatus('self');
+      return;
+    }
 
     try {
-      // TODO: Implement checkFriendshipStatus in friendsService
-      // For now, determine status based on whether this is a request view
-      if (isRequest) {
-        setFriendshipStatus('none');
-      } else {
-        // Check if they're in our friends list
-        const friends = await friendsService.getFriends(user.uid);
-        const isFriend = friends.some(friend => friend.id === friendId);
-        setFriendshipStatus(isFriend ? 'friends' : 'none');
+      // Use the new enhanced friendship status check
+      const status = await friendsService.checkFriendshipStatus(user.uid, friendId);
+      
+      // Map service status to component status
+      switch (status) {
+        case 'friends':
+          setFriendshipStatus('friends');
+          break;
+        case 'pending_sent':
+          setFriendshipStatus('pending_sent');
+          break;
+        case 'pending_received':
+          setFriendshipStatus('pending_received');
+          break;
+        case 'none':
+        default:
+          setFriendshipStatus('none');
+          break;
       }
     } catch (error) {
-      console.error('Check friendship status failed:', error);
+      console.error('❌ Check friendship status failed:', error);
       // Default to none if check fails
       setFriendshipStatus('none');
     }
-  }, [user, isRequest, friendId]);
+  }, [user, friendId]);
 
   /**
    * Load friend profile on component mount
@@ -195,7 +310,7 @@ const FriendProfileScreen: React.FC = () => {
     try {
       setIsProcessing(true);
       await friendsService.sendFriendRequest(user.uid, friendId);
-      setFriendshipStatus('pending');
+      setFriendshipStatus('pending_sent');
       
       showSuccessAlert(
         `Friend request sent to ${friendProfile.displayName}!`,
@@ -241,9 +356,89 @@ const FriendProfileScreen: React.FC = () => {
    * Send message to friend
    */
   const sendMessage = useCallback(() => {
-    // TODO: Navigate to messaging with this friend
-    navigation.navigate('Messages', { friendId, friendName: friendProfile?.displayName });
+    // Navigate to Messages tab with friend information
+    navigation.navigate('MainTabs', {
+      screen: 'Messages',
+      params: {
+        friendId,
+        friendName: friendProfile?.displayName,
+        openConversation: true
+      }
+    });
   }, [navigation, friendId, friendProfile]);
+
+  /**
+   * Accept friend request
+   */
+  const acceptFriendRequest = useCallback(async () => {
+    if (!user || !friendProfile) return;
+
+    try {
+      setIsProcessing(true);
+      
+      // Find the pending request to get the request ID
+      const pendingRequests = await friendsService.getPendingFriendRequests(user.uid);
+      const incomingRequest = pendingRequests.find(
+        req => req.type === 'incoming' && req.fromUserId === friendId
+      );
+      
+      if (incomingRequest) {
+        await friendsService.acceptFriendRequest(incomingRequest.id, user.uid);
+        setFriendshipStatus('friends');
+        
+        showSuccessAlert(
+          `You and ${friendProfile.displayName} are now friends!`,
+          'Friend Request Accepted'
+        );
+      } else {
+        showErrorAlert('Friend request not found. It may have been cancelled.');
+      }
+    } catch (error) {
+      console.error('Accept friend request failed:', error);
+      showErrorAlert('Failed to accept friend request. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [user, friendId, friendProfile]);
+
+  /**
+   * Decline friend request
+   */
+  const declineFriendRequest = useCallback(async () => {
+    if (!user || !friendProfile) return;
+
+    showDestructiveAlert(
+      'Decline Friend Request',
+      `Are you sure you want to decline the friend request from ${friendProfile.displayName}?`,
+      async () => {
+        try {
+          setIsProcessing(true);
+          
+          // Find the pending request to get the request ID
+          const pendingRequests = await friendsService.getPendingFriendRequests(user.uid);
+          const incomingRequest = pendingRequests.find(
+            req => req.type === 'incoming' && req.fromUserId === friendId
+          );
+          
+          if (incomingRequest) {
+            await friendsService.declineFriendRequest(incomingRequest.id, user.uid);
+            setFriendshipStatus('none');
+            
+            showSuccessAlert(`Friend request from ${friendProfile.displayName} has been declined.`);
+          } else {
+            showErrorAlert('Friend request not found. It may have been cancelled.');
+          }
+        } catch (error) {
+          console.error('Decline friend request failed:', error);
+          showErrorAlert('Failed to decline friend request. Please try again.');
+        } finally {
+          setIsProcessing(false);
+        }
+      },
+      undefined,
+      'Decline'
+    );
+  }, [user, friendId, friendProfile]);
 
   /**
    * Get user initials
@@ -293,7 +488,7 @@ const FriendProfileScreen: React.FC = () => {
   };
 
   /**
-   * Render action button based on friendship status
+   * Render action button based on friendship status - enhanced for new status types
    */
   const renderActionButton = () => {
     if (isProcessing) {
@@ -306,6 +501,15 @@ const FriendProfileScreen: React.FC = () => {
     }
 
     switch (friendshipStatus) {
+      case 'self':
+        return (
+          <View className="bg-cyber-gray/20 px-6 py-3 rounded-lg">
+            <Text className="text-white/60 font-inter font-medium text-center">
+              This is your profile
+            </Text>
+          </View>
+        );
+
       case 'friends':
         return (
           <View className="flex-row space-x-3">
@@ -326,12 +530,32 @@ const FriendProfileScreen: React.FC = () => {
           </View>
         );
 
-      case 'pending':
+      case 'pending_sent':
         return (
-          <View className="bg-cyber-gray/20 px-6 py-3 rounded-lg">
-            <Text className="text-white/60 font-inter font-medium text-center">
-              Friend Request Pending
+          <View className="bg-amber-500/20 px-6 py-3 rounded-lg">
+            <Text className="text-amber-400 font-inter font-medium text-center">
+              Friend Request Sent
             </Text>
+          </View>
+        );
+
+      case 'pending_received':
+        return (
+          <View className="flex-row space-x-3">
+            <TouchableOpacity
+              onPress={acceptFriendRequest}
+              className="flex-1 bg-green-500/20 px-6 py-3 rounded-lg flex-row items-center justify-center"
+            >
+              <Ionicons name="checkmark-circle" size={20} color="#10b981" />
+              <Text className="text-green-400 font-inter font-semibold ml-2">Accept Request</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              onPress={declineFriendRequest}
+              className="bg-red-500/20 px-4 py-3 rounded-lg"
+            >
+              <Ionicons name="close-circle" size={20} color="#ef4444" />
+            </TouchableOpacity>
           </View>
         );
 
@@ -359,6 +583,48 @@ const FriendProfileScreen: React.FC = () => {
       <Text className="text-white/60 font-inter text-sm">{label}</Text>
     </View>
   );
+
+  /**
+   * Render profile avatar with proper image handling
+   */
+  const renderProfileAvatar = () => {
+    if (!friendProfile) return null;
+    
+    if (friendProfile.profilePhoto) {
+      return (
+        <View className="relative mb-4">
+          <Image
+            source={{ uri: friendProfile.profilePhoto }}
+            className="w-24 h-24 rounded-full"
+            onError={() => {
+              // Fallback to initials if image fails to load
+              console.warn('Failed to load profile photo for:', friendProfile.displayName);
+            }}
+          />
+          {/* Status indicator */}
+          <View 
+            className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-4 border-cyber-black"
+            style={{ backgroundColor: getStatusColor(friendProfile.status) }}
+          />
+        </View>
+      );
+    } else {
+      return (
+        <View className="relative mb-4">
+          <View className="w-24 h-24 bg-cyber-cyan/20 rounded-full justify-center items-center">
+            <Text className="text-cyber-cyan font-inter font-bold text-2xl">
+              {getUserInitials()}
+            </Text>
+          </View>
+          {/* Status indicator */}
+          <View 
+            className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-4 border-cyber-black"
+            style={{ backgroundColor: getStatusColor(friendProfile.status) }}
+          />
+        </View>
+      );
+    }
+  };
 
   if (isLoading) {
     return (
@@ -417,18 +683,7 @@ const FriendProfileScreen: React.FC = () => {
         {/* Profile Header */}
         <View className="items-center px-6 py-8">
           {/* Avatar with status */}
-          <View className="relative mb-4">
-            <View className="w-24 h-24 bg-cyber-cyan/20 rounded-full justify-center items-center">
-              <Text className="text-cyber-cyan font-inter font-bold text-2xl">
-                {getUserInitials()}
-              </Text>
-            </View>
-            {/* Status indicator */}
-            <View 
-              className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-4 border-cyber-black"
-              style={{ backgroundColor: getStatusColor(friendProfile.status) }}
-            />
-          </View>
+          {renderProfileAvatar()}
 
           {/* Name and username */}
           <Text className="text-white font-inter font-bold text-2xl mb-1">

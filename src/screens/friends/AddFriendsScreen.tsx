@@ -38,6 +38,7 @@ import {
 } from 'react-native';
 import NotificationBadge from '../../components/common/NotificationBadge';
 import { useFriendRequests } from '../../hooks/useFriendRequests';
+import { useTabBarHeight } from '../../hooks/useTabBarHeight';
 import { friendsService } from '../../services/firebase/friendsService';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
@@ -97,6 +98,7 @@ const AddFriendsScreen: React.FC = () => {
   const theme = useThemeStore((state) => state.theme);
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
   const { user } = useAuthStore();
+  const { tabBarHeight } = useTabBarHeight();
 
   // Get source tab from route params
   const sourceTab = route.params?.sourceTab || 'Profile';
@@ -127,13 +129,16 @@ const AddFriendsScreen: React.FC = () => {
       // Get friend suggestions from Firebase
       const suggestionsData = await friendsService.getFriendSuggestions(user.uid, []);
 
-      // Transform to display format
+      // Transform to display format with batch mutual friends count calculation
+      const userIds = suggestionsData.map(suggestion => suggestion.id);
+      const mutualFriendsCounts = await friendsService.getBatchMutualFriendsCount(user.uid, userIds) as Record<string, number>;
+      
       const formattedSuggestions: FriendSuggestion[] = suggestionsData.map(suggestion => ({
         id: suggestion.id,
         displayName: suggestion.displayName || suggestion.username || 'Unknown User',
         username: suggestion.username || 'no-username',
         profilePhoto: suggestion.profilePhoto,
-        mutualFriends: Math.floor(Math.random() * 15), // TODO: Calculate real mutual friends
+        mutualFriends: mutualFriendsCounts[suggestion.id] || 0,
         reason: suggestion.reason || 'mutual',
         bio: suggestion.bio || 'Gaming enthusiast • SnapConnect user',
       }));
@@ -159,13 +164,16 @@ const AddFriendsScreen: React.FC = () => {
 
       const results = await friendsService.searchUsers(query, user.uid);
 
-      // Transform to display format
+      // Transform to display format with batch mutual friends count calculation
+      const resultUserIds = results.map(result => result.id);
+      const mutualFriendsCounts = await friendsService.getBatchMutualFriendsCount(user.uid, resultUserIds) as Record<string, number>;
+      
       const formattedResults: SearchUser[] = results.map(result => ({
         id: result.id,
         displayName: result.displayName || result.username || 'Unknown User',
         username: result.username || 'no-username',
         profilePhoto: result.profilePhoto,
-        mutualFriends: Math.floor(Math.random() * 10), // TODO: Calculate real mutual friends
+        mutualFriends: mutualFriendsCounts[result.id] || 0,
         isFriend: false, // TODO: Check if already friends
         requestSent: false, // TODO: Check if request already sent
         bio: result.bio || 'SnapConnect user',
@@ -472,7 +480,7 @@ const AddFriendsScreen: React.FC = () => {
               renderItem={renderSuggestion}
               keyExtractor={item => item.id}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: 100 }}
+              contentContainerStyle={{ paddingBottom: tabBarHeight + 20 }}
             />
           ) : (
             <View className="flex-1 justify-center items-center px-8">
@@ -511,7 +519,7 @@ const AddFriendsScreen: React.FC = () => {
               renderItem={renderSearchResult}
               keyExtractor={item => item.id}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: 100 }}
+              contentContainerStyle={{ paddingBottom: tabBarHeight + 20 }}
             />
           ) : (
             <View className="flex-1 justify-center items-center px-8">
@@ -546,7 +554,12 @@ const AddFriendsScreen: React.FC = () => {
 
       {/* Error Display */}
       {error && (
-        <View className="absolute bottom-20 left-4 right-4 bg-red-500/20 border border-red-500 rounded-lg p-3">
+        <View 
+          className="absolute left-4 right-4 bg-red-500/20 border border-red-500 rounded-lg p-3"
+          style={{
+            bottom: tabBarHeight + 8,
+          }}
+        >
           <Text className="text-red-400 font-inter text-center">{error}</Text>
         </View>
       )}

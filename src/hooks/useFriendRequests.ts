@@ -101,24 +101,32 @@ export const useFriendRequests = (): UseFriendRequestsReturn => {
       setError(null);
       const requestsData = await friendsService.getPendingFriendRequests(user.uid);
 
-      const enrichedRequests: FriendRequest[] = requestsData.map(request => ({
-        id: request.id,
-        fromUserId: request.fromUserId,
-        toUserId: request.toUserId,
-        status: request.status,
-        createdAt: request.createdAt?.toDate() || new Date(),
-        updatedAt: request.updatedAt?.toDate() || new Date(),
-        type: request.type as 'incoming' | 'outgoing',
-        user: {
-          id: request.user?.uid || request.user?.id || 'unknown',
-          displayName: request.user?.displayName || request.user?.username || 'Unknown User',
-          username: request.user?.username || 'no-username',
-          profilePhoto: request.user?.profilePhoto,
-          bio: request.user?.bio || 'SnapConnect user',
-          mutualFriends: Math.floor(Math.random() * 10), // TODO: Calculate real mutual friends
-          lastActive: request.user?.lastActive?.toDate(),
-        }
-      }));
+      // Calculate mutual friends count in batch for better performance
+      const requestUserIds = requestsData.map(request => request.user?.uid || request.user?.id || 'unknown');
+      const mutualFriendsCounts = await friendsService.getBatchMutualFriendsCount(user.uid, requestUserIds) as Record<string, number>;
+      
+      const enrichedRequests: FriendRequest[] = requestsData.map(request => {
+        const userId = request.user?.uid || request.user?.id || 'unknown';
+        
+        return {
+          id: request.id,
+          fromUserId: request.fromUserId,
+          toUserId: request.toUserId,
+          status: request.status,
+          createdAt: request.createdAt?.toDate() || new Date(),
+          updatedAt: request.updatedAt?.toDate() || new Date(),
+          type: request.type as 'incoming' | 'outgoing',
+          user: {
+            id: userId,
+            displayName: request.user?.displayName || request.user?.username || 'Unknown User',
+            username: request.user?.username || 'no-username',
+            profilePhoto: request.user?.profilePhoto,
+            bio: request.user?.bio || 'SnapConnect user',
+            mutualFriends: mutualFriendsCounts[userId] || 0,
+            lastActive: request.user?.lastActive?.toDate(),
+          }
+        };
+      });
 
       // Sort by creation date (newest first)
       enrichedRequests.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());

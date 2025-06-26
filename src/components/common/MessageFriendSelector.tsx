@@ -1,30 +1,27 @@
 /**
- * @file RecipientSelector.tsx
- * @description Enhanced recipient selection component for sending snaps to friends.
- * Handles real Firebase friend list, search, and multiple recipient selection.
+ * @file MessageFriendSelector.tsx
+ * @description Friend selection component for starting new conversations.
+ * Allows users to select friends from their friend list to begin messaging.
  * 
  * @author SnapConnect Team
- * @created 2024-01-20
- * @modified 2024-01-24
+ * @created 2024-01-24
  * 
  * @dependencies
  * - react: React hooks
  * - react-native: Core components
  * - expo-haptics: Haptic feedback
  * - @/services/firebase/friendsService: Friends management
- * - @/services/firebase/messagingService: Message sending
  * 
  * @usage
- * <RecipientSelector
+ * <MessageFriendSelector
  *   visible={isVisible}
- *   mediaData={capturedMedia}
- *   onSend={handleSend}
+ *   onSelectFriend={handleFriendSelect}
  *   onClose={handleClose}
  * />
  * 
  * @ai_context
- * Integrates with AI-powered friend suggestions and interaction analytics.
- * Supports smart recipient recommendations based on communication patterns.
+ * Integrates with AI-powered friend suggestions based on conversation patterns.
+ * Supports smart friend recommendations and recent interaction analysis.
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -43,10 +40,9 @@ import {
 import { friendsService } from '../../services/firebase/friendsService';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
-import { showErrorAlert } from '../../utils/alertService';
 
 /**
- * Friend interface for typing
+ * Friend interface for selection
  */
 interface Friend {
   id: string;
@@ -55,34 +51,24 @@ interface Friend {
   profilePhoto?: string;
   lastActive?: Date;
   isOnline?: boolean;
+  status: 'online' | 'offline' | 'away';
 }
 
 /**
- * Media data interface for sending
+ * Props for MessageFriendSelector component
  */
-interface MediaData {
-  uri: string;
-  type: 'photo' | 'video';
-  size: number;
-}
-
-/**
- * Props for RecipientSelector component
- */
-interface RecipientSelectorProps {
+interface MessageFriendSelectorProps {
   visible: boolean;
-  mediaData: MediaData | null;
-  onSend: (recipients: string[], timer: number) => Promise<void>;
+  onSelectFriend: (friendId: string, friendData: Friend) => void;
   onClose: () => void;
 }
 
 /**
- * Enhanced recipient selector component for choosing snap recipients
+ * Friend selector component for starting new conversations
  */
-const RecipientSelector: React.FC<RecipientSelectorProps> = ({
+const MessageFriendSelector: React.FC<MessageFriendSelectorProps> = ({
   visible,
-  mediaData,
-  onSend,
+  onSelectFriend,
   onClose
 }) => {
   const theme = useThemeStore((state) => state.theme);
@@ -92,15 +78,9 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
   // Component state
   const [friends, setFriends] = useState<Friend[]>([]);
   const [filteredFriends, setFilteredFriends] = useState<Friend[]>([]);
-  const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTimer, setSelectedTimer] = useState(5);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Timer options
-  const timerOptions = [1, 3, 5, 10];
 
   /**
    * Load friends from Firebase
@@ -134,14 +114,22 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
           profilePhoto: friend.profilePhoto,
           lastActive: presence.lastActive,
           isOnline: presence.isOnline,
+          status: presence.status,
         };
+      });
+      
+      // Sort by online status, then by display name
+      formattedFriends.sort((a, b) => {
+        if (a.status === 'online' && b.status !== 'online') return -1;
+        if (b.status === 'online' && a.status !== 'online') return 1;
+        return a.displayName.localeCompare(b.displayName);
       });
       
       setFriends(formattedFriends);
       
       // If no friends, show helpful message
       if (formattedFriends.length === 0) {
-        setError('No friends found. Add friends to start sending snaps!');
+        setError('No friends found. Add friends to start messaging!');
       }
       
     } catch (error) {
@@ -177,61 +165,17 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
   }, [friends, searchQuery]);
 
   /**
-   * Toggle recipient selection
+   * Handle friend selection
    */
-  const toggleRecipient = useCallback(async (friendId: string) => {
+  const handleSelectFriend = useCallback(async (friend: Friend) => {
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      
-      setSelectedRecipients(prev => {
-        if (prev.includes(friendId)) {
-          return prev.filter(id => id !== friendId);
-        } else {
-          return [...prev, friendId];
-        }
-      });
+      onSelectFriend(friend.id, friend);
+      handleClose();
     } catch (error) {
-      console.error('Toggle recipient failed:', error);
+      console.error('Select friend failed:', error);
     }
-  }, []);
-
-  /**
-   * Handle sending snap to selected recipients
-   */
-  const handleSendSnap = async () => {
-    if (selectedRecipients.length === 0) {
-      showErrorAlert('Please select at least one friend to send to.', 'No Recipients');
-      return;
-    }
-
-    if (!mediaData) {
-      showErrorAlert('No media available to send.', 'No Media');
-      return;
-    }
-
-    try {
-      setIsSending(true);
-
-      // Send to each selected recipient using original callback
-      await onSend(selectedRecipients, selectedTimer);
-      
-      // Clear selections
-      setSelectedRecipients([]);
-      setSearchQuery('');
-      
-      // Haptic feedback
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      
-      // Close modal
-      onClose();
-      
-    } catch (error) {
-      console.error('Send snap failed:', error);
-      showErrorAlert('Failed to send snap. Please try again.', 'Send Failed');
-    } finally {
-      setIsSending(false);
-    }
-  };
+  }, [onSelectFriend]);
 
   /**
    * Handle close modal
@@ -240,8 +184,7 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       
-      // Clear selections
-      setSelectedRecipients([]);
+      // Clear search
       setSearchQuery('');
       setError(null);
       
@@ -252,9 +195,22 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
   }, [onClose]);
 
   /**
+   * Get status color
+   */
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'online': return '#10b981'; // green
+      case 'away': return '#f59e0b'; // yellow
+      default: return '#6b7280'; // gray
+    }
+  };
+
+  /**
    * Format last seen time
    */
-  const formatLastSeen = (lastActive: Date) => {
+  const formatLastSeen = (lastActive: Date, isOnline: boolean) => {
+    if (isOnline) return 'Online now';
+    
     const now = new Date();
     const diffMs = now.getTime() - lastActive.getTime();
     const diffMins = Math.floor(diffMs / 60000);
@@ -281,28 +237,23 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
    * Render friend item
    */
   const renderFriendItem = ({ item }: { item: Friend }) => {
-    const isSelected = selectedRecipients.includes(item.id);
-    
     return (
       <TouchableOpacity
-        onPress={() => toggleRecipient(item.id)}
-        className={`flex-row items-center p-4 mx-4 mb-2 rounded-lg ${
-          isSelected ? 'bg-cyber-cyan/20 border border-cyber-cyan' : 'bg-cyber-gray/10'
-        }`}
-        disabled={isSending}
+        onPress={() => handleSelectFriend(item)}
+        className="flex-row items-center p-4 mx-4 mb-2 rounded-lg bg-cyber-gray/10 active:bg-cyber-cyan/20"
       >
-        {/* Avatar */}
-        <View className={`w-12 h-12 rounded-full justify-center items-center mr-3 ${
-          item.isOnline ? 'bg-green-500/20 border-2 border-green-500' : 'bg-gray-500/20 border-2 border-gray-500'
-        }`}>
-          <Text className="text-white font-inter font-semibold text-sm">
-            {getFriendInitials(item)}
-          </Text>
-          
-          {/* Online indicator */}
-          {item.isOnline && (
-            <View className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-cyber-black" />
-          )}
+        {/* Avatar with status indicator */}
+        <View className="relative mr-4">
+          <View className="w-12 h-12 bg-cyber-cyan/20 rounded-full justify-center items-center">
+            <Text className="text-cyber-cyan font-inter font-semibold text-sm">
+              {getFriendInitials(item)}
+            </Text>
+          </View>
+          {/* Status indicator */}
+          <View 
+            className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-cyber-black"
+            style={{ backgroundColor: getStatusColor(item.status) }}
+          />
         </View>
         
         {/* Friend info */}
@@ -311,17 +262,16 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
             {item.displayName}
           </Text>
           <Text className="text-white/60 font-inter text-sm">
-            @{item.username} • {item.isOnline ? 'Online' : (item.lastActive ? formatLastSeen(item.lastActive) : 'Offline')}
+            @{item.username}
+          </Text>
+          <Text className="text-white/40 font-inter text-xs mt-1">
+            {item.lastActive ? formatLastSeen(item.lastActive, item.isOnline || false) : 'Offline'}
           </Text>
         </View>
         
-        {/* Selection indicator */}
+        {/* Arrow indicator */}
         <View className="ml-3">
-          {isSelected ? (
-            <Ionicons name="checkmark-circle" size={24} color={accentColor} />
-          ) : (
-            <View className="w-6 h-6 border-2 border-white/30 rounded-full" />
-          )}
+          <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.4)" />
         </View>
       </TouchableOpacity>
     );
@@ -333,9 +283,9 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
   const renderEmptyState = () => {
     if (isLoading) {
       return (
-        <View className="items-center py-20">
+        <View className="items-center py-20 px-8">
           <ActivityIndicator size="large" color={accentColor} />
-          <Text className="text-white/60 font-inter text-base mt-4">
+          <Text className="text-white/60 font-inter text-base mt-4 text-center">
             Loading friends...
           </Text>
         </View>
@@ -344,9 +294,9 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
 
     if (error) {
       return (
-        <View className="items-center py-20">
+        <View className="items-center py-20 px-8">
           <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
-          <Text className="text-white/70 font-inter text-lg mt-4 mb-2">
+          <Text className="text-white/70 font-inter text-base mt-4 mb-2 text-center">
             {error}
           </Text>
           <TouchableOpacity
@@ -363,12 +313,12 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
 
     if (searchQuery && filteredFriends.length === 0) {
       return (
-        <View className="items-center py-20">
+        <View className="items-center py-20 px-8">
           <Ionicons name="search-outline" size={48} color="rgba(255,255,255,0.3)" />
-          <Text className="text-white/60 font-inter text-lg mt-4 mb-2">
+          <Text className="text-white/60 font-inter text-base mt-4 mb-2 text-center">
             No friends found
           </Text>
-          <Text className="text-white/40 font-inter text-sm text-center px-8">
+          <Text className="text-white/40 font-inter text-sm text-center">
             Try searching with a different name or username
           </Text>
         </View>
@@ -376,13 +326,13 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
     }
 
     return (
-      <View className="items-center py-20">
+      <View className="items-center py-20 px-8">
         <Ionicons name="people-outline" size={48} color="rgba(255,255,255,0.3)" />
-        <Text className="text-white/60 font-inter text-lg mt-4 mb-2">
+        <Text className="text-white/60 font-inter text-base mt-4 mb-2 text-center">
           No friends yet
         </Text>
-        <Text className="text-white/40 font-inter text-sm text-center px-8">
-          Add friends to start sending snaps!
+        <Text className="text-white/40 font-inter text-sm text-center">
+          Add friends to start conversations!
         </Text>
       </View>
     );
@@ -404,28 +354,10 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
             </TouchableOpacity>
             
             <Text className="text-white font-orbitron text-lg">
-              Send To
+              New Message
             </Text>
             
-            <TouchableOpacity
-              onPress={handleSendSnap}
-              disabled={selectedRecipients.length === 0 || isSending}
-              className={`px-4 py-2 rounded-lg ${
-                selectedRecipients.length > 0 && !isSending
-                  ? 'bg-cyber-cyan'
-                  : 'bg-cyber-gray/20'
-              }`}
-            >
-              <Text
-                className={`font-inter font-semibold ${
-                  selectedRecipients.length > 0 && !isSending
-                    ? 'text-cyber-black'
-                    : 'text-white/40'
-                }`}
-              >
-                {isSending ? 'Sending...' : 'Send'}
-              </Text>
-            </TouchableOpacity>
+            <View className="w-8" />
           </View>
 
           {/* Search */}
@@ -449,42 +381,12 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
             </View>
           </View>
 
-          {/* Timer Selection */}
+          {/* Instructions */}
           <View className="px-6 pb-4">
-            <Text className="text-white font-inter font-medium mb-3">
-              Timer: {selectedTimer}s
+            <Text className="text-white/60 font-inter text-sm">
+              Select a friend to start a conversation
             </Text>
-            <View className="flex-row justify-around">
-              {timerOptions.map(timer => (
-                <TouchableOpacity
-                  key={timer}
-                  onPress={() => setSelectedTimer(timer)}
-                  className={`w-12 h-12 rounded-full justify-center items-center ${
-                    selectedTimer === timer
-                      ? 'bg-cyber-cyan'
-                      : 'bg-cyber-gray/20 border border-cyber-gray/40'
-                  }`}
-                >
-                  <Text
-                    className={`font-inter font-semibold ${
-                      selectedTimer === timer ? 'text-cyber-black' : 'text-white'
-                    }`}
-                  >
-                    {timer}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
           </View>
-
-          {/* Selected count */}
-          {selectedRecipients.length > 0 && (
-            <View className="px-6 pb-2">
-              <Text className="text-cyber-cyan font-inter text-sm">
-                {selectedRecipients.length} recipient{selectedRecipients.length !== 1 ? 's' : ''} selected
-              </Text>
-            </View>
-          )}
 
           {/* Friends List */}
           <FlatList
@@ -501,4 +403,4 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
   );
 };
 
-export default RecipientSelector;
+export default MessageFriendSelector; 

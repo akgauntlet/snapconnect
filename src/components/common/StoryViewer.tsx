@@ -39,6 +39,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { useTabBarHeight } from '../../hooks/useTabBarHeight';
 import { storiesService } from '../../services/firebase/storiesService';
 import { useAuthStore } from '../../stores/authStore';
 
@@ -90,6 +91,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
   onStoryViewed
 }) => {
   const { user } = useAuthStore();
+  const { tabBarHeight } = useTabBarHeight();
   
   // Component state
   const [currentUserIndex, setCurrentUserIndex] = useState(initialUserIndex);
@@ -383,7 +385,12 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
 
           {/* Text Overlay */}
           {currentStory.text && (
-            <View className="absolute bottom-20 left-4 right-4">
+            <View 
+              className="absolute left-4 right-4"
+              style={{
+                bottom: tabBarHeight + 20,
+              }}
+            >
               <Text className="text-white font-inter text-lg text-center bg-black/50 p-3 rounded-lg">
                 {currentStory.text}
               </Text>

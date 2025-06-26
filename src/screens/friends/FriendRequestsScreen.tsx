@@ -22,6 +22,7 @@ import {
     View
 } from 'react-native';
 import { useFriendRequests } from '../../hooks/useFriendRequests';
+import { useTabBarHeight } from '../../hooks/useTabBarHeight';
 import { friendsService } from '../../services/firebase/friendsService';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
@@ -54,6 +55,7 @@ const FriendRequestsScreen: React.FC = () => {
   const theme = useThemeStore((state) => state.theme);
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
   const { user } = useAuthStore();
+  const { tabBarHeight } = useTabBarHeight();
 
   // Get source tab from route params
   const sourceTab = route.params?.sourceTab || 'Profile';
@@ -269,7 +271,7 @@ const FriendRequestsScreen: React.FC = () => {
           renderItem={renderIncomingRequest}
           keyExtractor={item => item.id}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingTop: 16, paddingBottom: 100 }}
+          contentContainerStyle={{ paddingTop: 16, paddingBottom: tabBarHeight + 20 }}
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}

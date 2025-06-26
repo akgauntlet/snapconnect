@@ -624,6 +624,400 @@ class FriendsService {
       console.error('❌ Send friend accepted notification failed:', error);
     }
   }
+
+  /**
+   * Get mutual friends count between two users
+   * @param {string} userId1 - First user ID
+   * @param {string} userId2 - Second user ID
+   * @returns {Promise<number>} Number of mutual friends
+   */
+  async getMutualFriendsCount(userId1, userId2) {
+    try {
+      const db = this.getDB();
+      
+      // Get friends of both users
+      const [user1Friends, user2Friends] = await Promise.all([
+        this.getFriendIds(userId1),
+        this.getFriendIds(userId2)
+      ]);
+      
+      // Find intersection (mutual friends)
+      const mutualFriends = user1Friends.filter(friendId => user2Friends.includes(friendId));
+      
+      return mutualFriends.length;
+    } catch (error) {
+      console.error('❌ Get mutual friends count failed:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Get mutual friends list between two users
+   * @param {string} userId1 - First user ID
+   * @param {string} userId2 - Second user ID
+   * @returns {Promise<Array>} Array of mutual friends with user data
+   */
+  async getMutualFriends(userId1, userId2) {
+    try {
+      const db = this.getDB();
+      const { firebase } = require('../../config/firebase');
+      
+      // Get friends of both users
+      const [user1Friends, user2Friends] = await Promise.all([
+        this.getFriendIds(userId1),
+        this.getFriendIds(userId2)
+      ]);
+      
+      // Find intersection (mutual friends)
+      const mutualFriendIds = user1Friends.filter(friendId => user2Friends.includes(friendId));
+      
+      if (mutualFriendIds.length === 0) {
+        return [];
+      }
+      
+      // Get user data for mutual friends
+      const mutualFriends = [];
+      const batchSize = 10;
+      
+      for (let i = 0; i < mutualFriendIds.length; i += batchSize) {
+        const batch = mutualFriendIds.slice(i, i + batchSize);
+        
+        const usersSnapshot = await db
+          .collection('users')
+          .where(firebase.firestore.FieldPath.documentId(), 'in', batch)
+          .get();
+        
+        usersSnapshot.forEach(doc => {
+          mutualFriends.push({ id: doc.id, ...doc.data() });
+        });
+      }
+      
+      return mutualFriends;
+    } catch (error) {
+      console.error('❌ Get mutual friends failed:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get mutual friends count for multiple users (batch operation for performance)
+   * @param {string} currentUserId - Current user ID
+   * @param {Array} userIds - Array of user IDs to calculate mutual friends for
+   * @returns {Promise<Object>} Object with userId as key and mutual friends count as value
+   */
+  async getBatchMutualFriendsCount(currentUserId, userIds) {
+    try {
+      if (!userIds || userIds.length === 0) {
+        return {};
+      }
+
+      // Get current user's friends once
+      const currentUserFriends = await this.getFriendIds(currentUserId);
+      
+      // Get all other users' friends in parallel
+      const otherUsersFriends = await Promise.all(
+        userIds.map(userId => this.getFriendIds(userId))
+      );
+      
+      // Calculate mutual friends count for each user
+      const results = {};
+      userIds.forEach((userId, index) => {
+        const otherUserFriends = otherUsersFriends[index];
+        const mutualFriends = currentUserFriends.filter(friendId => 
+          otherUserFriends.includes(friendId)
+        );
+        results[userId] = mutualFriends.length;
+      });
+      
+      return results;
+    } catch (error) {
+      console.error('❌ Get batch mutual friends count failed:', error);
+      return {};
+    }
+  }
+
+  /**
+   * Get user stats (snaps sent/received, streaks, etc.)
+   * @param {string} userId - User ID
+   * @returns {Promise<Object>} User stats object
+   */
+  async getUserStats(userId) {
+    try {
+      const db = this.getDB();
+      
+      // Get user stats document - handle gracefully if collection doesn't exist
+      const statsDoc = await db.collection('userStats').doc(userId).get();
+      
+      if (statsDoc.exists) {
+        return statsDoc.data();
+      } else {
+        // Return default stats if document doesn't exist
+        console.log('📊 No user stats found for user:', userId, '- returning defaults');
+        return {
+          snapsSent: 0,
+          snapsReceived: 0,
+          streaks: 0,
+          storiesShared: 0,
+          totalFriends: 0,
+          joinedDate: new Date(),
+          lastActive: new Date()
+        };
+      }
+    } catch (error) {
+      console.warn('⚠️ Get user stats failed (using defaults):', error.message);
+      // Return default stats instead of throwing - this prevents the entire profile load from failing
+      return {
+        snapsSent: 0,
+        snapsReceived: 0,
+        streaks: 0,
+        storiesShared: 0,
+        totalFriends: 0,
+        joinedDate: new Date(),
+        lastActive: new Date()
+      };
+    }
+  }
+
+  /**
+   * Update user stats
+   * @param {string} userId - User ID
+   * @param {Object} updates - Stats updates
+   * @returns {Promise<void>}
+   */
+  async updateUserStats(userId, updates) {
+    try {
+      const db = this.getDB();
+      const { firebase } = require('../../config/firebase');
+      
+      await db.collection('userStats').doc(userId).set({
+        ...updates,
+        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      
+      console.log('✅ User stats updated successfully');
+    } catch (error) {
+      console.error('❌ Update user stats failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get user presence status
+   * @param {string} userId - User ID
+   * @returns {Promise<Object>} Presence object with status and lastActive
+   */
+  async getUserPresence(userId) {
+    try {
+      const db = this.getDB();
+      
+      const presenceDoc = await db.collection('presence').doc(userId).get();
+      
+      if (presenceDoc.exists) {
+        const data = presenceDoc.data();
+        return {
+          status: data.status || 'offline',
+          lastActive: data.lastActive?.toDate() || new Date(),
+          isOnline: data.status === 'online'
+        };
+      } else {
+        console.log('👤 No presence data found for user:', userId, '- returning defaults');
+        return {
+          status: 'offline',
+          lastActive: new Date(),
+          isOnline: false
+        };
+      }
+    } catch (error) {
+      console.warn('⚠️ Get user presence failed (using defaults):', error.message);
+      // Return default presence instead of throwing
+      return {
+        status: 'offline',
+        lastActive: new Date(),
+        isOnline: false
+      };
+    }
+  }
+
+  /**
+   * Get batch presence for multiple users
+   * @param {Array} userIds - Array of user IDs
+   * @returns {Promise<Object>} Object with userId as key and presence as value
+   */
+  async getBatchUserPresence(userIds) {
+    try {
+      if (!userIds || userIds.length === 0) {
+        return {};
+      }
+
+      const db = this.getDB();
+      const { firebase } = require('../../config/firebase');
+      const results = {};
+      
+      // Batch get presence documents
+      const batchSize = 10;
+      for (let i = 0; i < userIds.length; i += batchSize) {
+        const batch = userIds.slice(i, i + batchSize);
+        
+        const presenceSnapshot = await db
+          .collection('presence')
+          .where(firebase.firestore.FieldPath.documentId(), 'in', batch)
+          .get();
+        
+        // Process found presence data
+        presenceSnapshot.forEach(doc => {
+          const data = doc.data();
+          results[doc.id] = {
+            status: data.status || 'offline',
+            lastActive: data.lastActive?.toDate() || new Date(),
+            isOnline: data.status === 'online'
+          };
+        });
+        
+        // Set default for users not found
+        batch.forEach(userId => {
+          if (!results[userId]) {
+            results[userId] = {
+              status: 'offline',
+              lastActive: new Date(),
+              isOnline: false
+            };
+          }
+        });
+      }
+      
+      return results;
+    } catch (error) {
+      console.error('❌ Get batch user presence failed:', error);
+      return {};
+    }
+  }
+
+  /**
+   * Get complete user profile by ID (for friend profile viewing)
+   * @param {string} userId - User ID to get profile for
+   * @returns {Promise<Object|null>} Complete user profile or null if not found
+   */
+  async getUserProfile(userId) {
+    try {
+      const db = this.getDB();
+      
+      const userDoc = await db.collection('users').doc(userId).get();
+      
+      if (!userDoc.exists) {
+        console.warn('⚠️ User profile not found:', userId);
+        return null;
+      }
+      
+      return { id: userDoc.id, ...userDoc.data() };
+    } catch (error) {
+      console.error('❌ Get user profile failed:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Check specific friendship status between two users
+   * @param {string} currentUserId - Current user ID  
+   * @param {string} targetUserId - Target user ID to check friendship with
+   * @returns {Promise<string>} Friendship status: 'friends', 'pending_sent', 'pending_received', 'none'
+   */
+  async checkFriendshipStatus(currentUserId, targetUserId) {
+    try {
+      const db = this.getDB();
+      
+      // Check if they're friends first (most common case)
+      const isFriend = await this.areFriends(currentUserId, targetUserId);
+      if (isFriend) {
+        return 'friends';
+      }
+      
+      // Check for pending friend requests
+      const [sentRequest, receivedRequest] = await Promise.all([
+        // Check if current user sent a request to target user
+        db.collection('friendRequests')
+          .where('fromUserId', '==', currentUserId)
+          .where('toUserId', '==', targetUserId)
+          .where('status', '==', 'pending')
+          .get(),
+        // Check if current user received a request from target user  
+        db.collection('friendRequests')
+          .where('fromUserId', '==', targetUserId)
+          .where('toUserId', '==', currentUserId)
+          .where('status', '==', 'pending')
+          .get()
+      ]);
+      
+      if (!sentRequest.empty) {
+        return 'pending_sent';
+      }
+      
+      if (!receivedRequest.empty) {
+        return 'pending_received';
+      }
+      
+      return 'none';
+    } catch (error) {
+      console.error('❌ Check friendship status failed:', error);
+      return 'none';
+    }
+  }
+
+  /**
+   * Get enriched user profile with stats, presence, and friendship data
+   * @param {string} currentUserId - Current user ID (for calculating mutual friends)
+   * @param {string} targetUserId - Target user ID to get profile for
+   * @returns {Promise<Object|null>} Enriched user profile or null
+   */
+  async getEnrichedUserProfile(currentUserId, targetUserId) {
+    try {
+      // Get basic profile data
+      const userProfile = await this.getUserProfile(targetUserId);
+      if (!userProfile) {
+        return null;
+      }
+      
+      // Get additional data in parallel for better performance
+      const [friendIds, userStats, userPresence, mutualFriendsCount, friendshipStatus] = await Promise.all([
+        this.getFriendIds(targetUserId),
+        this.getUserStats(targetUserId),
+        this.getUserPresence(targetUserId),
+        currentUserId !== targetUserId ? this.getMutualFriendsCount(currentUserId, targetUserId) : Promise.resolve(0),
+        currentUserId !== targetUserId ? this.checkFriendshipStatus(currentUserId, targetUserId) : Promise.resolve('self')
+      ]);
+      
+      // Helper function to safely convert dates
+      const safeToDate = (dateValue) => {
+        if (!dateValue) return new Date();
+        if (dateValue instanceof Date) return dateValue;
+        if (dateValue && typeof dateValue.toDate === 'function') return dateValue.toDate();
+        if (typeof dateValue === 'number') return new Date(dateValue);
+        if (typeof dateValue === 'string') {
+          const parsed = new Date(dateValue);
+          return isNaN(parsed.getTime()) ? new Date() : parsed;
+        }
+        return new Date();
+      };
+      
+      // Combine all data into enriched profile
+      return {
+        ...userProfile,
+        totalFriends: friendIds.length,
+        snapsSent: userStats.snapsSent || 0,
+        snapsReceived: userStats.snapsReceived || 0,
+        streaks: userStats.streaks || 0,
+        storiesShared: userStats.storiesShared || 0,
+        joinedDate: safeToDate(userProfile.createdAt) || safeToDate(userStats.joinedDate),
+        lastActive: userPresence.lastActive,
+        isOnline: userPresence.isOnline,
+        status: userPresence.status,
+        mutualFriends: mutualFriendsCount,
+        friendshipStatus: friendshipStatus,
+      };
+    } catch (error) {
+      console.error('❌ Get enriched user profile failed:', error);
+      return null;
+    }
+  }
 }
 
 export const friendsService = new FriendsService();

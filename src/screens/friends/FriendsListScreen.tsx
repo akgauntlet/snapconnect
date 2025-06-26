@@ -40,6 +40,7 @@ import {
 } from 'react-native';
 import NotificationBadge from '../../components/common/NotificationBadge';
 import { useFriendRequests } from '../../hooks/useFriendRequests';
+import { useTabBarHeight } from '../../hooks/useTabBarHeight';
 import { friendsService } from '../../services/firebase/friendsService';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
@@ -95,6 +96,7 @@ const FriendsListScreen: React.FC = () => {
   const theme = useThemeStore((state) => state.theme);
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
   const { user } = useAuthStore();
+  const { tabBarHeight } = useTabBarHeight();
 
   // Get source tab from route params
   const sourceTab = route.params?.sourceTab || 'Profile'; // Default to Profile if not specified
@@ -121,18 +123,30 @@ const FriendsListScreen: React.FC = () => {
       setError(null);
       const friendsData = await friendsService.getFriends(user.uid);
 
-      // Transform and enrich friend data
-      const enrichedFriends: Friend[] = friendsData.map(friend => ({
-        id: friend.id,
-        displayName: friend.displayName || friend.username || 'Unknown User',
-        username: friend.username || 'no-username',
-        profilePhoto: friend.profilePhoto,
-        lastActive: friend.lastActive?.toDate(),
-        isOnline: Math.random() > 0.6, // TODO: Real presence detection
-        createdAt: friend.createdAt?.toDate(),
-        status: Math.random() > 0.6 ? 'online' : Math.random() > 0.3 ? 'away' : 'offline',
-        mutualFriends: Math.floor(Math.random() * 20), // TODO: Calculate real mutual friends
-      }));
+      // Get real presence data for all friends in batch
+      const friendIds = friendsData.map(friend => friend.id);
+      const presenceData = await friendsService.getBatchUserPresence(friendIds) as Record<string, {
+        status: 'online' | 'offline' | 'away';
+        lastActive: Date;
+        isOnline: boolean;
+      }>;
+      
+      // Transform and enrich friend data with real presence data
+      const enrichedFriends: Friend[] = friendsData.map((friend) => {
+        const presence = presenceData[friend.id] || { status: 'offline', lastActive: new Date(), isOnline: false };
+        
+        return {
+          id: friend.id,
+          displayName: friend.displayName || friend.username || 'Unknown User',
+          username: friend.username || 'no-username',
+          profilePhoto: friend.profilePhoto,
+          lastActive: presence.lastActive,
+          isOnline: presence.isOnline,
+          createdAt: friend.createdAt?.toDate(),
+          status: presence.status,
+          mutualFriends: 0, // Not applicable for friends list - they're already friends with current user
+        };
+      });
 
       // Sort by online status, then by display name
       enrichedFriends.sort((a, b) => {
@@ -531,7 +545,7 @@ const FriendsListScreen: React.FC = () => {
           renderItem={renderFriendItem}
           keyExtractor={item => item.id}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={{ paddingBottom: tabBarHeight + 20 }}
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}
@@ -546,8 +560,9 @@ const FriendsListScreen: React.FC = () => {
       {/* Floating Action Button - Find & Add New Friends */}
       <TouchableOpacity
         onPress={handleAddFriends}
-        className="absolute bottom-20 right-6 w-14 h-14 bg-cyber-cyan rounded-full justify-center items-center shadow-lg"
+        className="absolute right-6 w-14 h-14 bg-cyber-cyan rounded-full justify-center items-center shadow-lg"
         style={{
+          bottom: tabBarHeight + 8,
           shadowColor: accentColor,
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.3,

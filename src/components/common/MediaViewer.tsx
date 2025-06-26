@@ -46,6 +46,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { useTabBarHeight } from '../../hooks/useTabBarHeight';
 import { messagingService } from '../../services/firebase/messagingService';
 import { useAuthStore } from '../../stores/authStore';
 import { showAlert, showErrorAlert } from '../../utils/alertService';
@@ -84,6 +85,7 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
   onScreenshot
 }) => {
   const { user } = useAuthStore();
+  const { tabBarHeight } = useTabBarHeight();
   
   // Component state
   const [isViewing, setIsViewing] = useState(false);
@@ -448,7 +450,12 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
 
       {/* Bottom hint */}
       {isViewing && (
-        <View className="absolute bottom-8 left-0 right-0 items-center z-20">
+        <View 
+          className="absolute left-0 right-0 items-center z-20"
+          style={{
+            bottom: tabBarHeight + 8,
+          }}
+        >
           <Text className="text-white/60 font-inter text-sm">
             Hold to report • Tap elsewhere to close
           </Text>

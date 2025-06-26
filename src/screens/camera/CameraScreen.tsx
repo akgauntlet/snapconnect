@@ -974,7 +974,13 @@ const CameraScreen: React.FC = () => {
             </View>
             
             {/* Action Buttons */}
-            <View className="flex-row justify-around items-center px-6 py-8">
+            <View 
+              className="flex-row justify-around items-center px-6"
+              style={{
+                paddingTop: 32,
+                paddingBottom: Math.max(tabBarHeight + 8, 32), // Dynamic tab bar height + padding
+              }}
+            >
               <TouchableOpacity
                 onPress={discardMedia}
                 className="w-16 h-16 bg-red-500/20 border-2 border-red-500 rounded-full justify-center items-center"
@@ -1280,7 +1286,12 @@ const CameraScreen: React.FC = () => {
             </View>
 
             {/* Action Buttons */}
-            <View className="px-6 pb-8">
+            <View 
+              className="px-6"
+              style={{
+                paddingBottom: Math.max(tabBarHeight + 8, 32), // Dynamic tab bar height + padding
+              }}
+            >
               {isStoryMode ? (
                 // Story Mode Actions
                 <TouchableOpacity
