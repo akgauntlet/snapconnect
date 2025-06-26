@@ -2,38 +2,36 @@
  * @file PhoneVerificationScreen.tsx
  * @description Phone verification screen for SMS code verification.
  * Features gaming aesthetic and real-time code validation.
- * 
+ *
  * @author SnapConnect Team
  * @created 2024-01-20
  * @modified 2024-01-24
- * 
+ *
  * @dependencies
  * - react-native: Core components
  * - @react-navigation/native: Navigation
  * - @/stores/authStore: Authentication state
  * - @/utils/alertService: Web-compatible alerts
- * 
+ *
  * @usage
  * Used after phone number input to verify SMS code.
- * 
+ *
  * @ai_context
  * Integrates with AI-powered fraud detection and verification analytics.
  */
 
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useEffect, useRef, useState } from 'react';
-import {
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
-import { useAuthStore } from '../../stores/authStore';
-import { showErrorAlert, showSuccessAlert } from '../../utils/alertService';
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import React, { useEffect, useRef, useState } from "react";
+import { Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useAuthStore } from "../../stores/authStore";
+import { showErrorAlert, showSuccessAlert } from "../../utils/alertService";
 
 // Type definitions
-type PhoneVerificationScreenNavigationProp = NativeStackNavigationProp<any, 'PhoneVerification'>;
+type PhoneVerificationScreenNavigationProp = NativeStackNavigationProp<
+  any,
+  "PhoneVerification"
+>;
 
 interface PhoneVerificationScreenProps {
   navigation?: PhoneVerificationScreenNavigationProp;
@@ -41,20 +39,20 @@ interface PhoneVerificationScreenProps {
 
 /**
  * Phone verification screen component with SMS code input
- * 
+ *
  * @param props - Component properties
  * @returns {React.ReactElement} Rendered phone verification screen
- * 
+ *
  * @accessibility
  * - Supports screen readers with proper labels
  * - High contrast mode compatible
  * - Auto-advance input fields
- * 
+ *
  * @performance
  * - Optimized input handling
  * - Real-time validation
  * - Gaming-grade smooth animations
- * 
+ *
  * @ai_integration
  * - Fraud detection for verification codes
  * - Pattern analysis for security
@@ -62,20 +60,20 @@ interface PhoneVerificationScreenProps {
  */
 const PhoneVerificationScreen: React.FC<PhoneVerificationScreenProps> = () => {
   const navigation = useNavigation<PhoneVerificationScreenNavigationProp>();
-  
+
   // Auth store
-  const { 
-    verifyPhoneNumber, 
+  const {
+    verifyPhoneNumber,
     signInWithPhoneNumber,
     phoneVerification,
-    isLoading, 
-    error, 
+    isLoading,
+    error,
     clearError,
-    clearPhoneVerification
+    clearPhoneVerification,
   } = useAuthStore();
 
   // Verification code state
-  const [code, setCode] = useState(['', '', '', '', '', '']);
+  const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [resendTimer, setResendTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
 
@@ -123,8 +121,8 @@ const PhoneVerificationScreen: React.FC<PhoneVerificationScreenProps> = () => {
     }
 
     // Auto-verify when all digits are entered
-    if (newCode.every(digit => digit !== '') && text) {
-      const verificationCode = newCode.join('');
+    if (newCode.every((digit) => digit !== "") && text) {
+      const verificationCode = newCode.join("");
       handleVerifyCode(verificationCode);
     }
   };
@@ -133,7 +131,7 @@ const PhoneVerificationScreen: React.FC<PhoneVerificationScreenProps> = () => {
    * Handle backspace navigation
    */
   const handleKeyPress = (key: string, index: number) => {
-    if (key === 'Backspace' && !code[index] && index > 0) {
+    if (key === "Backspace" && !code[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
   };
@@ -142,26 +140,26 @@ const PhoneVerificationScreen: React.FC<PhoneVerificationScreenProps> = () => {
    * Handle code verification
    */
   const handleVerifyCode = async (verificationCode?: string) => {
-    const codeToVerify = verificationCode || code.join('');
-    
+    const codeToVerify = verificationCode || code.join("");
+
     if (codeToVerify.length !== 6) {
-      showErrorAlert('Please enter the complete 6-digit code.');
+      showErrorAlert("Please enter the complete 6-digit code.");
       return;
     }
 
     try {
       const result = await verifyPhoneNumber(codeToVerify);
-      
+
       if (result?.isNewUser) {
         // Navigate to profile setup for new users
-        navigation.navigate('ProfileSetup');
+        navigation.navigate("ProfileSetup");
       } else {
         // Navigation will be handled by auth state change for existing users
       }
     } catch (error: any) {
-      showErrorAlert(error.message, 'Verification Failed');
+      showErrorAlert(error.message, "Verification Failed");
       // Clear the code inputs on error
-      setCode(['', '', '', '', '', '']);
+      setCode(["", "", "", "", "", ""]);
       inputRefs.current[0]?.focus();
     }
   };
@@ -178,11 +176,14 @@ const PhoneVerificationScreen: React.FC<PhoneVerificationScreenProps> = () => {
       await signInWithPhoneNumber(phoneVerification.phoneNumber);
       setResendTimer(60);
       setCanResend(false);
-      setCode(['', '', '', '', '', '']);
+      setCode(["", "", "", "", "", ""]);
       inputRefs.current[0]?.focus();
-      showSuccessAlert('A new verification code has been sent to your phone.', 'Code Sent');
+      showSuccessAlert(
+        "A new verification code has been sent to your phone.",
+        "Code Sent",
+      );
     } catch (error: any) {
-      showErrorAlert(error.message, 'Resend Failed');
+      showErrorAlert(error.message, "Resend Failed");
     }
   };
 
@@ -219,10 +220,14 @@ const PhoneVerificationScreen: React.FC<PhoneVerificationScreenProps> = () => {
           {code.map((digit, index) => (
             <TextInput
               key={index}
-                             ref={(ref) => { inputRefs.current[index] = ref; }}
+              ref={(ref) => {
+                inputRefs.current[index] = ref;
+              }}
               value={digit}
               onChangeText={(text) => handleCodeChange(text.slice(-1), index)}
-              onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, index)}
+              onKeyPress={({ nativeEvent }) =>
+                handleKeyPress(nativeEvent.key, index)
+              }
               placeholder="•"
               placeholderTextColor="#6B7280"
               className="w-12 h-14 bg-cyber-dark border-2 border-cyber-gray rounded-lg text-center text-white font-orbitron text-xl font-bold"
@@ -245,19 +250,19 @@ const PhoneVerificationScreen: React.FC<PhoneVerificationScreenProps> = () => {
         {/* Verify Button */}
         <TouchableOpacity
           onPress={() => handleVerifyCode()}
-          disabled={isLoading || code.some(digit => digit === '')}
+          disabled={isLoading || code.some((digit) => digit === "")}
           className={`bg-cyber-cyan py-4 rounded-lg shadow-lg mb-6 ${
-            isLoading || code.some(digit => digit === '') ? 'opacity-50' : ''
+            isLoading || code.some((digit) => digit === "") ? "opacity-50" : ""
           }`}
           style={{
-            shadowColor: '#00ffff',
+            shadowColor: "#00ffff",
             shadowOffset: { width: 0, height: 0 },
             shadowOpacity: 0.3,
             shadowRadius: 10,
           }}
         >
           <Text className="text-cyber-black font-bold text-lg font-orbitron text-center">
-            {isLoading ? 'VERIFYING...' : 'VERIFY CODE'}
+            {isLoading ? "VERIFYING..." : "VERIFY CODE"}
           </Text>
         </TouchableOpacity>
 
@@ -285,10 +290,7 @@ const PhoneVerificationScreen: React.FC<PhoneVerificationScreenProps> = () => {
         </View>
 
         {/* Back Button */}
-        <TouchableOpacity 
-          onPress={handleGoBack}
-          className="items-center"
-        >
+        <TouchableOpacity onPress={handleGoBack} className="items-center">
           <Text className="text-gray-300 font-inter">
             Use different phone number
           </Text>
@@ -297,8 +299,8 @@ const PhoneVerificationScreen: React.FC<PhoneVerificationScreenProps> = () => {
         {/* Instructions */}
         <View className="mt-8 bg-cyber-dark/50 rounded-lg p-4">
           <Text className="text-gray-300 font-inter text-sm text-center">
-            Enter the verification code as soon as you receive it. 
-            The code will auto-verify when complete.
+            Enter the verification code as soon as you receive it. The code will
+            auto-verify when complete.
           </Text>
         </View>
       </View>
@@ -306,4 +308,4 @@ const PhoneVerificationScreen: React.FC<PhoneVerificationScreenProps> = () => {
   );
 };
 
-export default PhoneVerificationScreen; 
+export default PhoneVerificationScreen;

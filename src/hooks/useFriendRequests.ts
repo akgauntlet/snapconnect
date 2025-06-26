@@ -2,26 +2,26 @@
  * @file useFriendRequests.ts
  * @description Custom hook for managing friend request state and counts.
  * Provides real-time updates for incoming and outgoing friend requests.
- * 
+ *
  * @author SnapConnect Team
  * @created 2024-01-24
- * 
+ *
  * @dependencies
  * - react: React hooks
  * - @/services/firebase/friendsService: Friends management
  * - @/stores/authStore: Authentication state
- * 
+ *
  * @usage
  * Used throughout the app to track friend request counts and state.
- * 
+ *
  * @ai_context
  * Smart request prioritization and intelligent notification timing.
  * AI-powered friend suggestion integration.
  */
 
-import { useCallback, useEffect, useState } from 'react';
-import { friendsService } from '../services/firebase/friendsService';
-import { useAuthStore } from '../stores/authStore';
+import { useCallback, useEffect, useState } from "react";
+import { friendsService } from "../services/firebase/friendsService";
+import { useAuthStore } from "../stores/authStore";
 
 /**
  * Friend request interface
@@ -30,10 +30,10 @@ interface FriendRequest {
   id: string;
   fromUserId: string;
   toUserId: string;
-  status: 'pending' | 'accepted' | 'declined';
+  status: "pending" | "accepted" | "declined";
   createdAt: Date;
   updatedAt: Date;
-  type: 'incoming' | 'outgoing';
+  type: "incoming" | "outgoing";
   user: {
     id: string;
     displayName: string;
@@ -69,14 +69,14 @@ interface UseFriendRequestsReturn {
 
 /**
  * Custom hook for managing friend requests
- * 
+ *
  * @returns {UseFriendRequestsReturn} Friend request state and actions
- * 
+ *
  * @performance
  * - Efficient caching and real-time updates
  * - Optimized re-renders with proper dependencies
  * - Smart polling for live updates
- * 
+ *
  * @ai_integration
  * - Intelligent request prioritization
  * - Smart notification timing based on user activity
@@ -99,15 +99,23 @@ export const useFriendRequests = (): UseFriendRequestsReturn => {
 
     try {
       setError(null);
-      const requestsData = await friendsService.getPendingFriendRequests(user.uid);
+      const requestsData = await friendsService.getPendingFriendRequests(
+        user.uid,
+      );
 
       // Calculate mutual friends count in batch for better performance
-      const requestUserIds = requestsData.map(request => request.user?.uid || request.user?.id || 'unknown');
-      const mutualFriendsCounts = await friendsService.getBatchMutualFriendsCount(user.uid, requestUserIds) as Record<string, number>;
-      
-      const enrichedRequests: FriendRequest[] = requestsData.map(request => {
-        const userId = request.user?.uid || request.user?.id || 'unknown';
-        
+      const requestUserIds = requestsData.map(
+        (request) => request.user?.uid || request.user?.id || "unknown",
+      );
+      const mutualFriendsCounts =
+        (await friendsService.getBatchMutualFriendsCount(
+          user.uid,
+          requestUserIds,
+        )) as Record<string, number>;
+
+      const enrichedRequests: FriendRequest[] = requestsData.map((request) => {
+        const userId = request.user?.uid || request.user?.id || "unknown";
+
         return {
           id: request.id,
           fromUserId: request.fromUserId,
@@ -115,25 +123,30 @@ export const useFriendRequests = (): UseFriendRequestsReturn => {
           status: request.status,
           createdAt: request.createdAt?.toDate() || new Date(),
           updatedAt: request.updatedAt?.toDate() || new Date(),
-          type: request.type as 'incoming' | 'outgoing',
+          type: request.type as "incoming" | "outgoing",
           user: {
             id: userId,
-            displayName: request.user?.displayName || request.user?.username || 'Unknown User',
-            username: request.user?.username || 'no-username',
+            displayName:
+              request.user?.displayName ||
+              request.user?.username ||
+              "Unknown User",
+            username: request.user?.username || "no-username",
             profilePhoto: request.user?.profilePhoto,
-            bio: request.user?.bio || 'SnapConnect user',
+            bio: request.user?.bio || "SnapConnect user",
             mutualFriends: mutualFriendsCounts[userId] || 0,
             lastActive: request.user?.lastActive?.toDate(),
-          }
+          },
         };
       });
 
       // Sort by creation date (newest first)
-      enrichedRequests.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      enrichedRequests.sort(
+        (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+      );
       setRequests(enrichedRequests);
     } catch (error) {
-      console.error('Load friend requests failed:', error);
-      setError('Failed to load friend requests');
+      console.error("Load friend requests failed:", error);
+      setError("Failed to load friend requests");
     } finally {
       setIsLoading(false);
     }
@@ -154,8 +167,12 @@ export const useFriendRequests = (): UseFriendRequestsReturn => {
   }, [loadFriendRequests]);
 
   // Filter requests by type
-  const incomingRequests = requests.filter(request => request.type === 'incoming');
-  const outgoingRequests = requests.filter(request => request.type === 'outgoing');
+  const incomingRequests = requests.filter(
+    (request) => request.type === "incoming",
+  );
+  const outgoingRequests = requests.filter(
+    (request) => request.type === "outgoing",
+  );
 
   return {
     requests,
@@ -167,4 +184,4 @@ export const useFriendRequests = (): UseFriendRequestsReturn => {
     error,
     refreshRequests,
   };
-}; 
+};

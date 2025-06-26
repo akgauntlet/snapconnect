@@ -2,11 +2,11 @@
  * @file StoriesScreen.tsx
  * @description Gaming stories and ephemeral content viewing interface.
  * Displays friend stories, gaming highlights, and community content.
- * 
+ *
  * @author SnapConnect Team
  * @created 2024-01-20
  * @modified 2024-01-24
- * 
+ *
  * @dependencies
  * - react: React hooks
  * - react-native: Core components
@@ -15,29 +15,40 @@
  * - @/components/common/StoryRingItem: Story preview component
  * - @/components/common/StoryGridItem: Story grid component
  * - @/components/common/StoryStatsModal: Story statistics modal
- * 
+ *
  * @usage
  * Interface for viewing gaming stories and ephemeral community content.
- * 
+ *
  * @ai_context
  * AI-powered content curation and personalized story recommendations.
  * Gaming achievement and highlight detection and promotion.
  */
 
-import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, SafeAreaView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import React, { useCallback, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  SafeAreaView,
+  StatusBar,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
-import StoryGridItem, { StoryUser } from '../../components/common/StoryGridItem';
-import StoryRingItem, { MyStory } from '../../components/common/StoryRingItem';
-import StoryStatsModal from '../../components/common/StoryStatsModal';
-import StoryViewer from '../../components/common/StoryViewer';
-import { useTabBarHeight } from '../../hooks/useTabBarHeight';
-import { storiesService } from '../../services/firebase/storiesService';
-import { useAuthStore } from '../../stores/authStore';
-import { useThemeStore } from '../../stores/themeStore';
-import { showErrorAlert, showSuccessAlert } from '../../utils/alertService';
+import StoryGridItem, {
+  StoryUser,
+} from "../../components/common/StoryGridItem";
+import StoryRingItem, { MyStory } from "../../components/common/StoryRingItem";
+import StoryStatsModal from "../../components/common/StoryStatsModal";
+import StoryViewer from "../../components/common/StoryViewer";
+import { useTabBarHeight } from "../../hooks/useTabBarHeight";
+import { storiesService } from "../../services/firebase/storiesService";
+import { useAuthStore } from "../../stores/authStore";
+import { useThemeStore } from "../../stores/themeStore";
+import { showErrorAlert, showSuccessAlert } from "../../utils/alertService";
 
 /**
  * Story stats data interface
@@ -50,14 +61,14 @@ interface StoryStatsData {
 
 /**
  * Enhanced stories screen component with gaming aesthetics
- * 
+ *
  * @returns {React.ReactElement} Rendered stories interface
- * 
+ *
  * @performance
  * - Optimized media loading and caching
  * - Smooth story transitions and animations
  * - Efficient memory management for video content
- * 
+ *
  * @ai_integration
  * - Personalized story recommendations
  * - Gaming achievement highlighting
@@ -69,7 +80,7 @@ const StoriesScreen: React.FC = () => {
   const { user } = useAuthStore();
   const navigation = useNavigation();
   const { tabBarHeight } = useTabBarHeight();
-  
+
   // Component state
   const [friendsStories, setFriendsStories] = useState<StoryUser[]>([]);
   const [myStories, setMyStories] = useState<MyStory[]>([]);
@@ -85,34 +96,35 @@ const StoriesScreen: React.FC = () => {
 
   // Story stats modal state
   const [showStoryStats, setShowStoryStats] = useState(false);
-  const [storyStatsData, setStoryStatsData] = useState<StoryStatsData | null>(null);
+  const [storyStatsData, setStoryStatsData] = useState<StoryStatsData | null>(
+    null,
+  );
 
   /**
    * Load all stories (friends' and user's own)
    */
   const loadStories = useCallback(async () => {
     if (!user) return;
-    
+
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const [friendsStoriesData, userStoriesData] = await Promise.all([
         storiesService.getFriendsStories(user.uid),
-        storiesService.getUserStories(user.uid)
+        storiesService.getUserStories(user.uid),
       ]);
-      
+
       setFriendsStories(friendsStoriesData);
       setMyStories(userStoriesData);
-      
-      console.log('✅ Stories loaded:', {
+
+      console.log("✅ Stories loaded:", {
         friendsStories: friendsStoriesData.length,
-        myStories: userStoriesData.length
+        myStories: userStoriesData.length,
       });
-      
     } catch (error) {
-      console.error('❌ Load stories failed:', error);
-      setError('Failed to load stories. Please try again.');
+      console.error("❌ Load stories failed:", error);
+      setError("Failed to load stories. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -126,7 +138,7 @@ const StoriesScreen: React.FC = () => {
       if (user) {
         loadStories();
       }
-    }, [user, loadStories])
+    }, [user, loadStories]),
   );
 
   /**
@@ -141,31 +153,38 @@ const StoriesScreen: React.FC = () => {
   /**
    * Handle story press to view
    */
-  const handleStoryPress = useCallback((storyUser: StoryUser, storyIndex: number = 0) => {
-    if (!user) return;
-    
-    try {
-      setStoryViewerData([storyUser]);
-      setInitialUserIndex(0);
-      setInitialStoryIndex(storyIndex);
-      setShowStoryViewer(true);
-    } catch (error) {
-      console.error('❌ View story failed:', error);
-      showErrorAlert('Failed to view story.');
-    }
-  }, [user]);
+  const handleStoryPress = useCallback(
+    (storyUser: StoryUser, storyIndex: number = 0) => {
+      if (!user) return;
+
+      try {
+        setStoryViewerData([storyUser]);
+        setInitialUserIndex(0);
+        setInitialStoryIndex(storyIndex);
+        setShowStoryViewer(true);
+      } catch (error) {
+        console.error("❌ View story failed:", error);
+        showErrorAlert("Failed to view story.");
+      }
+    },
+    [user],
+  );
 
   /**
    * Handle story viewed callback
    */
   const handleStoryViewed = useCallback((storyId: string) => {
-    setFriendsStories(prev => prev.map(user => ({
-      ...user,
-      stories: user.stories.map(story => 
-        story.id === storyId ? { ...story, hasViewed: true } : story
-      ),
-      hasUnviewed: user.stories.some(story => story.id !== storyId && !story.hasViewed)
-    })));
+    setFriendsStories((prev) =>
+      prev.map((user) => ({
+        ...user,
+        stories: user.stories.map((story) =>
+          story.id === storyId ? { ...story, hasViewed: true } : story,
+        ),
+        hasUnviewed: user.stories.some(
+          (story) => story.id !== storyId && !story.hasViewed,
+        ),
+      })),
+    );
   }, []);
 
   /**
@@ -179,64 +198,79 @@ const StoriesScreen: React.FC = () => {
   /**
    * Handle my story press (show stats)
    */
-  const handleMyStoryPress = useCallback(async (story: MyStory) => {
-    if (!story || !story.id || !user) {
-      showErrorAlert('Invalid story data.');
-      return;
-    }
-    
-    try {
-      const viewers = await storiesService.getStoryViewers(story.id, user.uid);
-      
-      const viewerNames = viewers.length > 0 
-        ? viewers.map(v => v.displayName || v.username || 'Unknown').join(', ')
-        : 'No viewers yet';
-      
-      setStoryStatsData({
-        story,
-        viewers,
-        viewerNames
-      });
-      setShowStoryStats(true);
-      
-    } catch (error) {
-      console.error('❌ Get story stats failed:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
-      setStoryStatsData({
-        story,
-        viewers: [],
-        viewerNames: `Error: ${errorMessage}`
-      });
-      setShowStoryStats(true);
-    }
-  }, [user]);
+  const handleMyStoryPress = useCallback(
+    async (story: MyStory) => {
+      if (!story || !story.id || !user) {
+        showErrorAlert("Invalid story data.");
+        return;
+      }
+
+      try {
+        const viewers = await storiesService.getStoryViewers(
+          story.id,
+          user.uid,
+        );
+
+        const viewerNames =
+          viewers.length > 0
+            ? viewers
+                .map((v) => v.displayName || v.username || "Unknown")
+                .join(", ")
+            : "No viewers yet";
+
+        setStoryStatsData({
+          story,
+          viewers,
+          viewerNames,
+        });
+        setShowStoryStats(true);
+      } catch (error) {
+        console.error("❌ Get story stats failed:", error);
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+
+        setStoryStatsData({
+          story,
+          viewers: [],
+          viewerNames: `Error: ${errorMessage}`,
+        });
+        setShowStoryStats(true);
+      }
+    },
+    [user],
+  );
 
   /**
    * Handle create story (navigate to camera)
    */
   const handleCreateStory = useCallback(() => {
     try {
-      (navigation as any).navigate('Camera', { mode: 'story' });
+      (navigation as any).navigate("Camera", { mode: "story" });
     } catch (error) {
-      console.error('Navigation to camera failed:', error);
-      showErrorAlert('Switch to the Camera tab to create your story!', 'Create Story');
+      console.error("Navigation to camera failed:", error);
+      showErrorAlert(
+        "Switch to the Camera tab to create your story!",
+        "Create Story",
+      );
     }
   }, [navigation]);
 
   /**
    * Handle delete story
    */
-  const handleDeleteStory = useCallback(async (storyId: string) => {
-    try {
-      await storiesService.deleteStory(storyId);
-      showSuccessAlert('Story deleted successfully.');
-      await loadStories();
-    } catch (error) {
-      console.error('❌ Delete story failed:', error);
-      showErrorAlert('Failed to delete story.');
-    }
-  }, [loadStories]);
+  const handleDeleteStory = useCallback(
+    async (storyId: string) => {
+      try {
+        await storiesService.deleteStory(storyId);
+        showSuccessAlert("Story deleted successfully.");
+        await loadStories();
+      } catch (error) {
+        console.error("❌ Delete story failed:", error);
+        showErrorAlert("Failed to delete story.");
+      }
+    },
+    [loadStories],
+  );
 
   /**
    * Close story stats modal
@@ -249,23 +283,33 @@ const StoriesScreen: React.FC = () => {
   /**
    * Render story ring item
    */
-  const renderStoryRingItem = ({ item, index }: { item: any; index: number }) => {
+  const renderStoryRingItem = ({
+    item,
+    index,
+  }: {
+    item: any;
+    index: number;
+  }) => {
     if (index === 0) {
       // First item is always the user's story or create button
       const latestStory = myStories.length > 0 ? myStories[0] : undefined;
       return (
         <StoryRingItem
-          type={latestStory ? 'user' : 'create'}
+          type={latestStory ? "user" : "create"}
           story={latestStory}
-          onPress={latestStory ? () => handleMyStoryPress(latestStory) : handleCreateStory}
+          onPress={
+            latestStory
+              ? () => handleMyStoryPress(latestStory)
+              : handleCreateStory
+          }
         />
       );
     }
-    
+
     // Friend stories
     const friendStory = friendsStories[index - 1];
     if (!friendStory) return null;
-    
+
     return (
       <StoryRingItem
         type="friend"
@@ -279,10 +323,7 @@ const StoriesScreen: React.FC = () => {
    * Render story grid item
    */
   const renderStoryGridItem = ({ item }: { item: StoryUser }) => (
-    <StoryGridItem
-      storyUser={item}
-      onPress={handleStoryPress}
-    />
+    <StoryGridItem storyUser={item} onPress={handleStoryPress} />
   );
 
   /**
@@ -325,7 +366,11 @@ const StoriesScreen: React.FC = () => {
    */
   const renderEmptyState = () => (
     <View className="flex-1 justify-center items-center px-8 py-16">
-      <Ionicons name="play-circle-outline" size={64} color="rgba(0, 255, 255, 0.3)" />
+      <Ionicons
+        name="play-circle-outline"
+        size={64}
+        color="rgba(0, 255, 255, 0.3)"
+      />
       <Text className="text-white/70 font-orbitron text-xl mt-6 mb-2 text-center">
         No Stories Yet
       </Text>
@@ -343,7 +388,12 @@ const StoriesScreen: React.FC = () => {
           elevation: 8,
         }}
       >
-        <Ionicons name="camera" size={20} color="#000000" style={{ marginRight: 8 }} />
+        <Ionicons
+          name="camera"
+          size={20}
+          color="#000000"
+          style={{ marginRight: 8 }}
+        />
         <Text className="text-cyber-black font-inter font-bold text-base">
           Create Story
         </Text>
@@ -352,18 +402,24 @@ const StoriesScreen: React.FC = () => {
   );
 
   // Prepare ring data (user story + friend stories)
-  const ringData = [{ type: 'user' }, ...friendsStories.map(item => ({ type: 'friend', data: item }))];
+  const ringData = [
+    { type: "user" },
+    ...friendsStories.map((item) => ({ type: "friend", data: item })),
+  ];
 
   return (
     <>
-      <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background.primary }}>
-        <StatusBar barStyle="light-content" backgroundColor={theme.colors.background.primary} />
-        
+      <SafeAreaView
+        style={{ flex: 1, backgroundColor: theme.colors.background.primary }}
+      >
+        <StatusBar
+          barStyle="light-content"
+          backgroundColor={theme.colors.background.primary}
+        />
+
         {/* Header */}
         <View className="flex-row justify-between items-center px-6 py-4 border-b border-cyber-gray/10">
-          <Text className="text-white font-orbitron text-2xl">
-            Stories
-          </Text>
+          <Text className="text-white font-orbitron text-2xl">Stories</Text>
           <TouchableOpacity
             onPress={handleCreateStory}
             className="bg-cyber-cyan/10 border border-cyber-cyan/20 p-3 rounded-full"
@@ -390,17 +446,17 @@ const StoriesScreen: React.FC = () => {
                 contentContainerStyle={{ paddingHorizontal: 24, gap: 8 }}
               />
             </View>
-            
+
             {/* Recent Stories Section */}
             <View className="flex-1 px-6">
               <Text className="text-white font-inter font-semibold text-lg mb-4">
                 Recent Stories
               </Text>
-              
+
               <FlatList
                 data={friendsStories}
                 renderItem={renderStoryGridItem}
-                keyExtractor={item => item.userId}
+                keyExtractor={(item) => item.userId}
                 showsVerticalScrollIndicator={false}
                 refreshControl={
                   <RefreshControl
@@ -410,9 +466,9 @@ const StoriesScreen: React.FC = () => {
                     colors={[accentColor]}
                   />
                 }
-                contentContainerStyle={{ 
+                contentContainerStyle={{
                   paddingBottom: tabBarHeight + 16,
-                  flexGrow: friendsStories.length === 0 ? 1 : 0
+                  flexGrow: friendsStories.length === 0 ? 1 : 0,
                 }}
                 ListEmptyComponent={renderEmptyState}
               />
@@ -443,4 +499,4 @@ const StoriesScreen: React.FC = () => {
   );
 };
 
-export default StoriesScreen; 
+export default StoriesScreen;

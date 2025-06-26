@@ -2,23 +2,23 @@
  * @file realtimeService.js
  * @description Real-time messaging service for SnapConnect.
  * Handles real-time message listening, notifications, and presence management.
- * 
- * @author SnapConnect Team  
+ *
+ * @author SnapConnect Team
  * @created 2024-01-20
- * 
+ *
  * @dependencies
  * - firebase/firestore: Firestore Web SDK
  * - @/config/firebase: Firebase configuration
- * 
+ *
  * @usage
  * import { realtimeService } from '@/services/firebase/realtimeService';
- * 
+ *
  * @ai_context
  * Integrates with AI services for intelligent message routing and content analysis.
  * Supports real-time AI-powered content moderation and smart notifications.
  */
 
-import { getFirebaseDB } from '../../config/firebase';
+import { getFirebaseDB } from "../../config/firebase";
 
 /**
  * Real-time messaging service class
@@ -48,45 +48,45 @@ class RealtimeService {
   listenForMessages(userId, onMessage, onError) {
     try {
       const db = this.getDB();
-      
+
       // Listen for messages where user is recipient
       const unsubscribe = db
-        .collection('messages')
-        .where('recipientId', '==', userId)
-        .where('viewed', '==', false)
-        .orderBy('createdAt', 'desc')
+        .collection("messages")
+        .where("recipientId", "==", userId)
+        .where("viewed", "==", false)
+        .orderBy("createdAt", "desc")
         .onSnapshot(
           (snapshot) => {
             const newMessages = [];
-            
+
             snapshot.docChanges().forEach((change) => {
-              if (change.type === 'added') {
+              if (change.type === "added") {
                 const messageData = change.doc.data();
                 newMessages.push({
                   id: change.doc.id,
-                  ...messageData
+                  ...messageData,
                 });
               }
             });
-            
+
             if (newMessages.length > 0) {
               console.log(`📨 Received ${newMessages.length} new message(s)`);
               onMessage(newMessages);
             }
           },
           (error) => {
-            console.error('❌ Message listener error:', error);
+            console.error("❌ Message listener error:", error);
             onError?.(error);
-          }
+          },
         );
-      
+
       // Store listener for cleanup
       this.listeners.set(`messages_${userId}`, unsubscribe);
-      
-      console.log('✅ Started listening for messages:', userId);
+
+      console.log("✅ Started listening for messages:", userId);
       return unsubscribe;
     } catch (error) {
-      console.error('❌ Listen for messages failed:', error);
+      console.error("❌ Listen for messages failed:", error);
       onError?.(error);
       return () => {};
     }
@@ -102,37 +102,37 @@ class RealtimeService {
   listenForConversations(userId, onUpdate, onError) {
     try {
       const db = this.getDB();
-      
+
       const unsubscribe = db
-        .collection('conversations')
-        .where('participants', 'array-contains', userId)
-        .orderBy('lastMessageAt', 'desc')
+        .collection("conversations")
+        .where("participants", "array-contains", userId)
+        .orderBy("lastMessageAt", "desc")
         .onSnapshot(
           (snapshot) => {
             const conversations = [];
-            
+
             snapshot.forEach((doc) => {
               conversations.push({
                 id: doc.id,
-                ...doc.data()
+                ...doc.data(),
               });
             });
-            
+
             onUpdate(conversations);
           },
           (error) => {
-            console.error('❌ Conversation listener error:', error);
+            console.error("❌ Conversation listener error:", error);
             onError?.(error);
-          }
+          },
         );
-      
+
       // Store listener for cleanup
       this.listeners.set(`conversations_${userId}`, unsubscribe);
-      
-      console.log('✅ Started listening for conversations:', userId);
+
+      console.log("✅ Started listening for conversations:", userId);
       return unsubscribe;
     } catch (error) {
-      console.error('❌ Listen for conversations failed:', error);
+      console.error("❌ Listen for conversations failed:", error);
       onError?.(error);
       return () => {};
     }
@@ -148,9 +148,9 @@ class RealtimeService {
   listenForPresence(userId, onPresenceUpdate, onError) {
     try {
       const db = this.getDB();
-      
+
       const unsubscribe = db
-        .collection('presence')
+        .collection("presence")
         .doc(userId)
         .onSnapshot(
           (doc) => {
@@ -160,18 +160,18 @@ class RealtimeService {
             }
           },
           (error) => {
-            console.error('❌ Presence listener error:', error);
+            console.error("❌ Presence listener error:", error);
             onError?.(error);
-          }
+          },
         );
-      
+
       // Store listener for cleanup
       this.listeners.set(`presence_${userId}`, unsubscribe);
-      
-      console.log('✅ Started listening for presence:', userId);
+
+      console.log("✅ Started listening for presence:", userId);
       return unsubscribe;
     } catch (error) {
-      console.error('❌ Listen for presence failed:', error);
+      console.error("❌ Listen for presence failed:", error);
       onError?.(error);
       return () => {};
     }
@@ -185,35 +185,35 @@ class RealtimeService {
   async startPresence(userId) {
     try {
       const db = this.getDB();
-      const { firebase } = require('../../config/firebase');
-      
+      const { firebase } = require("../../config/firebase");
+
       this.currentUserId = userId;
-      
+
       // Set initial online status
-      await db.collection('presence').doc(userId).set({
+      await db.collection("presence").doc(userId).set({
         isOnline: true,
         lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       });
-      
+
       // Update presence every 30 seconds
       this.presenceInterval = setInterval(async () => {
         try {
-          await db.collection('presence').doc(userId).update({
+          await db.collection("presence").doc(userId).update({
             lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
           });
         } catch (error) {
-          console.error('❌ Presence update failed:', error);
+          console.error("❌ Presence update failed:", error);
         }
       }, 30000);
-      
+
       // Set offline on disconnect (using onDisconnect in a real implementation)
       // For now, we'll handle this in stopPresence
-      
-      console.log('✅ Started presence management:', userId);
+
+      console.log("✅ Started presence management:", userId);
     } catch (error) {
-      console.error('❌ Start presence failed:', error);
+      console.error("❌ Start presence failed:", error);
       throw error;
     }
   }
@@ -229,23 +229,23 @@ class RealtimeService {
         clearInterval(this.presenceInterval);
         this.presenceInterval = null;
       }
-      
+
       // Set user offline
       if (this.currentUserId) {
         const db = this.getDB();
-        const { firebase } = require('../../config/firebase');
-        
-        await db.collection('presence').doc(this.currentUserId).update({
+        const { firebase } = require("../../config/firebase");
+
+        await db.collection("presence").doc(this.currentUserId).update({
           isOnline: false,
           lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         });
-        
-        console.log('✅ Stopped presence management:', this.currentUserId);
+
+        console.log("✅ Stopped presence management:", this.currentUserId);
         this.currentUserId = null;
       }
     } catch (error) {
-      console.error('❌ Stop presence failed:', error);
+      console.error("❌ Stop presence failed:", error);
     }
   }
 
@@ -259,20 +259,20 @@ class RealtimeService {
   async sendTypingIndicator(senderId, recipientId, isTyping) {
     try {
       const db = this.getDB();
-      const { firebase } = require('../../config/firebase');
+      const { firebase } = require("../../config/firebase");
       const conversationId = this.getConversationId(senderId, recipientId);
-      
+
       if (isTyping) {
-        await db.collection('typing').doc(conversationId).set({
+        await db.collection("typing").doc(conversationId).set({
           userId: senderId,
           isTyping: true,
-          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
         });
       } else {
-        await db.collection('typing').doc(conversationId).delete();
+        await db.collection("typing").doc(conversationId).delete();
       }
     } catch (error) {
-      console.error('❌ Send typing indicator failed:', error);
+      console.error("❌ Send typing indicator failed:", error);
     }
   }
 
@@ -286,9 +286,9 @@ class RealtimeService {
   listenForTyping(conversationId, onTypingUpdate, onError) {
     try {
       const db = this.getDB();
-      
+
       const unsubscribe = db
-        .collection('typing')
+        .collection("typing")
         .doc(conversationId)
         .onSnapshot(
           (doc) => {
@@ -300,17 +300,17 @@ class RealtimeService {
             }
           },
           (error) => {
-            console.error('❌ Typing listener error:', error);
+            console.error("❌ Typing listener error:", error);
             onError?.(error);
-          }
+          },
         );
-      
+
       // Store listener for cleanup
       this.listeners.set(`typing_${conversationId}`, unsubscribe);
-      
+
       return unsubscribe;
     } catch (error) {
-      console.error('❌ Listen for typing failed:', error);
+      console.error("❌ Listen for typing failed:", error);
       onError?.(error);
       return () => {};
     }
@@ -325,27 +325,27 @@ class RealtimeService {
   async markAsDelivered(messageId, recipientId) {
     try {
       const db = this.getDB();
-      const { firebase } = require('../../config/firebase');
-      
-      await db.collection('messages').doc(messageId).update({
+      const { firebase } = require("../../config/firebase");
+
+      await db.collection("messages").doc(messageId).update({
         delivered: true,
-        deliveredAt: firebase.firestore.FieldValue.serverTimestamp()
+        deliveredAt: firebase.firestore.FieldValue.serverTimestamp(),
       });
-      
-      console.log('✅ Message marked as delivered:', messageId);
+
+      console.log("✅ Message marked as delivered:", messageId);
     } catch (error) {
-      console.error('❌ Mark as delivered failed:', error);
+      console.error("❌ Mark as delivered failed:", error);
     }
   }
 
   /**
    * Generate consistent conversation ID for two users
    * @param {string} userId1 - First user ID
-   * @param {string} userId2 - Second user ID  
+   * @param {string} userId2 - Second user ID
    * @returns {string} Conversation ID
    */
   getConversationId(userId1, userId2) {
-    return [userId1, userId2].sort().join('_');
+    return [userId1, userId2].sort().join("_");
   }
 
   /**
@@ -357,7 +357,7 @@ class RealtimeService {
     if (unsubscribe) {
       unsubscribe();
       this.listeners.delete(listenerKey);
-      console.log('✅ Stopped listener:', listenerKey);
+      console.log("✅ Stopped listener:", listenerKey);
     }
   }
 
@@ -368,14 +368,14 @@ class RealtimeService {
     this.listeners.forEach((unsubscribe, key) => {
       try {
         unsubscribe();
-        console.log('✅ Stopped listener:', key);
+        console.log("✅ Stopped listener:", key);
       } catch (error) {
-        console.error('❌ Stop listener failed:', key, error);
+        console.error("❌ Stop listener failed:", key, error);
       }
     });
-    
+
     this.listeners.clear();
-    console.log('✅ Stopped all listeners');
+    console.log("✅ Stopped all listeners");
   }
 
   /**
@@ -386,9 +386,9 @@ class RealtimeService {
     try {
       await this.stopPresence();
       this.stopAllListeners();
-      console.log('✅ Real-time service cleanup completed');
+      console.log("✅ Real-time service cleanup completed");
     } catch (error) {
-      console.error('❌ Cleanup failed:', error);
+      console.error("❌ Cleanup failed:", error);
     }
   }
 }

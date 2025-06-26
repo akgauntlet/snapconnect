@@ -1,6 +1,6 @@
 const { getDefaultConfig } = require("expo/metro-config");
-const { withNativeWind } = require('nativewind/metro');
-const path = require('path');
+const { withNativeWind } = require("nativewind/metro");
+const path = require("path");
 
 const config = getDefaultConfig(__dirname);
 
@@ -9,13 +9,13 @@ config.resolver = {
   ...config.resolver,
   alias: {
     ...config.resolver?.alias,
-    '@react-native-async-storage/async-storage': path.resolve(
+    "@react-native-async-storage/async-storage": path.resolve(
       __dirname,
-      'node_modules/@react-native-async-storage/async-storage'
+      "node_modules/@react-native-async-storage/async-storage",
     ),
   },
-  resolverMainFields: ['react-native', 'browser', 'main'],
-  platforms: ['ios', 'android', 'native', 'web'],
+  resolverMainFields: ["react-native", "browser", "main"],
+  platforms: ["ios", "android", "native", "web"],
 };
 
 // Configure transformer to handle import.meta for web
@@ -35,9 +35,9 @@ config.server = {
   enhanceMiddleware: (middleware) => {
     return (req, res, next) => {
       // Handle import.meta polyfill for web
-      if (req.url?.includes('?import.meta')) {
-        res.setHeader('Content-Type', 'application/javascript');
-        res.end('export default {};');
+      if (req.url?.includes("?import.meta")) {
+        res.setHeader("Content-Type", "application/javascript");
+        res.end("export default {};");
         return;
       }
       return middleware(req, res, next);
@@ -48,4 +48,4 @@ config.server = {
 // Reduce max workers to prevent memory issues
 config.maxWorkers = 1;
 
-module.exports = withNativeWind(config, { input: './global.css' });
+module.exports = withNativeWind(config, { input: "./global.css" });

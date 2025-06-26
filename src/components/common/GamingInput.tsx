@@ -2,37 +2,37 @@
  * @file GamingInput.tsx
  * @description Cyber gaming themed input component with RGB borders and gaming aesthetics.
  * Provides consistent input styling throughout the SnapConnect application.
- * 
+ *
  * @author SnapConnect Team
  * @created 2024-01-25
- * 
+ *
  * @dependencies
  * - react: React hooks and types
  * - react-native: TextInput, Text, View
  * - @expo/vector-icons: Input icons
- * 
+ *
  * @usage
  * import { GamingInput } from '@/components/common/GamingInput';
  * <GamingInput placeholder="Enter username" value={username} onChangeText={setUsername} />
- * 
+ *
  * @ai_context
  * Input component that adapts to gaming context and provides enhanced UX.
  * Supports validation states and accessibility features.
  */
 
-import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
-import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from "@expo/vector-icons";
+import React, { useState } from "react";
+import { Text, TextInput, TouchableOpacity, View } from "react-native";
 
 /**
  * Input variant types for different contexts
  */
-export type GamingInputVariant = 
-  | 'default'    // Standard cyber cyan
-  | 'success'    // Green border - valid input
-  | 'error'      // Red border - invalid input
-  | 'warning'    // Orange border - warning state
-  | 'legendary'; // Gold border - premium input
+export type GamingInputVariant =
+  | "default" // Standard cyber cyan
+  | "success" // Green border - valid input
+  | "error" // Red border - invalid input
+  | "warning" // Orange border - warning state
+  | "legendary"; // Gold border - premium input
 
 /**
  * GamingInput component props
@@ -57,9 +57,9 @@ export interface GamingInputProps {
   /** Secure text entry (password) */
   secureTextEntry?: boolean;
   /** Keyboard type */
-  keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
+  keyboardType?: "default" | "email-address" | "numeric" | "phone-pad";
   /** Auto capitalize */
-  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  autoCapitalize?: "none" | "sentences" | "words" | "characters";
   /** Auto correct */
   autoCorrect?: boolean;
   /** Max length */
@@ -92,9 +92,9 @@ export interface GamingInputProps {
  * @returns CSS classes for the variant
  */
 function getVariantClasses(
-  variant: GamingInputVariant, 
-  focused: boolean, 
-  disabled: boolean
+  variant: GamingInputVariant,
+  focused: boolean,
+  disabled: boolean,
 ): {
   container: string;
   input: string;
@@ -102,45 +102,45 @@ function getVariantClasses(
 } {
   if (disabled) {
     return {
-      container: 'border-gray-600 bg-gray-800',
-      input: 'text-gray-400',
-      glow: '',
+      container: "border-gray-600 bg-gray-800",
+      input: "text-gray-400",
+      glow: "",
     };
   }
 
-  const baseContainer = focused ? 'border-2' : 'border';
-  
+  const baseContainer = focused ? "border-2" : "border";
+
   switch (variant) {
-    case 'success':
+    case "success":
       return {
         container: `${baseContainer} border-cyber-green bg-cyber-dark`,
-        input: 'text-white',
-        glow: focused ? 'shadow-glow-green' : '',
+        input: "text-white",
+        glow: focused ? "shadow-glow-green" : "",
       };
-    case 'error':
+    case "error":
       return {
         container: `${baseContainer} border-neon-red bg-cyber-dark`,
-        input: 'text-white',
-        glow: focused ? 'shadow-glow-red' : '',
+        input: "text-white",
+        glow: focused ? "shadow-glow-red" : "",
       };
-    case 'warning':
+    case "warning":
       return {
         container: `${baseContainer} border-cyber-orange bg-cyber-dark`,
-        input: 'text-white',
-        glow: focused ? 'shadow-glow-orange' : '',
+        input: "text-white",
+        glow: focused ? "shadow-glow-orange" : "",
       };
-    case 'legendary':
+    case "legendary":
       return {
         container: `${baseContainer} border-gaming-legendary bg-cyber-dark`,
-        input: 'text-white',
-        glow: focused ? 'shadow-glow-orange' : '',
+        input: "text-white",
+        glow: focused ? "shadow-glow-orange" : "",
       };
-    case 'default':
+    case "default":
     default:
       return {
         container: `${baseContainer} border-cyber-cyan bg-cyber-dark`,
-        input: 'text-white',
-        glow: focused ? 'shadow-glow-cyan' : '',
+        input: "text-white",
+        glow: focused ? "shadow-glow-cyan" : "",
       };
   }
 }
@@ -148,10 +148,10 @@ function getVariantClasses(
 /**
  * GamingInput Component
  * Cyber-themed input with RGB effects and gaming aesthetics
- * 
+ *
  * @param props - Component props
  * @returns Rendered input component
- * 
+ *
  * @example
  * <GamingInput
  *   label="Gamer Tag"
@@ -170,11 +170,11 @@ export const GamingInput: React.FC<GamingInputProps> = ({
   label,
   error,
   success,
-  variant = 'default',
+  variant = "default",
   disabled = false,
   secureTextEntry = false,
-  keyboardType = 'default',
-  autoCapitalize = 'none',
+  keyboardType = "default",
+  autoCapitalize = "none",
   autoCorrect = false,
   maxLength,
   multiline = false,
@@ -182,7 +182,7 @@ export const GamingInput: React.FC<GamingInputProps> = ({
   leftIcon,
   rightIcon,
   onRightIconPress,
-  className = '',
+  className = "",
   testID,
   onFocus,
   onBlur,
@@ -191,8 +191,8 @@ export const GamingInput: React.FC<GamingInputProps> = ({
   const [showPassword, setShowPassword] = useState(false);
 
   // Determine actual variant based on error/success state
-  const actualVariant = error ? 'error' : success ? 'success' : variant;
-  
+  const actualVariant = error ? "error" : success ? "success" : variant;
+
   const variantClasses = getVariantClasses(actualVariant, focused, disabled);
 
   /**
@@ -222,7 +222,7 @@ export const GamingInput: React.FC<GamingInputProps> = ({
    * Get password toggle icon
    */
   const getPasswordIcon = (): keyof typeof Ionicons.glyphMap => {
-    return showPassword ? 'eye-off' : 'eye';
+    return showPassword ? "eye-off" : "eye";
   };
 
   /**
@@ -233,9 +233,7 @@ export const GamingInput: React.FC<GamingInputProps> = ({
       return (
         <View className="flex-row items-center mt-2">
           <Ionicons name="alert-circle" size={14} color="#ff0040" />
-          <Text className="text-neon-red font-inter text-sm ml-2">
-            {error}
-          </Text>
+          <Text className="text-neon-red font-inter text-sm ml-2">{error}</Text>
         </View>
       );
     }
@@ -264,7 +262,7 @@ export const GamingInput: React.FC<GamingInputProps> = ({
       )}
 
       {/* Input Container */}
-      <View 
+      <View
         className={`
           ${variantClasses.container}
           ${variantClasses.glow}
@@ -272,7 +270,7 @@ export const GamingInput: React.FC<GamingInputProps> = ({
           flex-row
           items-center
           px-4
-          ${multiline ? 'py-3' : 'py-4'}
+          ${multiline ? "py-3" : "py-4"}
         `}
       >
         {/* Left Icon */}
@@ -280,7 +278,7 @@ export const GamingInput: React.FC<GamingInputProps> = ({
           <Ionicons
             name={leftIcon}
             size={20}
-            color={disabled ? '#9ca3af' : '#00ffff'}
+            color={disabled ? "#9ca3af" : "#00ffff"}
             style={{ marginRight: 12 }}
           />
         )}
@@ -309,7 +307,7 @@ export const GamingInput: React.FC<GamingInputProps> = ({
             flex-1
           `}
           style={{
-            textAlignVertical: multiline ? 'top' : 'center',
+            textAlignVertical: multiline ? "top" : "center",
           }}
         />
 
@@ -323,7 +321,7 @@ export const GamingInput: React.FC<GamingInputProps> = ({
             <Ionicons
               name={secureTextEntry ? getPasswordIcon() : rightIcon!}
               size={20}
-              color={disabled ? '#9ca3af' : '#00ffff'}
+              color={disabled ? "#9ca3af" : "#00ffff"}
             />
           </TouchableOpacity>
         )}
@@ -342,4 +340,4 @@ export const GamingInput: React.FC<GamingInputProps> = ({
   );
 };
 
-export default GamingInput; 
+export default GamingInput;

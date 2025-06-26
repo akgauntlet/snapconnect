@@ -7,6 +7,7 @@ This document defines the detailed user journeys through SnapConnect, covering a
 ## User Persona
 
 **Primary Target**: Gamers (PC, console, mobile gaming enthusiasts)
+
 - Age: 16-35
 - Tech-savvy, early adopters
 - Value quick communication, visual content sharing
@@ -23,6 +24,7 @@ This document defines the detailed user journeys through SnapConnect, covering a
 ### Flow 1: App Download & First Launch
 
 #### 1.1 Initial Onboarding
+
 ```
 1. User downloads app from app store
 2. App launches → Splash screen with SnapConnect branding
@@ -37,6 +39,7 @@ This document defines the detailed user journeys through SnapConnect, covering a
 ```
 
 #### 1.2 Registration Flow
+
 ```
 1. User taps "Sign Up"
 2. Phone number entry screen
@@ -68,6 +71,7 @@ This document defines the detailed user journeys through SnapConnect, covering a
 ```
 
 #### 1.3 Tutorial Flow
+
 ```
 1. Interactive camera tutorial
    - "Take your first snap" prompt
@@ -94,6 +98,7 @@ This document defines the detailed user journeys through SnapConnect, covering a
 ### Flow 2: Friend Invitation Entry
 
 #### 2.1 Invitation Link Flow
+
 ```
 1. User receives invitation link (SMS, social media, gaming platform)
 2. Link opens app or app store
@@ -118,6 +123,7 @@ This document defines the detailed user journeys through SnapConnect, covering a
 ### Flow 3: Create & Share Photos/Videos
 
 #### 3.1 Content Creation Flow
+
 ```
 1. User opens camera (main screen default)
 2. Camera interface displays:
@@ -153,6 +159,7 @@ This document defines the detailed user journeys through SnapConnect, covering a
 ```
 
 #### 3.2 Sharing Options Flow
+
 ```
 1. After content creation, sharing screen appears:
    - Friend list (recent contacts prioritized)
@@ -182,6 +189,7 @@ This document defines the detailed user journeys through SnapConnect, covering a
 ### Flow 4: Stories Feature
 
 #### 4.1 Story Creation Flow
+
 ```
 1. User accesses story creation:
    - Camera → capture → "Add to Story"
@@ -208,6 +216,7 @@ This document defines the detailed user journeys through SnapConnect, covering a
 ```
 
 #### 4.2 Story Consumption Flow
+
 ```
 1. Stories feed display:
    - Friend stories prioritized by engagement
@@ -236,6 +245,7 @@ This document defines the detailed user journeys through SnapConnect, covering a
 ### Flow 5: Group Messaging
 
 #### 5.1 Group Creation Flow
+
 ```
 1. User initiates group creation:
    - Messages tab → "New Group" button
@@ -262,6 +272,7 @@ This document defines the detailed user journeys through SnapConnect, covering a
 ```
 
 #### 5.2 Group Messaging Flow
+
 ```
 1. Group conversation interface:
    - Message input with gaming emoji shortcuts
@@ -297,6 +308,7 @@ This document defines the detailed user journeys through SnapConnect, covering a
 ### Flow 6: Profile Management
 
 #### 6.1 Profile Viewing (Self)
+
 ```
 1. Profile access via bottom navigation
 2. Profile elements display:
@@ -316,6 +328,7 @@ This document defines the detailed user journeys through SnapConnect, covering a
 ```
 
 #### 6.2 Profile Viewing (Others)
+
 ```
 1. Friend profile access:
    - From friend list
@@ -342,6 +355,7 @@ This document defines the detailed user journeys through SnapConnect, covering a
 ### Flow 7: Search & Discovery
 
 #### 7.1 Friend Search Flow
+
 ```
 1. Search interface access:
    - Friends tab search bar
@@ -364,6 +378,7 @@ This document defines the detailed user journeys through SnapConnect, covering a
 ```
 
 #### 7.2 Content Discovery Flow
+
 ```
 1. Discover section features:
    - Trending gaming content
@@ -393,6 +408,7 @@ This document defines the detailed user journeys through SnapConnect, covering a
 ### System-Level Error Flows
 
 #### Network Connectivity Issues
+
 ```
 1. Connection lost detection
 2. User notification: "No internet connection"
@@ -408,6 +424,7 @@ This document defines the detailed user journeys through SnapConnect, covering a
 ```
 
 #### Account Security Issues
+
 ```
 1. Suspicious activity detection
 2. Account temporarily locked
@@ -418,8 +435,6 @@ This document defines the detailed user journeys through SnapConnect, covering a
 5. Account recovery options
 ```
 
-
-
 ---
 
 ## RAG Integration Points
@@ -427,28 +442,32 @@ This document defines the detailed user journeys through SnapConnect, covering a
 ### Phase 2 Enhancement Details
 
 #### Content Intelligence
+
 - Real-time gaming content recognition
 - Auto-tagging with gaming terminology
 - Smart cropping for optimal gaming content display
 - Performance analytics for gaming creators
 
 #### Personalization Engine
+
 - Gaming preference learning
 - Friend recommendation optimization
 - Content feed curation based on gaming behavior
 - Tournament suggestions
 
 #### Communication Enhancement
+
 - Gaming context-aware auto-replies
 - Smart notification filtering for gaming sessions
 - Voice-to-text with gaming terminology
 - Translation with gaming slang preservation
 
 #### Community Building
+
 - Gaming group formation suggestions
 - Tournament and event organization tools
 - Gaming achievement celebration automation
 
 ---
 
-This document serves as the foundational guide for implementing user journeys that seamlessly blend core social features with RAG-enhanced gaming experiences, ensuring both mainstream appeal and specialized gaming community value. 
+This document serves as the foundational guide for implementing user journeys that seamlessly blend core social features with RAG-enhanced gaming experiences, ensuring both mainstream appeal and specialized gaming community value.

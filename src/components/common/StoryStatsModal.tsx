@@ -2,15 +2,15 @@
  * @file StoryStatsModal.tsx
  * @description Modal component for displaying story statistics and viewer information.
  * Shows view counts, viewer list, and engagement metrics with cyber gaming aesthetics.
- * 
+ *
  * @author SnapConnect Team
  * @created 2024-01-24
- * 
+ *
  * @dependencies
  * - react: React hooks
  * - react-native: Core components
  * - @expo/vector-icons: Icons
- * 
+ *
  * @usage
  * <StoryStatsModal
  *   visible={showModal}
@@ -18,16 +18,23 @@
  *   onClose={handleClose}
  *   onDeleteStory={handleDelete}
  * />
- * 
+ *
  * @ai_context
  * Displays AI-enhanced story analytics with engagement insights.
  * Supports smart viewer categorization and interaction patterns.
  */
 
-import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { FlatList, Modal, SafeAreaView, Text, TouchableOpacity, View } from 'react-native';
-import { useThemeStore } from '../../stores/themeStore';
+import { Ionicons } from "@expo/vector-icons";
+import React from "react";
+import {
+  FlatList,
+  Modal,
+  SafeAreaView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useThemeStore } from "../../stores/themeStore";
 
 /**
  * Story data interface
@@ -35,7 +42,7 @@ import { useThemeStore } from '../../stores/themeStore';
 interface MyStory {
   id: string;
   mediaUrl: string;
-  mediaType: 'photo' | 'video';
+  mediaType: "photo" | "video";
   text?: string;
   createdAt: any;
   viewCount: number;
@@ -74,10 +81,10 @@ interface StoryStatsModalProps {
 
 /**
  * Story statistics modal component with cyber gaming aesthetic
- * 
+ *
  * @param {StoryStatsModalProps} props - Component props
  * @returns {React.ReactElement} Rendered story stats modal
- * 
+ *
  * @performance
  * - Efficient list rendering for large viewer counts
  * - Optimized modal animations and transitions
@@ -87,7 +94,7 @@ const StoryStatsModal: React.FC<StoryStatsModalProps> = ({
   visible,
   storyData,
   onClose,
-  onDeleteStory
+  onDeleteStory,
 }) => {
   const theme = useThemeStore((state) => state.theme);
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
@@ -100,14 +107,14 @@ const StoryStatsModal: React.FC<StoryStatsModalProps> = ({
    * Format time since creation
    */
   const formatTimeAgo = (timestamp: any) => {
-    if (!timestamp) return '';
-    
+    if (!timestamp) return "";
+
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    
-    if (diffHours < 1) return 'Just now';
+
+    if (diffHours < 1) return "Just now";
     if (diffHours < 24) return `${diffHours}h ago`;
     return `${Math.floor(diffHours / 24)}d ago`;
   };
@@ -116,19 +123,19 @@ const StoryStatsModal: React.FC<StoryStatsModalProps> = ({
    * Format viewer viewed time
    */
   const formatViewedTime = (viewedAt: any) => {
-    if (!viewedAt) return '';
-    
+    if (!viewedAt) return "";
+
     const date = viewedAt.toDate ? viewedAt.toDate() : new Date(viewedAt);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
-    
-    if (diffMins < 1) return 'Just now';
+
+    if (diffMins < 1) return "Just now";
     if (diffMins < 60) return `${diffMins}m ago`;
-    
+
     const diffHours = Math.floor(diffMins / 60);
     if (diffHours < 24) return `${diffHours}h ago`;
-    
+
     return `${Math.floor(diffHours / 24)}d ago`;
   };
 
@@ -136,11 +143,11 @@ const StoryStatsModal: React.FC<StoryStatsModalProps> = ({
    * Get user initials for avatar
    */
   const getUserInitials = (viewer: StoryViewer) => {
-    const name = viewer.displayName || viewer.username || 'Unknown';
+    const name = viewer.displayName || viewer.username || "Unknown";
     return name
-      .split(' ')
-      .map(n => n.charAt(0).toUpperCase())
-      .join('')
+      .split(" ")
+      .map((n) => n.charAt(0).toUpperCase())
+      .join("")
       .slice(0, 2);
   };
 
@@ -165,11 +172,11 @@ const StoryStatsModal: React.FC<StoryStatsModalProps> = ({
           {getUserInitials(item)}
         </Text>
       </View>
-      
+
       {/* Viewer Info */}
       <View className="flex-1">
         <Text className="text-white font-inter font-medium text-base">
-          {item.displayName || item.username || 'Unknown User'}
+          {item.displayName || item.username || "Unknown User"}
         </Text>
         <Text className="text-white/60 font-inter text-sm">
           Viewed {formatViewedTime(item.viewedAt)}
@@ -186,7 +193,11 @@ const StoryStatsModal: React.FC<StoryStatsModalProps> = ({
    */
   const renderEmptyViewers = () => (
     <View className="flex-1 justify-center items-center py-12">
-      <Ionicons name="eye-off-outline" size={48} color="rgba(255,255,255,0.3)" />
+      <Ionicons
+        name="eye-off-outline"
+        size={48}
+        color="rgba(255,255,255,0.3)"
+      />
       <Text className="text-white/60 font-inter text-base mt-4 text-center">
         No viewers yet
       </Text>
@@ -203,18 +214,20 @@ const StoryStatsModal: React.FC<StoryStatsModalProps> = ({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background.primary }}>
+      <SafeAreaView
+        style={{ flex: 1, backgroundColor: theme.colors.background.primary }}
+      >
         <View className="flex-1 bg-cyber-black">
           {/* Header */}
           <View className="flex-row justify-between items-center px-6 py-4 border-b border-cyber-gray/20">
             <TouchableOpacity onPress={onClose} className="p-2">
               <Ionicons name="close" size={24} color="white" />
             </TouchableOpacity>
-            
+
             <Text className="text-white font-orbitron text-lg">
               Story Stats
             </Text>
-            
+
             {onDeleteStory && (
               <TouchableOpacity onPress={handleDeleteStory} className="p-2">
                 <Ionicons name="trash-outline" size={20} color="#ff0040" />
@@ -230,25 +243,25 @@ const StoryStatsModal: React.FC<StoryStatsModalProps> = ({
                   {story.viewCount || 0}
                 </Text>
                 <Text className="text-white/60 font-inter text-sm">
-                  {story.viewCount === 1 ? 'View' : 'Views'}
+                  {story.viewCount === 1 ? "View" : "Views"}
                 </Text>
               </View>
-              
-                             <View className="items-end">
-                 <Text className="text-white/60 font-inter text-sm">
-                   {formatTimeAgo(story.createdAt)}
-                 </Text>
-                 <View className="flex-row items-center mt-1">
-                   <Ionicons 
-                     name={story.mediaType === 'video' ? 'videocam' : 'camera'} 
-                     size={14} 
-                     color={accentColor} 
-                   />
-                   <Text className="text-cyber-cyan font-inter text-xs ml-1 font-medium">
-                     {story.mediaType.toUpperCase()}
-                   </Text>
-                 </View>
-               </View>
+
+              <View className="items-end">
+                <Text className="text-white/60 font-inter text-sm">
+                  {formatTimeAgo(story.createdAt)}
+                </Text>
+                <View className="flex-row items-center mt-1">
+                  <Ionicons
+                    name={story.mediaType === "video" ? "videocam" : "camera"}
+                    size={14}
+                    color={accentColor}
+                  />
+                  <Text className="text-cyber-cyan font-inter text-xs ml-1 font-medium">
+                    {story.mediaType.toUpperCase()}
+                  </Text>
+                </View>
+              </View>
             </View>
 
             {/* Story Text Preview */}
@@ -265,14 +278,20 @@ const StoryStatsModal: React.FC<StoryStatsModalProps> = ({
               <View className="flex-row items-center">
                 <Ionicons name="eye" size={16} color={accentColor} />
                 <Text className="text-white/70 font-inter text-sm ml-2">
-                  {viewers.length} {viewers.length === 1 ? 'viewer' : 'viewers'}
+                  {viewers.length} {viewers.length === 1 ? "viewer" : "viewers"}
                 </Text>
               </View>
-              
+
               <View className="flex-row items-center">
                 <Ionicons name="time" size={16} color={accentColor} />
                 <Text className="text-white/70 font-inter text-sm ml-2">
-                  Expires in {24 - Math.floor((Date.now() - story.createdAt.toDate()) / (1000 * 60 * 60))}h
+                  Expires in{" "}
+                  {24 -
+                    Math.floor(
+                      (Date.now() - story.createdAt.toDate()) /
+                        (1000 * 60 * 60),
+                    )}
+                  h
                 </Text>
               </View>
             </View>
@@ -289,7 +308,7 @@ const StoryStatsModal: React.FC<StoryStatsModalProps> = ({
             <FlatList
               data={viewers}
               renderItem={renderViewerItem}
-              keyExtractor={item => item.id}
+              keyExtractor={(item) => item.id}
               ListEmptyComponent={renderEmptyViewers}
               showsVerticalScrollIndicator={false}
             />
@@ -300,4 +319,4 @@ const StoryStatsModal: React.FC<StoryStatsModalProps> = ({
   );
 };
 
-export default StoryStatsModal; 
+export default StoryStatsModal;

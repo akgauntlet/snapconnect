@@ -2,28 +2,28 @@
  * @file firebase.js
  * @description Firebase configuration and initialization for SnapConnect using Firebase compat mode.
  * Uses compatibility layer for better React Native support and stability.
- * 
+ *
  * @author SnapConnect Team
  * @created 2024-01-20
  * @modified 2024-01-24
- * 
+ *
  * @dependencies
  * - firebase: Firebase v9+ Compat SDK
  * - @react-native-async-storage/async-storage: For Auth persistence
- * 
+ *
  * @usage
  * import { getFirebaseAuth, getFirebaseDB, getFirebaseStorage, initializeFirebaseServices } from '@/config/firebase';
- * 
+ *
  * @ai_context
  * Integrates with AI services for user behavior analytics and personalization.
  * Supports real-time data synchronization for AI-powered features.
  */
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import firebase from 'firebase/compat/app';
-import 'firebase/compat/auth';
-import 'firebase/compat/firestore';
-import 'firebase/compat/storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import firebase from "firebase/compat/app";
+import "firebase/compat/auth";
+import "firebase/compat/firestore";
+import "firebase/compat/storage";
 
 /**
  * Validate that all required Firebase environment variables are set
@@ -31,20 +31,20 @@ import 'firebase/compat/storage';
  */
 function validateFirebaseConfig() {
   const requiredVars = [
-    'EXPO_PUBLIC_FIREBASE_API_KEY',
-    'EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN',
-    'EXPO_PUBLIC_FIREBASE_PROJECT_ID',
-    'EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET',
-    'EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID',
-    'EXPO_PUBLIC_FIREBASE_APP_ID',
+    "EXPO_PUBLIC_FIREBASE_API_KEY",
+    "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN",
+    "EXPO_PUBLIC_FIREBASE_PROJECT_ID",
+    "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET",
+    "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
+    "EXPO_PUBLIC_FIREBASE_APP_ID",
   ];
 
-  const missingVars = requiredVars.filter(varName => !process.env[varName]);
-  
+  const missingVars = requiredVars.filter((varName) => !process.env[varName]);
+
   if (missingVars.length > 0) {
     throw new Error(
-      `❌ Missing required Firebase environment variables: ${missingVars.join(', ')}\n` +
-      'Please check your .env file and ensure all Firebase configuration variables are set.'
+      `❌ Missing required Firebase environment variables: ${missingVars.join(", ")}\n` +
+        "Please check your .env file and ensure all Firebase configuration variables are set.",
     );
   }
 }
@@ -88,12 +88,12 @@ const firebaseConfig = {
  */
 function getCurrentEnvironment() {
   // Check if running in React Native environment
-  if (typeof __DEV__ !== 'undefined') {
-    return __DEV__ ? 'development' : 'production';
+  if (typeof __DEV__ !== "undefined") {
+    return __DEV__ ? "development" : "production";
   }
-  
+
   // Fallback for Node.js environment
-  return process.env.NODE_ENV === 'production' ? 'production' : 'development';
+  return process.env.NODE_ENV === "production" ? "production" : "development";
 }
 
 /**
@@ -105,39 +105,47 @@ export const initializeFirebaseServices = async () => {
   try {
     // Validate environment variables before initialization
     validateFirebaseConfig();
-    
+
     // Check if Firebase is already initialized
     if (!firebase.apps.length) {
       const environment = getCurrentEnvironment();
       const config = firebaseConfig[environment];
-      
+
       // Initialize Firebase app
       firebase.initializeApp(config);
       console.log(`🔥 Firebase initialized for ${environment} environment`);
     } else {
-      console.log('🔥 Firebase already initialized');
+      console.log("🔥 Firebase already initialized");
     }
-    
+
     // Configure Auth persistence for React Native
     try {
       // Check if we're in React Native environment
-      if (typeof navigator !== 'undefined' && navigator.product === 'ReactNative') {
+      if (
+        typeof navigator !== "undefined" &&
+        navigator.product === "ReactNative"
+      ) {
         // React Native automatically handles auth persistence with AsyncStorage
         // No need to explicitly set persistence - Firebase handles this internally
-        console.log('✅ Firebase Auth persistence enabled with AsyncStorage');
+        console.log("✅ Firebase Auth persistence enabled with AsyncStorage");
       } else {
         // For web platforms, use localStorage persistence
-        await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-        console.log('✅ Firebase Auth persistence enabled with localStorage');
+        await firebase
+          .auth()
+          .setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+        console.log("✅ Firebase Auth persistence enabled with localStorage");
       }
     } catch (persistenceError) {
-      console.warn('⚠️ Firebase Auth persistence configuration warning:', persistenceError.message);
+      console.warn(
+        "⚠️ Firebase Auth persistence configuration warning:",
+        persistenceError.message,
+      );
       // Continue without explicit persistence configuration
     }
-    
-    console.log('✅ Firebase services initialized successfully');
+
+    console.log("✅ Firebase services initialized successfully");
   } catch (error) {
-    console.error('❌ Firebase services initialization failed:', error);
+    console.error("❌ Firebase services initialization failed:", error);
     throw error;
   }
 };
@@ -148,7 +156,9 @@ export const initializeFirebaseServices = async () => {
  */
 export const getFirebaseAuth = () => {
   if (!firebase.apps.length) {
-    throw new Error('Firebase not initialized. Call initializeFirebaseServices() first.');
+    throw new Error(
+      "Firebase not initialized. Call initializeFirebaseServices() first.",
+    );
   }
   return firebase.auth();
 };
@@ -159,7 +169,9 @@ export const getFirebaseAuth = () => {
  */
 export const getFirebaseDB = () => {
   if (!firebase.apps.length) {
-    throw new Error('Firebase not initialized. Call initializeFirebaseServices() first.');
+    throw new Error(
+      "Firebase not initialized. Call initializeFirebaseServices() first.",
+    );
   }
   return firebase.firestore();
 };
@@ -170,7 +182,9 @@ export const getFirebaseDB = () => {
  */
 export const getFirebaseStorage = () => {
   if (!firebase.apps.length) {
-    throw new Error('Firebase not initialized. Call initializeFirebaseServices() first.');
+    throw new Error(
+      "Firebase not initialized. Call initializeFirebaseServices() first.",
+    );
   }
   return firebase.storage();
 };
@@ -181,7 +195,9 @@ export const getFirebaseStorage = () => {
  */
 export const getFirebaseApp = () => {
   if (!firebase.apps.length) {
-    throw new Error('Firebase not initialized. Call initializeFirebaseServices() first.');
+    throw new Error(
+      "Firebase not initialized. Call initializeFirebaseServices() first.",
+    );
   }
   return firebase.app();
 };
@@ -200,16 +216,16 @@ export const isFirebaseInitialized = () => {
  */
 export const verifyAsyncStorage = async () => {
   try {
-    const testKey = '@snapconnect:storage_test';
-    const testValue = 'test';
-    
+    const testKey = "@snapconnect:storage_test";
+    const testValue = "test";
+
     await AsyncStorage.setItem(testKey, testValue);
     const retrievedValue = await AsyncStorage.getItem(testKey);
     await AsyncStorage.removeItem(testKey);
-    
+
     return retrievedValue === testValue;
   } catch (error) {
-    console.error('AsyncStorage verification failed:', error);
+    console.error("AsyncStorage verification failed:", error);
     return false;
   }
 };
@@ -218,4 +234,4 @@ export const verifyAsyncStorage = async () => {
 export { firebase };
 
 // Export the app as default
-export default firebase; 
+export default firebase;

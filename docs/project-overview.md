@@ -5,6 +5,7 @@ This project is a speed build challenge to build a fully functional Snapchat clo
 ---
 
 ## Phase 1: Core Clone
+
 Build a complete ephemeral messaging platform with essential features:
 
 - **Real-time photo/video sharing with disappearing messages**

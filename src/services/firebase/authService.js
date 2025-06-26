@@ -2,24 +2,24 @@
  * @file authService.js
  * @description Firebase authentication service for SnapConnect Phase 2.
  * Handles phone and email authentication, user profiles, and verification using Firebase compat SDK.
- * 
+ *
  * @author SnapConnect Team
  * @created 2024-01-20
  * @modified 2024-01-24
- * 
+ *
  * @dependencies
  * - firebase/compat: Firebase Authentication Compat SDK
- * 
+ *
  * @usage
  * import { authService } from '@/services/firebase/authService';
- * 
+ *
  * @ai_context
  * Integrates with AI services for user behavior analytics and gaming preference detection.
  */
 
 /**
  * Authentication service class for Firebase integration
- * 
+ *
  * NOTE: This class is designed to be completely safe during module import.
  * No Firebase services are accessed until methods are actually called.
  */
@@ -35,7 +35,7 @@ class AuthService {
    */
   getAuth() {
     // Dynamic import to avoid circular dependencies and early Firebase access
-    const { getFirebaseAuth } = require('../../config/firebase');
+    const { getFirebaseAuth } = require("../../config/firebase");
     return getFirebaseAuth();
   }
 
@@ -45,7 +45,7 @@ class AuthService {
    */
   getDB() {
     // Dynamic import to avoid circular dependencies and early Firebase access
-    const { getFirebaseDB } = require('../../config/firebase');
+    const { getFirebaseDB } = require("../../config/firebase");
     return getFirebaseDB();
   }
 
@@ -55,10 +55,10 @@ class AuthService {
    */
   async verifyStorage() {
     try {
-      const { verifyAsyncStorage } = require('../../config/firebase');
+      const { verifyAsyncStorage } = require("../../config/firebase");
       return await verifyAsyncStorage();
     } catch (error) {
-      console.warn('⚠️ Storage verification failed:', error);
+      console.warn("⚠️ Storage verification failed:", error);
       return false;
     }
   }
@@ -71,29 +71,32 @@ class AuthService {
    */
   async signInWithEmail(email, password) {
     try {
-      console.log('🔄 Starting email signin process for:', email);
-      console.log('📞 Calling authService.signInWithEmail...');
-      console.log('🔄 Getting Firebase Auth instance...');
-      
+      console.log("🔄 Starting email signin process for:", email);
+      console.log("📞 Calling authService.signInWithEmail...");
+      console.log("🔄 Getting Firebase Auth instance...");
+
       const auth = this.getAuth();
-      console.log('🔄 Signing in with email and password...');
-      
-      const userCredential = await auth.signInWithEmailAndPassword(email, password);
+      console.log("🔄 Signing in with email and password...");
+
+      const userCredential = await auth.signInWithEmailAndPassword(
+        email,
+        password,
+      );
       const user = userCredential.user;
-      
-      console.log('✅ Firebase Auth signin successful');
-      
+
+      console.log("✅ Firebase Auth signin successful");
+
       // Get user profile from database
       const profile = await this.getUserProfile(user.uid);
-      
-      console.log('✅ User profile loaded successfully');
-      
+
+      console.log("✅ User profile loaded successfully");
+
       return {
         user: this.formatUserData(user),
-        profile
+        profile,
       };
     } catch (error) {
-      console.error('❌ Email sign in failed:', error);
+      console.error("❌ Email sign in failed:", error);
       throw this.handleAuthError(error);
     }
   }
@@ -108,64 +111,84 @@ class AuthService {
    */
   async signUpWithEmail(email, password, displayName, additionalData = {}) {
     try {
-      console.log('🔄 Starting email signup process for:', email);
-      console.log('📞 Calling authService.signUpWithEmail...');
-      console.log('🔄 Getting Firebase Auth instance...');
-      
+      console.log("🔄 Starting email signup process for:", email);
+      console.log("📞 Calling authService.signUpWithEmail...");
+      console.log("🔄 Getting Firebase Auth instance...");
+
       // Verify storage is working before proceeding
       const storageWorking = await this.verifyStorage();
       if (!storageWorking) {
-        console.warn('⚠️ AsyncStorage verification failed, but continuing with auth...');
+        console.warn(
+          "⚠️ AsyncStorage verification failed, but continuing with auth...",
+        );
       }
-      
+
       const auth = this.getAuth();
-      console.log('🔄 Creating user with email and password...');
-      
-      const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+      console.log("🔄 Creating user with email and password...");
+
+      const userCredential = await auth.createUserWithEmailAndPassword(
+        email,
+        password,
+      );
       const user = userCredential.user;
-      
-      console.log('✅ Firebase Auth user created successfully');
-      
+
+      console.log("✅ Firebase Auth user created successfully");
+
       // Update Firebase Auth profile
       await user.updateProfile({ displayName });
-      console.log('✅ Firebase Auth profile updated');
-      
+      console.log("✅ Firebase Auth profile updated");
+
       // Create user profile in database (includes username reservation)
       const profile = await this.createUserProfile(user.uid, {
         email,
         displayName,
-        authMethod: 'email',
-        ...additionalData
+        authMethod: "email",
+        ...additionalData,
       });
-      
-      console.log('✅ User profile created in database');
-      
+
+      console.log("✅ User profile created in database");
+
       return {
         user: this.formatUserData(user),
-        profile
+        profile,
       };
     } catch (error) {
-      console.error('❌ Email sign up failed:', error);
-      
+      console.error("❌ Email sign up failed:", error);
+
       // Check if this might be a storage error
-      if (error.message && error.message.includes('setItem')) {
-        console.error('🚨 Storage/persistence error detected during signup');
-        console.warn('⚠️ This is likely a local storage issue, not an authentication failure');
-        console.warn('⚠️ Firebase Auth operations may have succeeded despite this error');
-        console.error('Storage error details:', error.message);
-        
+      if (error.message && error.message.includes("setItem")) {
+        console.error("🚨 Storage/persistence error detected during signup");
+        console.warn(
+          "⚠️ This is likely a local storage issue, not an authentication failure",
+        );
+        console.warn(
+          "⚠️ Firebase Auth operations may have succeeded despite this error",
+        );
+        console.error("Storage error details:", error.message);
+
         // Wrap storage errors with user-friendly message
-        const wrappedError = new Error('Authentication completed but local storage may not be working properly.');
-        console.error('❌ Email sign up failed:', `[${wrappedError.constructor.name}: ${wrappedError.message}]`);
-        console.warn('⚠️ This appears to be a storage/persistence error, not an authentication error');
-        console.warn('⚠️ The user may have been created successfully despite this error');
-        
+        const wrappedError = new Error(
+          "Authentication completed but local storage may not be working properly.",
+        );
+        console.error(
+          "❌ Email sign up failed:",
+          `[${wrappedError.constructor.name}: ${wrappedError.message}]`,
+        );
+        console.warn(
+          "⚠️ This appears to be a storage/persistence error, not an authentication error",
+        );
+        console.warn(
+          "⚠️ The user may have been created successfully despite this error",
+        );
+
         throw wrappedError;
       }
-      
+
       throw this.handleAuthError(error);
     } finally {
-      console.log('✅ Signup process completed (storage issues may exist but auth should work)');
+      console.log(
+        "✅ Signup process completed (storage issues may exist but auth should work)",
+      );
     }
   }
 
@@ -179,37 +202,37 @@ class AuthService {
     try {
       // For now, we'll simulate phone auth since reCAPTCHA setup is complex in Expo
       // In production, you'd set up reCAPTCHA verification
-      console.log('Phone authentication simulated for:', phoneNumber);
-      
+      console.log("Phone authentication simulated for:", phoneNumber);
+
       // Return a mock confirmation object
       const mockVerificationId = `mock_${Date.now()}`;
-      
+
       return {
         confirmation: {
           verificationId: mockVerificationId,
           confirm: async (code) => {
             // Mock verification - in production, this would verify the actual SMS code
-            if (code === '123456') {
+            if (code === "123456") {
               // Create a mock user for demo purposes
               const mockUser = {
                 uid: `phone_user_${Date.now()}`,
                 phoneNumber: phoneNumber,
-                providerData: [{ providerId: 'phone' }]
+                providerData: [{ providerId: "phone" }],
               };
-              
+
               return {
                 user: mockUser,
-                additionalUserInfo: { isNewUser: true }
+                additionalUserInfo: { isNewUser: true },
               };
             } else {
-              throw new Error('Invalid verification code');
+              throw new Error("Invalid verification code");
             }
-          }
+          },
         },
-        verificationId: mockVerificationId
+        verificationId: mockVerificationId,
       };
     } catch (error) {
-      console.error('Phone sign in failed:', error);
+      console.error("Phone sign in failed:", error);
       throw this.handleAuthError(error);
     }
   }
@@ -224,45 +247,45 @@ class AuthService {
   async verifyPhoneNumber(verificationId, code, additionalData = {}) {
     try {
       // Mock verification for demo purposes
-      if (code === '123456') {
+      if (code === "123456") {
         const isNewUser = true;
-        
+
         // Create mock user data
         const mockUser = {
           uid: `phone_user_${Date.now()}`,
-          phoneNumber: '+1234567890', // Mock phone number
+          phoneNumber: "+1234567890", // Mock phone number
           displayName: additionalData.displayName || null,
           photoURL: null,
           emailVerified: false,
           metadata: {
             creationTime: new Date().toISOString(),
-            lastSignInTime: new Date().toISOString()
-          }
+            lastSignInTime: new Date().toISOString(),
+          },
         };
-        
+
         let profile;
         if (isNewUser) {
           // Create new user profile (includes username reservation)
           profile = await this.createUserProfile(mockUser.uid, {
             phoneNumber: mockUser.phoneNumber,
-            authMethod: 'phone',
-            ...additionalData
+            authMethod: "phone",
+            ...additionalData,
           });
         } else {
           // Get existing user profile
           profile = await this.getUserProfile(mockUser.uid);
         }
-        
+
         return {
           user: this.formatUserData(mockUser),
           profile,
-          isNewUser
+          isNewUser,
         };
       } else {
-        throw new Error('Invalid verification code');
+        throw new Error("Invalid verification code");
       }
     } catch (error) {
-      console.error('Phone verification failed:', error);
+      console.error("Phone verification failed:", error);
       throw this.handleAuthError(error);
     }
   }
@@ -275,9 +298,9 @@ class AuthService {
     try {
       const auth = this.getAuth();
       await auth.signOut();
-      console.log('✅ User signed out successfully');
+      console.log("✅ User signed out successfully");
     } catch (error) {
-      console.error('Sign out failed:', error);
+      console.error("Sign out failed:", error);
       throw this.handleAuthError(error);
     }
   }
@@ -291,10 +314,15 @@ class AuthService {
   async createUserProfile(uid, profileData) {
     try {
       const db = this.getDB();
-      const { firebase } = require('../../config/firebase');
-      
-      console.log('🔄 Creating user profile for:', uid, 'with data:', profileData);
-      
+      const { firebase } = require("../../config/firebase");
+
+      console.log(
+        "🔄 Creating user profile for:",
+        uid,
+        "with data:",
+        profileData,
+      );
+
       const profile = {
         uid,
         username: profileData.username || null,
@@ -306,28 +334,28 @@ class AuthService {
         gamingPlatform: profileData.gamingPlatform || null,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         lastActive: firebase.firestore.FieldValue.serverTimestamp(),
-        status: 'active',
+        status: "active",
         preferences: {
-          theme: 'cyber',
+          theme: "cyber",
           notifications: true,
-          privacy: 'friends'
-        }
+          privacy: "friends",
+        },
       };
-      
+
       // Create user document first
-      const userRef = db.collection('users').doc(uid);
+      const userRef = db.collection("users").doc(uid);
       await userRef.set(profile);
-      console.log('✅ User document created successfully');
-      
+      console.log("✅ User document created successfully");
+
       // Reserve username if provided (now that user document exists)
       if (profileData.username) {
         await this.reserveUsernameOnly(uid, profileData.username);
-        console.log('✅ Username reserved:', profileData.username);
+        console.log("✅ Username reserved:", profileData.username);
       }
-      
+
       return profile;
     } catch (error) {
-      console.error('❌ Create user profile failed:', error);
+      console.error("❌ Create user profile failed:", error);
       throw error;
     }
   }
@@ -340,27 +368,27 @@ class AuthService {
   async getUserProfile(uid) {
     try {
       const db = this.getDB();
-      const userRef = db.collection('users').doc(uid);
+      const userRef = db.collection("users").doc(uid);
       const snapshot = await userRef.get();
-      
+
       if (!snapshot.exists) {
-        console.warn('⚠️ User profile not found for UID:', uid);
-        console.log('🔄 Attempting to recover missing profile...');
-        
+        console.warn("⚠️ User profile not found for UID:", uid);
+        console.log("🔄 Attempting to recover missing profile...");
+
         // Try to recover missing profile by checking for reserved username
         const recoveredProfile = await this.recoverMissingProfile(uid);
         if (recoveredProfile) {
-          console.log('✅ Profile recovered successfully');
+          console.log("✅ Profile recovered successfully");
           return recoveredProfile;
         }
-        
-        console.warn('⚠️ Could not recover profile, returning null');
+
+        console.warn("⚠️ Could not recover profile, returning null");
         return null;
       }
-      
+
       return snapshot.data();
     } catch (error) {
-      console.error('Get user profile failed:', error);
+      console.error("Get user profile failed:", error);
       throw error;
     }
   }
@@ -373,25 +401,25 @@ class AuthService {
   async recoverMissingProfile(uid) {
     try {
       const db = this.getDB();
-      const { firebase } = require('../../config/firebase');
-      
+      const { firebase } = require("../../config/firebase");
+
       // Search for username reserved by this user
-      const usernamesQuery = db.collection('usernames').where('uid', '==', uid);
+      const usernamesQuery = db.collection("usernames").where("uid", "==", uid);
       const usernameSnapshot = await usernamesQuery.get();
-      
+
       let username = null;
       if (!usernameSnapshot.empty) {
         username = usernameSnapshot.docs[0].id;
-        console.log('🔍 Found reserved username:', username);
+        console.log("🔍 Found reserved username:", username);
       }
-      
+
       // Get current Firebase Auth user to recover basic info
       const auth = this.getAuth();
       const currentUser = auth.currentUser;
-      
+
       if (currentUser && currentUser.uid === uid) {
-        console.log('🔄 Recovering profile from Firebase Auth user...');
-        
+        console.log("🔄 Recovering profile from Firebase Auth user...");
+
         const recoveredProfile = {
           uid,
           username,
@@ -399,29 +427,29 @@ class AuthService {
           email: currentUser.email || null,
           phoneNumber: currentUser.phoneNumber || null,
           profilePhoto: currentUser.photoURL || null,
-          authMethod: currentUser.email ? 'email' : 'phone',
+          authMethod: currentUser.email ? "email" : "phone",
           gamingPlatform: null,
           createdAt: firebase.firestore.FieldValue.serverTimestamp(),
           lastActive: firebase.firestore.FieldValue.serverTimestamp(),
-          status: 'active',
+          status: "active",
           preferences: {
-            theme: 'cyber',
+            theme: "cyber",
             notifications: true,
-            privacy: 'friends'
-          }
+            privacy: "friends",
+          },
         };
-        
+
         // Create the missing profile document
-        const userRef = db.collection('users').doc(uid);
+        const userRef = db.collection("users").doc(uid);
         await userRef.set(recoveredProfile);
-        console.log('✅ Missing profile document created');
-        
+        console.log("✅ Missing profile document created");
+
         return recoveredProfile;
       }
-      
+
       return null;
     } catch (error) {
-      console.error('❌ Profile recovery failed:', error);
+      console.error("❌ Profile recovery failed:", error);
       return null;
     }
   }
@@ -435,115 +463,160 @@ class AuthService {
   async updateUserProfile(uid, updates) {
     try {
       const db = this.getDB();
-      const { firebase } = require('../../config/firebase');
-      
-      console.log('🔄 AuthService: Updating user profile for:', uid, 'with updates:', updates);
-      
+      const { firebase } = require("../../config/firebase");
+
+      console.log(
+        "🔄 AuthService: Updating user profile for:",
+        uid,
+        "with updates:",
+        updates,
+      );
+
       // Handle username changes with improved error handling
       if (updates.username) {
-        console.log('🔄 AuthService: Processing username change...');
-        
+        console.log("🔄 AuthService: Processing username change...");
+
         try {
           const currentProfile = await this.getUserProfile(uid);
           const currentUsername = currentProfile?.username;
-          
+
           // If username is changing, update username reservation
           if (currentUsername !== updates.username) {
-            console.log('🔄 AuthService: Username changing from:', currentUsername, 'to:', updates.username);
-            
+            console.log(
+              "🔄 AuthService: Username changing from:",
+              currentUsername,
+              "to:",
+              updates.username,
+            );
+
             // Check if new username is available before making any changes
-            const isAvailable = await this.isUsernameAvailable(updates.username);
+            const isAvailable = await this.isUsernameAvailable(
+              updates.username,
+            );
             if (!isAvailable) {
-              throw new Error('Username is already taken');
+              throw new Error("Username is already taken");
             }
-            
+
             // Remove old username reservation if it exists
             if (currentUsername) {
               try {
-                const oldUsernameRef = db.collection('usernames').doc(currentUsername.toLowerCase());
+                const oldUsernameRef = db
+                  .collection("usernames")
+                  .doc(currentUsername.toLowerCase());
                 await oldUsernameRef.delete();
-                console.log('✅ AuthService: Old username reservation removed:', currentUsername);
+                console.log(
+                  "✅ AuthService: Old username reservation removed:",
+                  currentUsername,
+                );
               } catch (error) {
-                console.warn('⚠️ AuthService: Failed to remove old username reservation (non-critical):', error);
+                console.warn(
+                  "⚠️ AuthService: Failed to remove old username reservation (non-critical):",
+                  error,
+                );
                 // Don't throw here - this is not critical to the update process
               }
             }
-            
+
             // Reserve new username
             try {
               await this.reserveUsernameOnly(uid, updates.username);
-              console.log('✅ AuthService: New username reserved:', updates.username);
+              console.log(
+                "✅ AuthService: New username reserved:",
+                updates.username,
+              );
             } catch (error) {
-              console.error('❌ AuthService: Failed to reserve new username:', error);
-              
+              console.error(
+                "❌ AuthService: Failed to reserve new username:",
+                error,
+              );
+
               // If username reservation fails, try to restore old username if it existed
               if (currentUsername) {
                 try {
                   await this.reserveUsernameOnly(uid, currentUsername);
-                  console.log('🔄 AuthService: Restored old username reservation');
+                  console.log(
+                    "🔄 AuthService: Restored old username reservation",
+                  );
                 } catch (restoreError) {
-                  console.error('❌ AuthService: Failed to restore old username:', restoreError);
+                  console.error(
+                    "❌ AuthService: Failed to restore old username:",
+                    restoreError,
+                  );
                 }
               }
-              
-              throw new Error('Username reservation failed. The username might already be taken.');
+
+              throw new Error(
+                "Username reservation failed. The username might already be taken.",
+              );
             }
           } else {
-            console.log('✅ AuthService: Username unchanged, skipping reservation');
+            console.log(
+              "✅ AuthService: Username unchanged, skipping reservation",
+            );
           }
         } catch (error) {
-          console.error('❌ AuthService: Username processing failed:', error);
+          console.error("❌ AuthService: Username processing failed:", error);
           throw error; // Re-throw to stop the update process
         }
       }
-      
+
       // Update the user document
-      console.log('🔄 AuthService: Updating user document...');
-      
+      console.log("🔄 AuthService: Updating user document...");
+
       const updateData = {
         ...updates,
-        lastActive: firebase.firestore.FieldValue.serverTimestamp()
+        lastActive: firebase.firestore.FieldValue.serverTimestamp(),
       };
-      
+
       try {
-        const userRef = db.collection('users').doc(uid);
+        const userRef = db.collection("users").doc(uid);
         await userRef.update(updateData);
-        console.log('✅ AuthService: User profile document updated');
+        console.log("✅ AuthService: User profile document updated");
       } catch (error) {
-        console.error('❌ AuthService: Failed to update user document:', error);
-        throw new Error('Failed to update profile in database');
+        console.error("❌ AuthService: Failed to update user document:", error);
+        throw new Error("Failed to update profile in database");
       }
-      
+
       // Get the updated profile
-      console.log('🔄 AuthService: Fetching updated profile...');
-      
+      console.log("🔄 AuthService: Fetching updated profile...");
+
       try {
         const updatedProfile = await this.getUserProfile(uid);
-        console.log('✅ AuthService: Profile update completed successfully');
-        
+        console.log("✅ AuthService: Profile update completed successfully");
+
         return updatedProfile;
       } catch (error) {
-        console.error('❌ AuthService: Failed to fetch updated profile:', error);
+        console.error(
+          "❌ AuthService: Failed to fetch updated profile:",
+          error,
+        );
         // Even if we can't fetch the updated profile, the update succeeded
         // Return the original profile with our updates applied
-        console.log('⚠️ AuthService: Returning constructed profile due to fetch error');
+        console.log(
+          "⚠️ AuthService: Returning constructed profile due to fetch error",
+        );
         return {
           uid,
           ...updates,
-          lastActive: new Date()
+          lastActive: new Date(),
         };
       }
-      
     } catch (error) {
-      console.error('❌ AuthService: Update user profile failed:', error);
-      
+      console.error("❌ AuthService: Update user profile failed:", error);
+
       // Provide more specific error messages
-      if (error.message === 'Username is already taken') {
-        throw new Error('Username is already taken. Please choose a different username.');
-      } else if (error.message.includes('Username reservation failed')) {
-        throw new Error('Unable to reserve username. Please try again.');
-      } else if (error.message.includes('Failed to update profile in database')) {
-        throw new Error('Failed to save profile changes. Please check your internet connection and try again.');
+      if (error.message === "Username is already taken") {
+        throw new Error(
+          "Username is already taken. Please choose a different username.",
+        );
+      } else if (error.message.includes("Username reservation failed")) {
+        throw new Error("Unable to reserve username. Please try again.");
+      } else if (
+        error.message.includes("Failed to update profile in database")
+      ) {
+        throw new Error(
+          "Failed to save profile changes. Please check your internet connection and try again.",
+        );
       } else {
         throw new Error(`Profile update failed: ${error.message}`);
       }
@@ -558,12 +631,14 @@ class AuthService {
   async isUsernameAvailable(username) {
     try {
       const db = this.getDB();
-      const usernameRef = db.collection('usernames').doc(username.toLowerCase());
+      const usernameRef = db
+        .collection("usernames")
+        .doc(username.toLowerCase());
       const snapshot = await usernameRef.get();
-      
+
       return !snapshot.exists;
     } catch (error) {
-      console.error('Username check failed:', error);
+      console.error("Username check failed:", error);
       return false;
     }
   }
@@ -577,13 +652,15 @@ class AuthService {
   async reserveUsername(uid, username) {
     try {
       const db = this.getDB();
-      const usernameRef = db.collection('usernames').doc(username.toLowerCase());
+      const usernameRef = db
+        .collection("usernames")
+        .doc(username.toLowerCase());
       await usernameRef.set({ uid });
-      
-      const userRef = db.collection('users').doc(uid);
+
+      const userRef = db.collection("users").doc(uid);
       await userRef.update({ username });
     } catch (error) {
-      console.error('Username reservation failed:', error);
+      console.error("Username reservation failed:", error);
       throw error;
     }
   }
@@ -597,11 +674,13 @@ class AuthService {
   async reserveUsernameOnly(uid, username) {
     try {
       const db = this.getDB();
-      const usernameRef = db.collection('usernames').doc(username.toLowerCase());
+      const usernameRef = db
+        .collection("usernames")
+        .doc(username.toLowerCase());
       await usernameRef.set({ uid });
-      console.log('✅ Username reserved in usernames collection:', username);
+      console.log("✅ Username reserved in usernames collection:", username);
     } catch (error) {
-      console.error('❌ Username reservation failed:', error);
+      console.error("❌ Username reservation failed:", error);
       throw error;
     }
   }
@@ -620,7 +699,7 @@ class AuthService {
       photoURL: firebaseUser.photoURL,
       emailVerified: firebaseUser.emailVerified,
       createdAt: firebaseUser.metadata?.creationTime,
-      lastSignInTime: firebaseUser.metadata?.lastSignInTime
+      lastSignInTime: firebaseUser.metadata?.lastSignInTime,
     };
   }
 
@@ -631,19 +710,82 @@ class AuthService {
    */
   handleAuthError(error) {
     const errorMessages = {
-      'auth/user-not-found': 'No account found with this email address.',
-      'auth/wrong-password': 'Incorrect password. Please try again.',
-      'auth/email-already-in-use': 'An account already exists with this email address.',
-      'auth/weak-password': 'Password should be at least 6 characters long.',
-      'auth/invalid-email': 'Please enter a valid email address.',
-      'auth/too-many-requests': 'Too many attempts. Please try again later.',
-      'auth/invalid-phone-number': 'Please enter a valid phone number.',
-      'auth/invalid-verification-code': 'Invalid verification code. Please try again.',
-      'auth/code-expired': 'Verification code has expired. Please request a new one.',
+      // Sign in errors
+      "auth/user-not-found":
+        "No account found with this email address. Please check your email or create a new account.",
+      "auth/wrong-password":
+        "Incorrect password. Please try again or reset your password.",
+      "auth/invalid-credential":
+        "Incorrect email or password. Please check your login details and try again.",
+      "auth/invalid-email": "Please enter a valid email address.",
+      "auth/user-disabled":
+        "This account has been disabled. Please contact support for assistance.",
+      "auth/too-many-requests":
+        "Too many failed attempts. Please wait a few minutes before trying again.",
+
+      // Sign up errors
+      "auth/email-already-in-use":
+        "An account with this email already exists. Try signing in instead.",
+      "auth/weak-password":
+        "Password is too weak. Please use at least 6 characters with a mix of letters and numbers.",
+      "auth/operation-not-allowed":
+        "Email registration is currently disabled. Please contact support.",
+
+      // Phone authentication errors
+      "auth/invalid-phone-number":
+        "Please enter a valid phone number with country code (e.g. +1 555-123-4567).",
+      "auth/invalid-verification-code":
+        "The verification code is incorrect. Please check the code and try again.",
+      "auth/code-expired":
+        "The verification code has expired. Please request a new code.",
+      "auth/session-expired": "Your session has expired. Please try again.",
+      "auth/quota-exceeded": "SMS quota exceeded. Please try again later.",
+
+      // Network and general errors
+      "auth/network-request-failed":
+        "Network error. Please check your internet connection and try again.",
+      "auth/internal-error":
+        "Something went wrong on our end. Please try again in a moment.",
+      "auth/cancelled-popup-request":
+        "Sign-in was cancelled. Please try again.",
+      "auth/popup-blocked":
+        "Pop-up was blocked by your browser. Please enable pop-ups and try again.",
+      "auth/popup-closed-by-user": "Sign-in was cancelled. Please try again.",
+
+      // Token and session errors
+      "auth/id-token-expired":
+        "Your session has expired. Please sign in again.",
+      "auth/id-token-revoked":
+        "Your session is no longer valid. Please sign in again.",
+      "auth/invalid-api-key": "Configuration error. Please contact support.",
+      "auth/app-deleted":
+        "This app is no longer available. Please contact support.",
+
+      // Account management errors
+      "auth/requires-recent-login":
+        "For security, please sign out and sign in again to complete this action.",
+      "auth/credential-already-in-use":
+        "This credential is already associated with another account.",
+      "auth/account-exists-with-different-credential":
+        "An account already exists with the same email but different sign-in method.",
     };
 
-    const message = errorMessages[error.code] || error.message || 'An unexpected error occurred.';
-    
+    // Get user-friendly message or fall back to a generic one
+    let message = errorMessages[error.code];
+
+    if (!message) {
+      // For unknown errors, provide a helpful generic message
+      if (error.message && error.message.includes("auth/")) {
+        message =
+          "Authentication failed. Please check your details and try again.";
+      } else {
+        message = error.message || "Something went wrong. Please try again.";
+      }
+    }
+
+    // Log the original error for debugging while showing user-friendly message
+    console.error("Original Firebase error:", error.code, error.message);
+
     return new Error(message);
   }
 
@@ -660,4 +802,4 @@ class AuthService {
 
 // Create a single instance that's safe to import
 export const authService = new AuthService();
-export default authService; 
+export default authService;

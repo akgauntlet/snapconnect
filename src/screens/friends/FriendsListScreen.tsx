@@ -2,10 +2,10 @@
  * @file FriendsListScreen.tsx
  * @description Friends list screen showing all user's friends with management options.
  * Allows viewing friend profiles, removing friends, and navigating to add friends.
- * 
+ *
  * @author SnapConnect Team
  * @created 2024-01-24
- * 
+ *
  * @dependencies
  * - react: React hooks
  * - react-native: Core components
@@ -13,19 +13,23 @@
  * - @/services/firebase/friendsService: Friends management
  * - @/stores/authStore: Authentication state
  * - @/stores/themeStore: Theme management
- * 
+ *
  * @usage
  * Main friends management interface accessible from Profile screen.
- * 
+ *
  * @ai_context
  * AI-powered friend suggestions and social graph analysis.
  * Smart friend categorization based on gaming activity and interaction patterns.
  */
 
-import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useCallback, useEffect, useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import {
+    useFocusEffect,
+    useNavigation,
+    useRoute,
+} from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import React, { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
     FlatList,
@@ -36,15 +40,19 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View
-} from 'react-native';
-import NotificationBadge from '../../components/common/NotificationBadge';
-import { useFriendRequests } from '../../hooks/useFriendRequests';
-import { useTabBarHeight } from '../../hooks/useTabBarHeight';
-import { friendsService } from '../../services/firebase/friendsService';
-import { useAuthStore } from '../../stores/authStore';
-import { useThemeStore } from '../../stores/themeStore';
-import { showDestructiveAlert, showErrorAlert, showSuccessAlert } from '../../utils/alertService';
+    View,
+} from "react-native";
+import NotificationBadge from "../../components/common/NotificationBadge";
+import { useFriendRequests } from "../../hooks/useFriendRequests";
+import { useTabBarHeight } from "../../hooks/useTabBarHeight";
+import { friendsService } from "../../services/firebase/friendsService";
+import { useAuthStore } from "../../stores/authStore";
+import { useThemeStore } from "../../stores/themeStore";
+import {
+    showDestructiveAlert,
+    showErrorAlert,
+    showSuccessAlert,
+} from "../../utils/alertService";
 
 /**
  * Friend interface for display
@@ -57,27 +65,25 @@ interface Friend {
   lastActive?: Date;
   isOnline?: boolean;
   createdAt?: Date;
-  status: 'online' | 'offline' | 'away';
+  status: "online" | "offline" | "away";
   mutualFriends?: number;
 }
 
 /**
  * Navigation prop type
  */
-type FriendsListNavigationProp = NativeStackNavigationProp<any, 'FriendsList'>;
-
-
+type FriendsListNavigationProp = NativeStackNavigationProp<any, "FriendsList">;
 
 /**
  * Friends list screen component
- * 
+ *
  * @returns {React.ReactElement} Rendered friends list interface
- * 
+ *
  * @performance
  * - Virtualized list for large friend counts
  * - Optimized friend loading and caching
  * - Efficient search and filtering
- * 
+ *
  * @ai_integration
  * - Smart friend suggestions and recommendations
  * - Activity-based friend categorization
@@ -92,7 +98,7 @@ const FriendsListScreen: React.FC = () => {
   const { tabBarHeight } = useTabBarHeight();
 
   // Get source tab from route params
-  const sourceTab = route.params?.sourceTab || 'Profile'; // Default to Profile if not specified
+  const sourceTab = route.params?.sourceTab || "Profile"; // Default to Profile if not specified
 
   // Friend requests hook for badge count
   const { incomingCount, refreshRequests } = useFriendRequests();
@@ -100,11 +106,13 @@ const FriendsListScreen: React.FC = () => {
   // Component state
   const [friends, setFriends] = useState<Friend[]>([]);
   const [filteredFriends, setFilteredFriends] = useState<Friend[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'online' | 'recent'>('all');
+  const [selectedFilter, setSelectedFilter] = useState<
+    "all" | "online" | "recent"
+  >("all");
 
   /**
    * Load friends from Firebase
@@ -117,21 +125,30 @@ const FriendsListScreen: React.FC = () => {
       const friendsData = await friendsService.getFriends(user.uid);
 
       // Get real presence data for all friends in batch
-      const friendIds = friendsData.map(friend => friend.id);
-      const presenceData = await friendsService.getBatchUserPresence(friendIds) as Record<string, {
-        status: 'online' | 'offline' | 'away';
-        lastActive: Date;
-        isOnline: boolean;
-      }>;
-      
+      const friendIds = friendsData.map((friend) => friend.id);
+      const presenceData = (await friendsService.getBatchUserPresence(
+        friendIds,
+      )) as Record<
+        string,
+        {
+          status: "online" | "offline" | "away";
+          lastActive: Date;
+          isOnline: boolean;
+        }
+      >;
+
       // Transform and enrich friend data with real presence data
       const enrichedFriends: Friend[] = friendsData.map((friend) => {
-        const presence = presenceData[friend.id] || { status: 'offline', lastActive: new Date(), isOnline: false };
-        
+        const presence = presenceData[friend.id] || {
+          status: "offline",
+          lastActive: new Date(),
+          isOnline: false,
+        };
+
         return {
           id: friend.id,
-          displayName: friend.displayName || friend.username || 'Unknown User',
-          username: friend.username || 'no-username',
+          displayName: friend.displayName || friend.username || "Unknown User",
+          username: friend.username || "no-username",
           profilePhoto: friend.profilePhoto,
           lastActive: presence.lastActive,
           isOnline: presence.isOnline,
@@ -143,15 +160,15 @@ const FriendsListScreen: React.FC = () => {
 
       // Sort by online status, then by display name
       enrichedFriends.sort((a, b) => {
-        if (a.status === 'online' && b.status !== 'online') return -1;
-        if (b.status === 'online' && a.status !== 'online') return 1;
+        if (a.status === "online" && b.status !== "online") return -1;
+        if (b.status === "online" && a.status !== "online") return 1;
         return a.displayName.localeCompare(b.displayName);
       });
 
       setFriends(enrichedFriends);
     } catch (error) {
-      console.error('Load friends failed:', error);
-      setError('Failed to load friends. Please try again.');
+      console.error("Load friends failed:", error);
+      setError("Failed to load friends. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -175,7 +192,7 @@ const FriendsListScreen: React.FC = () => {
       if (user) {
         loadFriends();
       }
-    }, [user, loadFriends])
+    }, [user, loadFriends]),
   );
 
   /**
@@ -186,19 +203,22 @@ const FriendsListScreen: React.FC = () => {
 
     // Apply text search
     if (searchQuery.trim()) {
-      filtered = filtered.filter(friend =>
-        friend.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        friend.username.toLowerCase().includes(searchQuery.toLowerCase())
+      filtered = filtered.filter(
+        (friend) =>
+          friend.displayName
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          friend.username.toLowerCase().includes(searchQuery.toLowerCase()),
       );
     }
 
     // Apply status filter
     switch (selectedFilter) {
-      case 'online':
-        filtered = filtered.filter(friend => friend.status === 'online');
+      case "online":
+        filtered = filtered.filter((friend) => friend.status === "online");
         break;
-      case 'recent':
-        filtered = filtered.filter(friend => {
+      case "recent":
+        filtered = filtered.filter((friend) => {
           if (!friend.lastActive) return false;
           const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
           return friend.lastActive > dayAgo;
@@ -217,10 +237,7 @@ const FriendsListScreen: React.FC = () => {
    */
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await Promise.all([
-      loadFriends(),
-      refreshRequests()
-    ]);
+    await Promise.all([loadFriends(), refreshRequests()]);
     setIsRefreshing(false);
   }, [loadFriends, refreshRequests]);
 
@@ -228,14 +245,14 @@ const FriendsListScreen: React.FC = () => {
    * Navigate to add friends screen
    */
   const handleAddFriends = useCallback(() => {
-    navigation.navigate('AddFriends', { sourceTab });
+    navigation.navigate("AddFriends", { sourceTab });
   }, [navigation, sourceTab]);
 
   /**
    * Navigate to friend requests screen
    */
   const handleFriendRequests = useCallback(() => {
-    navigation.navigate('FriendRequests', { sourceTab });
+    navigation.navigate("FriendRequests", { sourceTab });
   }, [navigation, sourceTab]);
 
   /**
@@ -243,53 +260,64 @@ const FriendsListScreen: React.FC = () => {
    */
   const handleBackNavigation = useCallback(() => {
     // Navigate back to the MainTabs with the specific tab
-    navigation.navigate('MainTabs', {
-      screen: sourceTab
+    navigation.navigate("MainTabs", {
+      screen: sourceTab,
     });
   }, [navigation, sourceTab]);
 
   /**
    * View friend profile
    */
-  const handleViewProfile = useCallback((friend: Friend) => {
-    navigation.navigate('FriendProfile', { friendId: friend.id, friend });
-  }, [navigation]);
+  const handleViewProfile = useCallback(
+    (friend: Friend) => {
+      navigation.navigate("FriendProfile", { friendId: friend.id, friend });
+    },
+    [navigation],
+  );
 
   /**
    * Remove friend with confirmation
    */
-  const handleRemoveFriend = useCallback(async (friend: Friend) => {
-    if (!user) return;
+  const handleRemoveFriend = useCallback(
+    async (friend: Friend) => {
+      if (!user) return;
 
-    showDestructiveAlert(
-      'Remove Friend',
-      `Are you sure you want to remove ${friend.displayName} from your friends?`,
-      async () => {
-        try {
-          await friendsService.removeFriend(user.uid, friend.id);
-          
-          // Update local state
-          setFriends(prev => prev.filter(f => f.id !== friend.id));
-          
-          showSuccessAlert(`${friend.displayName} has been removed from your friends.`);
-        } catch (error) {
-          console.error('Remove friend failed:', error);
-          showErrorAlert('Failed to remove friend. Please try again.');
-        }
-      },
-      undefined,
-      'Remove'
-    );
-  }, [user]);
+      showDestructiveAlert(
+        "Remove Friend",
+        `Are you sure you want to remove ${friend.displayName} from your friends?`,
+        async () => {
+          try {
+            await friendsService.removeFriend(user.uid, friend.id);
+
+            // Update local state
+            setFriends((prev) => prev.filter((f) => f.id !== friend.id));
+
+            showSuccessAlert(
+              `${friend.displayName} has been removed from your friends.`,
+            );
+          } catch (error) {
+            console.error("Remove friend failed:", error);
+            showErrorAlert("Failed to remove friend. Please try again.");
+          }
+        },
+        undefined,
+        "Remove",
+      );
+    },
+    [user],
+  );
 
   /**
    * Get status color
    */
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'online': return '#10b981'; // green
-      case 'away': return '#f59e0b'; // yellow
-      default: return '#6b7280'; // gray
+      case "online":
+        return "#10b981"; // green
+      case "away":
+        return "#f59e0b"; // yellow
+      default:
+        return "#6b7280"; // gray
     }
   };
 
@@ -297,7 +325,11 @@ const FriendsListScreen: React.FC = () => {
    * Get friend initials
    */
   const getFriendInitials = (friend: Friend) => {
-    return friend.displayName.split(' ').map(n => n.charAt(0).toUpperCase()).join('').slice(0, 2);
+    return friend.displayName
+      .split(" ")
+      .map((n) => n.charAt(0).toUpperCase())
+      .join("")
+      .slice(0, 2);
   };
 
   /**
@@ -307,13 +339,13 @@ const FriendsListScreen: React.FC = () => {
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
-    
-    if (diffMins < 1) return 'Just now';
+
+    if (diffMins < 1) return "Just now";
     if (diffMins < 60) return `${diffMins}m ago`;
-    
+
     const diffHours = Math.floor(diffMins / 60);
     if (diffHours < 24) return `${diffHours}h ago`;
-    
+
     const diffDays = Math.floor(diffHours / 24);
     return `${diffDays}d ago`;
   };
@@ -334,7 +366,7 @@ const FriendsListScreen: React.FC = () => {
           </Text>
         </View>
         {/* Status indicator */}
-        <View 
+        <View
           className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-cyber-black"
           style={{ backgroundColor: getStatusColor(item.status) }}
         />
@@ -349,8 +381,11 @@ const FriendsListScreen: React.FC = () => {
           @{item.username}
         </Text>
         <Text className="text-white/40 font-inter text-xs mt-1">
-          {item.status === 'online' ? 'Online now' : 
-           item.lastActive ? `Last seen ${formatLastActive(item.lastActive)}` : 'Offline'}
+          {item.status === "online"
+            ? "Online now"
+            : item.lastActive
+              ? `Last seen ${formatLastActive(item.lastActive)}`
+              : "Offline"}
         </Text>
       </View>
 
@@ -363,7 +398,7 @@ const FriendsListScreen: React.FC = () => {
             </Text>
           </View>
         )}
-        
+
         <TouchableOpacity
           onPress={() => handleRemoveFriend(item)}
           className="p-2"
@@ -377,25 +412,36 @@ const FriendsListScreen: React.FC = () => {
   /**
    * Render filter tab
    */
-  const renderFilterTab = (filter: typeof selectedFilter, label: string, count?: number) => (
+  const renderFilterTab = (
+    filter: typeof selectedFilter,
+    label: string,
+    count?: number,
+  ) => (
     <TouchableOpacity
       onPress={() => setSelectedFilter(filter)}
       className={`px-4 py-2 rounded-full mr-3 ${
-        selectedFilter === filter ? 'bg-cyber-cyan' : 'bg-cyber-gray/20'
+        selectedFilter === filter ? "bg-cyber-cyan" : "bg-cyber-gray/20"
       }`}
     >
-      <Text className={`font-inter font-medium ${
-        selectedFilter === filter ? 'text-cyber-black' : 'text-white/70'
-      }`}>
+      <Text
+        className={`font-inter font-medium ${
+          selectedFilter === filter ? "text-cyber-black" : "text-white/70"
+        }`}
+      >
         {label} {count !== undefined && `(${count})`}
       </Text>
     </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background.primary }}>
-      <StatusBar barStyle="light-content" backgroundColor={theme.colors.background.primary} />
-      
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: theme.colors.background.primary }}
+    >
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={theme.colors.background.primary}
+      />
+
       {/* Header */}
       <View className="flex-row justify-between items-center px-6 py-4 border-b border-cyber-gray/20">
         <View className="flex-row items-center">
@@ -404,10 +450,13 @@ const FriendsListScreen: React.FC = () => {
           </TouchableOpacity>
           <Text className="text-white font-orbitron text-xl">Friends</Text>
         </View>
-        
-        <TouchableOpacity onPress={handleFriendRequests} className="flex-row items-center bg-cyber-gray/20 px-3 py-2 rounded-lg">
+
+        <TouchableOpacity
+          onPress={handleFriendRequests}
+          className="flex-row items-center bg-cyber-gray/20 px-3 py-2 rounded-lg"
+        >
           <NotificationBadge count={incomingCount}>
-            <Ionicons name="person-add-outline" size={20} color={accentColor} />
+            <Ionicons name="mail-outline" size={20} color={accentColor} />
           </NotificationBadge>
           <Text className="text-white font-inter font-medium text-sm ml-2">
             Requests
@@ -418,13 +467,21 @@ const FriendsListScreen: React.FC = () => {
       {/* Filter Tabs */}
       <View className="px-6 py-4">
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {renderFilterTab('all', 'All', friends.length)}
-          {renderFilterTab('online', 'Online', friends.filter(f => f.status === 'online').length)}
-          {renderFilterTab('recent', 'Recent', friends.filter(f => {
-            if (!f.lastActive) return false;
-            const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-            return f.lastActive > dayAgo;
-          }).length)}
+          {renderFilterTab("all", "All", friends.length)}
+          {renderFilterTab(
+            "online",
+            "Online",
+            friends.filter((f) => f.status === "online").length,
+          )}
+          {renderFilterTab(
+            "recent",
+            "Recent",
+            friends.filter((f) => {
+              if (!f.lastActive) return false;
+              const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+              return f.lastActive > dayAgo;
+            }).length,
+          )}
         </ScrollView>
       </View>
 
@@ -442,8 +499,12 @@ const FriendsListScreen: React.FC = () => {
             autoCorrect={false}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={20} color="rgba(255,255,255,0.5)" />
+            <TouchableOpacity onPress={() => setSearchQuery("")}>
+              <Ionicons
+                name="close-circle"
+                size={20}
+                color="rgba(255,255,255,0.5)"
+              />
             </TouchableOpacity>
           )}
         </View>
@@ -452,14 +513,18 @@ const FriendsListScreen: React.FC = () => {
       {/* No Friends State - moved up for better visibility */}
       {!isLoading && !error && filteredFriends.length === 0 && (
         <View className="flex-1 justify-start items-center px-8 pt-16">
-          <Ionicons name="people-outline" size={64} color="rgba(255,255,255,0.3)" />
+          <Ionicons
+            name="people-outline"
+            size={64}
+            color="rgba(255,255,255,0.3)"
+          />
           <Text className="text-white/70 font-inter text-lg mt-4 mb-2">
-            {searchQuery ? 'No friends found' : 'No friends yet'}
+            {searchQuery ? "No friends found" : "No friends yet"}
           </Text>
           <Text className="text-white/50 font-inter text-sm text-center mb-8">
-            {searchQuery 
-              ? 'Try a different search term' 
-              : 'Start building your gaming network by adding friends'}
+            {searchQuery
+              ? "Try a different search term"
+              : "Start building your gaming network by adding friends"}
           </Text>
           {!searchQuery && (
             <TouchableOpacity
@@ -473,7 +538,12 @@ const FriendsListScreen: React.FC = () => {
                 elevation: 8,
               }}
             >
-              <Ionicons name="person-add" size={20} color="#000000" style={{ marginRight: 8 }} />
+              <Ionicons
+                name="person-add"
+                size={20}
+                color="#000000"
+                style={{ marginRight: 8 }}
+              />
               <Text className="text-cyber-black font-inter font-bold text-base">
                 Find Friends
               </Text>
@@ -483,31 +553,34 @@ const FriendsListScreen: React.FC = () => {
       )}
 
       {/* Add Friends Banner - shown when user has few friends */}
-      {!isLoading && friends.length > 0 && friends.length <= 3 && filteredFriends.length > 0 && (
-        <View className="mx-6 mb-4 p-4 bg-gradient-to-r from-cyber-cyan/10 to-cyber-purple/10 rounded-lg border border-cyber-cyan/20">
-          <View className="flex-row items-center">
-            <View className="w-10 h-10 bg-cyber-cyan/20 rounded-full justify-center items-center mr-3">
-              <Ionicons name="people" size={20} color={accentColor} />
+      {!isLoading &&
+        friends.length > 0 &&
+        friends.length <= 3 &&
+        filteredFriends.length > 0 && (
+          <View className="mx-6 mb-4 p-4 bg-gradient-to-r from-cyber-cyan/10 to-cyber-purple/10 rounded-lg border border-cyber-cyan/20">
+            <View className="flex-row items-center">
+              <View className="w-10 h-10 bg-cyber-cyan/20 rounded-full justify-center items-center mr-3">
+                <Ionicons name="people" size={20} color={accentColor} />
+              </View>
+              <View className="flex-1">
+                <Text className="text-white font-inter font-medium text-sm">
+                  Grow Your Network
+                </Text>
+                <Text className="text-white/60 font-inter text-xs mt-1">
+                  Find friends to share stories and gaming moments
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={handleAddFriends}
+                className="bg-cyber-cyan px-4 py-2 rounded-lg"
+              >
+                <Text className="text-cyber-black font-inter font-semibold text-sm">
+                  Find Friends
+                </Text>
+              </TouchableOpacity>
             </View>
-            <View className="flex-1">
-              <Text className="text-white font-inter font-medium text-sm">
-                Grow Your Network
-              </Text>
-              <Text className="text-white/60 font-inter text-xs mt-1">
-                Find friends to share stories and gaming moments
-              </Text>
-            </View>
-            <TouchableOpacity
-              onPress={handleAddFriends}
-              className="bg-cyber-cyan px-4 py-2 rounded-lg"
-            >
-              <Text className="text-cyber-black font-inter font-semibold text-sm">
-                Find Friends
-              </Text>
-            </TouchableOpacity>
           </View>
-        </View>
-      )}
+        )}
 
       {/* Friends List */}
       {isLoading ? (
@@ -536,7 +609,7 @@ const FriendsListScreen: React.FC = () => {
         <FlatList
           data={filteredFriends}
           renderItem={renderFriendItem}
-          keyExtractor={item => item.id}
+          keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: tabBarHeight + 20 }}
           refreshControl={
@@ -569,4 +642,4 @@ const FriendsListScreen: React.FC = () => {
   );
 };
 
-export default FriendsListScreen; 
+export default FriendsListScreen;

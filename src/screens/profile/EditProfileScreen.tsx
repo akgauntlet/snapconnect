@@ -2,59 +2,59 @@
  * @file EditProfileScreen.tsx
  * @description Profile editing interface allowing users to modify their personal information.
  * Features input validation, real-time username availability checking, and seamless updates.
- * 
+ *
  * @author SnapConnect Team
  * @created 2024-01-24
  * @modified 2024-01-24
- * 
+ *
  * @dependencies
  * - react: React hooks
  * - react-native: Core components
  * - @react-navigation/native: Navigation
  * - @/stores/authStore: Authentication state
  * - @/stores/themeStore: Theme management
- * 
+ *
  * @usage
  * Profile editing interface accessible from ProfileScreen.
- * 
+ *
  * @ai_context
  * AI-powered profile optimization suggestions and content moderation.
  * Smart profile completion recommendations.
  */
 
-import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useEffect, useRef, useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import React, { useEffect, useRef, useState } from "react";
 import {
-    KeyboardAvoidingView,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
-import { useAuthStore } from '../../stores/authStore';
-import { useThemeStore } from '../../stores/themeStore';
-import { showDestructiveAlert, showErrorAlert } from '../../utils/alertService';
-import { REGEX_PATTERNS } from '../../utils/constants';
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useAuthStore } from "../../stores/authStore";
+import { useThemeStore } from "../../stores/themeStore";
+import { showDestructiveAlert, showErrorAlert } from "../../utils/alertService";
+import { REGEX_PATTERNS } from "../../utils/constants";
 
 // Type definitions
-type EditProfileNavigationProp = NativeStackNavigationProp<any, 'EditProfile'>;
+type EditProfileNavigationProp = NativeStackNavigationProp<any, "EditProfile">;
 
 /**
  * Edit profile screen component
- * 
+ *
  * @returns {React.ReactElement} Rendered edit profile interface
- * 
+ *
  * @performance
  * - Debounced username availability checking
  * - Optimized form validation and state management
  * - Efficient keyboard handling and scroll management
- * 
+ *
  * @ai_integration
  * - Smart profile completion suggestions
  * - Content moderation for bio and display name
@@ -64,27 +64,23 @@ const EditProfileScreen: React.FC = () => {
   const navigation = useNavigation<EditProfileNavigationProp>();
   const theme = useThemeStore((state) => state.theme);
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
-  
+
   // Auth store
-  const { 
-    updateProfile, 
-    checkUsernameAvailability,
-    isLoading, 
-    profile 
-  } = useAuthStore();
+  const { updateProfile, checkUsernameAvailability, isLoading, profile } =
+    useAuthStore();
 
   // Form state
-  const [displayName, setDisplayName] = useState(profile?.displayName || '');
-  const [username, setUsername] = useState(profile?.username || '');
-  const [bio, setBio] = useState(profile?.bio || '');
-  const [originalUsername] = useState(profile?.username || '');
-  
+  const [displayName, setDisplayName] = useState(profile?.displayName || "");
+  const [username, setUsername] = useState(profile?.username || "");
+  const [bio, setBio] = useState(profile?.bio || "");
+  const [originalUsername] = useState(profile?.username || "");
+
   // Validation state
-  const [usernameError, setUsernameError] = useState('');
+  const [usernameError, setUsernameError] = useState("");
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  
+
   // Timeout ref for debouncing username checks
   const usernameTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -93,21 +89,23 @@ const EditProfileScreen: React.FC = () => {
    */
   useEffect(() => {
     const originalData = {
-      displayName: profile?.displayName || '',
-      username: profile?.username || '',
-      bio: profile?.bio || '',
+      displayName: profile?.displayName || "",
+      username: profile?.username || "",
+      bio: profile?.bio || "",
     };
-    
+
     const currentData = {
       displayName,
       username,
       bio,
     };
-    
+
     const changes = Object.keys(originalData).some(
-      key => originalData[key as keyof typeof originalData] !== currentData[key as keyof typeof currentData]
+      (key) =>
+        originalData[key as keyof typeof originalData] !==
+        currentData[key as keyof typeof currentData],
     );
-    
+
     setHasChanges(changes);
   }, [displayName, username, bio, profile]);
 
@@ -127,31 +125,33 @@ const EditProfileScreen: React.FC = () => {
   const checkUsernameAvailabilityDebounced = async (username: string) => {
     // Skip check if username hasn't changed
     if (username === originalUsername) {
-      setUsernameError('');
+      setUsernameError("");
       return;
     }
 
     if (!username) {
-      setUsernameError('');
+      setUsernameError("");
       return;
     }
 
     if (!isValidUsernameFormat(username)) {
-      setUsernameError('Username must be 3-20 characters, letters, numbers, and underscores only');
+      setUsernameError(
+        "Username must be 3-20 characters, letters, numbers, and underscores only",
+      );
       return;
     }
 
     setIsCheckingUsername(true);
-    setUsernameError('');
+    setUsernameError("");
 
     try {
       const isAvailable = await checkUsernameAvailability(username);
       if (!isAvailable) {
-        setUsernameError('Username is already taken');
+        setUsernameError("Username is already taken");
       }
     } catch {
-      console.error('Username check failed');
-      setUsernameError('Unable to check username availability');
+      console.error("Username check failed");
+      setUsernameError("Unable to check username availability");
     } finally {
       setIsCheckingUsername(false);
     }
@@ -164,13 +164,13 @@ const EditProfileScreen: React.FC = () => {
   const handleUsernameChange = (text: string) => {
     const cleanText = text.toLowerCase().trim();
     setUsername(cleanText);
-    setUsernameError('');
-    
+    setUsernameError("");
+
     // Clear previous timeout
     if (usernameTimeoutRef.current) {
       clearTimeout(usernameTimeoutRef.current);
     }
-    
+
     // Set new timeout for debounced availability check
     usernameTimeoutRef.current = setTimeout(() => {
       checkUsernameAvailabilityDebounced(cleanText);
@@ -182,22 +182,24 @@ const EditProfileScreen: React.FC = () => {
    */
   const handleSaveProfile = async () => {
     if (!displayName.trim()) {
-      showErrorAlert('Display name is required.');
+      showErrorAlert("Display name is required.");
       return;
     }
 
     if (!username.trim()) {
-      showErrorAlert('Username is required.');
+      showErrorAlert("Username is required.");
       return;
     }
 
     if (!isValidUsernameFormat(username)) {
-      showErrorAlert('Username must be 3-20 characters, letters, numbers, and underscores only.');
+      showErrorAlert(
+        "Username must be 3-20 characters, letters, numbers, and underscores only.",
+      );
       return;
     }
 
     if (usernameError) {
-      showErrorAlert('Please resolve username issues before saving.');
+      showErrorAlert("Please resolve username issues before saving.");
       return;
     }
 
@@ -207,20 +209,22 @@ const EditProfileScreen: React.FC = () => {
       try {
         const isAvailable = await checkUsernameAvailability(username);
         if (!isAvailable) {
-          setUsernameError('Username is already taken');
+          setUsernameError("Username is already taken");
           setIsCheckingUsername(false);
           return;
         }
-          } catch {
-      setIsCheckingUsername(false);
-      showErrorAlert('Unable to verify username availability. Please try again.');
-      return;
-    }
+      } catch {
+        setIsCheckingUsername(false);
+        showErrorAlert(
+          "Unable to verify username availability. Please try again.",
+        );
+        return;
+      }
       setIsCheckingUsername(false);
     }
 
-    console.log('🔄 Starting profile update process...');
-    
+    console.log("🔄 Starting profile update process...");
+
     try {
       const updates = {
         displayName: displayName.trim(),
@@ -228,29 +232,30 @@ const EditProfileScreen: React.FC = () => {
         bio: bio.trim(),
       };
 
-      console.log('📝 Profile updates to apply:', updates);
-      
+      console.log("📝 Profile updates to apply:", updates);
+
       await updateProfile(updates);
-      
-      console.log('✅ Profile update successful');
-      
+
+      console.log("✅ Profile update successful");
+
       // Show success state and navigate back immediately
       setSaveSuccess(true);
-      
+
       // Navigate back immediately since we're using optimistic updates
-      console.log('🔄 Navigating back to profile...');
+      console.log("🔄 Navigating back to profile...");
       navigation.goBack();
     } catch (updateError: any) {
-      console.error('❌ Profile update failed:', updateError);
-      
+      console.error("❌ Profile update failed:", updateError);
+
       // Reset success state if there was an error
       setSaveSuccess(false);
-      
+
       // Show user-friendly error message
-      const errorMessage = updateError.message || 'Failed to update profile. Please try again.';
-      console.error('User will see error:', errorMessage);
-      
-      showErrorAlert(errorMessage, 'Profile Update Failed');
+      const errorMessage =
+        updateError.message || "Failed to update profile. Please try again.";
+      console.error("User will see error:", errorMessage);
+
+      showErrorAlert(errorMessage, "Profile Update Failed");
     }
   };
 
@@ -260,11 +265,11 @@ const EditProfileScreen: React.FC = () => {
   const handleGoBack = () => {
     if (hasChanges) {
       showDestructiveAlert(
-        'Unsaved Changes',
-        'You have unsaved changes. Are you sure you want to go back?',
+        "Unsaved Changes",
+        "You have unsaved changes. Are you sure you want to go back?",
         () => navigation.goBack(),
         undefined,
-        'Discard'
+        "Discard",
       );
     } else {
       navigation.goBack();
@@ -281,47 +286,64 @@ const EditProfileScreen: React.FC = () => {
   }, []);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background.primary }}>
-      <StatusBar barStyle="light-content" backgroundColor={theme.colors.background.primary} />
-      
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: theme.colors.background.primary }}
+    >
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={theme.colors.background.primary}
+      />
+
       {/* Header */}
       <View className="flex-row justify-between items-center px-6 py-4 border-b border-cyber-gray">
         <TouchableOpacity onPress={handleGoBack} className="p-2">
           <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
-        
+
         <Text className="text-white font-orbitron text-xl">Edit Profile</Text>
-        
+
         <TouchableOpacity
           onPress={handleSaveProfile}
-          disabled={isLoading || isCheckingUsername || !!usernameError || !hasChanges || saveSuccess}
+          disabled={
+            isLoading ||
+            isCheckingUsername ||
+            !!usernameError ||
+            !hasChanges ||
+            saveSuccess
+          }
           className={`px-4 py-2 rounded-lg ${
             saveSuccess
-              ? 'bg-green-500'
-              : hasChanges && !usernameError && !isLoading && !isCheckingUsername
-              ? 'bg-cyber-cyan' 
-              : 'bg-cyber-gray opacity-50'
+              ? "bg-green-500"
+              : hasChanges &&
+                  !usernameError &&
+                  !isLoading &&
+                  !isCheckingUsername
+                ? "bg-cyber-cyan"
+                : "bg-cyber-gray opacity-50"
           }`}
         >
-          <Text 
+          <Text
             className={`font-inter font-semibold ${
               saveSuccess
-                ? 'text-white'
-                : hasChanges && !usernameError && !isLoading && !isCheckingUsername
-                ? 'text-cyber-black' 
-                : 'text-white/50'
+                ? "text-white"
+                : hasChanges &&
+                    !usernameError &&
+                    !isLoading &&
+                    !isCheckingUsername
+                  ? "text-cyber-black"
+                  : "text-white/50"
             }`}
           >
-            {saveSuccess ? '✓ Saved!' : isLoading ? 'Saving...' : 'Save'}
+            {saveSuccess ? "✓ Saved!" : isLoading ? "Saving..." : "Save"}
           </Text>
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView 
-        style={{ flex: 1 }} 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <ScrollView 
+        <ScrollView
           className="flex-1 px-6"
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -375,34 +397,38 @@ const EditProfileScreen: React.FC = () => {
                 placeholder="Choose a unique username"
                 placeholderTextColor="#6B7280"
                 className={`bg-cyber-dark border rounded-lg px-4 py-3 text-white font-inter ${
-                  usernameError ? 'border-red-500' : 'border-cyber-gray'
+                  usernameError ? "border-red-500" : "border-cyber-gray"
                 }`}
                 autoCapitalize="none"
                 autoCorrect={false}
                 editable={!isLoading && !isCheckingUsername}
                 maxLength={20}
               />
-              
+
               {isCheckingUsername ? (
                 <Text className="text-yellow-400 text-sm font-inter mt-1">
                   Checking availability...
                 </Text>
               ) : null}
-              
+
               {usernameError ? (
                 <Text className="text-red-400 text-sm font-inter mt-1">
                   {usernameError}
                 </Text>
               ) : null}
-              
-              {username && !usernameError && !isCheckingUsername && username !== originalUsername ? (
+
+              {username &&
+              !usernameError &&
+              !isCheckingUsername &&
+              username !== originalUsername ? (
                 <Text className="text-green-400 text-sm font-inter mt-1">
                   ✓ Username available
                 </Text>
               ) : null}
-              
+
               <Text className="text-white/40 font-inter text-xs mt-1">
-                {username.length}/20 characters • Letters, numbers, and underscores only
+                {username.length}/20 characters • Letters, numbers, and
+                underscores only
               </Text>
             </View>
 
@@ -444,4 +470,4 @@ const EditProfileScreen: React.FC = () => {
   );
 };
 
-export default EditProfileScreen; 
+export default EditProfileScreen;

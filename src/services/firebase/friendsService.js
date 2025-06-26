@@ -2,22 +2,22 @@
  * @file friendsService.js
  * @description Firebase friends service for SnapConnect Phase 2.
  * Handles friend discovery, requests, management, and contact sync.
- * 
+ *
  * @author SnapConnect Team
  * @created 2024-01-20
  * @modified 2024-01-24
- * 
+ *
  * @dependencies
  * - firebase/firestore: Firestore Web SDK
- * 
+ *
  * @usage
  * import { friendsService } from '@/services/firebase/friendsService';
- * 
+ *
  * @ai_context
  * Integrates with AI services for smart friend suggestions and social graph analysis.
  */
 
-import { getFirebaseDB } from '../../config/firebase';
+import { getFirebaseDB } from "../../config/firebase";
 
 /**
  * Friends service class for friend management
@@ -40,37 +40,37 @@ class FriendsService {
   async sendFriendRequest(fromUserId, toUserId) {
     try {
       const db = this.getDB();
-      const { firebase } = require('../../config/firebase');
-      
+      const { firebase } = require("../../config/firebase");
+
       // Check if users are already friends
       if (await this.areFriends(fromUserId, toUserId)) {
-        throw new Error('Users are already friends');
+        throw new Error("Users are already friends");
       }
-      
+
       // Check if request already exists
       const existingRequest = await this.getFriendRequest(fromUserId, toUserId);
       if (existingRequest) {
-        throw new Error('Friend request already sent');
+        throw new Error("Friend request already sent");
       }
-      
+
       // Create friend request
       const requestData = {
         fromUserId,
         toUserId,
-        status: 'pending',
+        status: "pending",
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       };
-      
-      const requestRef = await db.collection('friendRequests').add(requestData);
-      
+
+      const requestRef = await db.collection("friendRequests").add(requestData);
+
       // Send notification
       await this.sendFriendRequestNotification(toUserId, fromUserId);
-      
-      console.log('✅ Friend request sent successfully:', requestRef.id);
+
+      console.log("✅ Friend request sent successfully:", requestRef.id);
       return requestRef.id;
     } catch (error) {
-      console.error('❌ Send friend request failed:', error);
+      console.error("❌ Send friend request failed:", error);
       throw error;
     }
   }
@@ -84,53 +84,61 @@ class FriendsService {
   async acceptFriendRequest(requestId, userId) {
     try {
       const db = this.getDB();
-      const { firebase } = require('../../config/firebase');
+      const { firebase } = require("../../config/firebase");
       const batch = db.batch();
-      
-      const requestRef = db.collection('friendRequests').doc(requestId);
+
+      const requestRef = db.collection("friendRequests").doc(requestId);
       const requestDoc = await requestRef.get();
-      
+
       if (!requestDoc.exists) {
-        throw new Error('Friend request not found');
+        throw new Error("Friend request not found");
       }
-      
+
       const requestData = requestDoc.data();
-      
+
       // Verify user is the recipient
       if (requestData.toUserId !== userId) {
-        throw new Error('Unauthorized to accept this request');
+        throw new Error("Unauthorized to accept this request");
       }
-      
+
       // Update request status
       batch.update(requestRef, {
-        status: 'accepted',
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        status: "accepted",
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       });
-      
+
       // Create friendship records for both users using subcollections
-      const friendship1Ref = db.collection('users').doc(requestData.fromUserId).collection('friends').doc(requestData.toUserId);
-      const friendship2Ref = db.collection('users').doc(requestData.toUserId).collection('friends').doc(requestData.fromUserId);
-      
+      const friendship1Ref = db
+        .collection("users")
+        .doc(requestData.fromUserId)
+        .collection("friends")
+        .doc(requestData.toUserId);
+      const friendship2Ref = db
+        .collection("users")
+        .doc(requestData.toUserId)
+        .collection("friends")
+        .doc(requestData.fromUserId);
+
       const now = firebase.firestore.FieldValue.serverTimestamp();
-      
+
       batch.set(friendship1Ref, {
         userId: requestData.toUserId,
-        createdAt: now
+        createdAt: now,
       });
-      
+
       batch.set(friendship2Ref, {
         userId: requestData.fromUserId,
-        createdAt: now
+        createdAt: now,
       });
-      
+
       await batch.commit();
-      
+
       // Send notification
       await this.sendFriendAcceptedNotification(requestData.fromUserId, userId);
-      
-      console.log('✅ Friend request accepted successfully');
+
+      console.log("✅ Friend request accepted successfully");
     } catch (error) {
-      console.error('❌ Accept friend request failed:', error);
+      console.error("❌ Accept friend request failed:", error);
       throw error;
     }
   }
@@ -144,30 +152,30 @@ class FriendsService {
   async declineFriendRequest(requestId, userId) {
     try {
       const db = this.getDB();
-      const { firebase } = require('../../config/firebase');
-      const requestRef = db.collection('friendRequests').doc(requestId);
+      const { firebase } = require("../../config/firebase");
+      const requestRef = db.collection("friendRequests").doc(requestId);
       const requestDoc = await requestRef.get();
-      
+
       if (!requestDoc.exists) {
-        throw new Error('Friend request not found');
+        throw new Error("Friend request not found");
       }
-      
+
       const requestData = requestDoc.data();
-      
+
       // Verify user is the recipient
       if (requestData.toUserId !== userId) {
-        throw new Error('Unauthorized to decline this request');
+        throw new Error("Unauthorized to decline this request");
       }
-      
+
       // Update request status
       await requestRef.update({
-        status: 'declined',
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        status: "declined",
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       });
-      
-      console.log('✅ Friend request declined successfully');
+
+      console.log("✅ Friend request declined successfully");
     } catch (error) {
-      console.error('❌ Decline friend request failed:', error);
+      console.error("❌ Decline friend request failed:", error);
       throw error;
     }
   }
@@ -182,19 +190,27 @@ class FriendsService {
     try {
       const db = this.getDB();
       const batch = db.batch();
-      
+
       // Delete friendship records from both user's subcollections
-      const friendship1Ref = db.collection('users').doc(userId).collection('friends').doc(friendId);
-      const friendship2Ref = db.collection('users').doc(friendId).collection('friends').doc(userId);
-      
+      const friendship1Ref = db
+        .collection("users")
+        .doc(userId)
+        .collection("friends")
+        .doc(friendId);
+      const friendship2Ref = db
+        .collection("users")
+        .doc(friendId)
+        .collection("friends")
+        .doc(userId);
+
       batch.delete(friendship1Ref);
       batch.delete(friendship2Ref);
-      
+
       await batch.commit();
-      
-      console.log('✅ Friend removed successfully');
+
+      console.log("✅ Friend removed successfully");
     } catch (error) {
-      console.error('❌ Remove friend failed:', error);
+      console.error("❌ Remove friend failed:", error);
       throw error;
     }
   }
@@ -207,58 +223,60 @@ class FriendsService {
   async getFriends(userId) {
     try {
       const db = this.getDB();
-      const { firebase } = require('../../config/firebase');
-      
+      const { firebase } = require("../../config/firebase");
+
       // Get friendship records from user's subcollection
       const friendsSnapshot = await db
-        .collection('users')
+        .collection("users")
         .doc(userId)
-        .collection('friends')
+        .collection("friends")
         .get();
-      
+
       if (friendsSnapshot.empty) {
         return [];
       }
-      
+
       // Get friend IDs
-      const friendIds = friendsSnapshot.docs.map(doc => doc.id);
-      
+      const friendIds = friendsSnapshot.docs.map((doc) => doc.id);
+
       // Get friend user data (batch get for efficiency)
       const friends = [];
       const danglingFriendships = []; // Track friendships pointing to non-existent users
-      
+
       // Firestore has a limit of 10 items for 'in' queries, so we need to batch
       const batchSize = 10;
       for (let i = 0; i < friendIds.length; i += batchSize) {
         const batch = friendIds.slice(i, i + batchSize);
-        
+
         const usersSnapshot = await db
-          .collection('users')
-          .where(firebase.firestore.FieldPath.documentId(), 'in', batch)
+          .collection("users")
+          .where(firebase.firestore.FieldPath.documentId(), "in", batch)
           .get();
-        
+
         // Track which users were found
         const foundUserIds = new Set();
-        usersSnapshot.forEach(doc => {
+        usersSnapshot.forEach((doc) => {
           friends.push({ id: doc.id, ...doc.data() });
           foundUserIds.add(doc.id);
         });
-        
+
         // Find dangling friendships (friend IDs that don't have user documents)
-        const missingUserIds = batch.filter(friendId => !foundUserIds.has(friendId));
+        const missingUserIds = batch.filter(
+          (friendId) => !foundUserIds.has(friendId),
+        );
         if (missingUserIds.length > 0) {
           danglingFriendships.push(...missingUserIds);
         }
       }
-      
+
       // Clean up dangling friendships
       if (danglingFriendships.length > 0) {
         await this.cleanupDanglingFriendships(userId, danglingFriendships);
       }
-      
+
       return friends;
     } catch (error) {
-      console.error('❌ Get friends failed:', error);
+      console.error("❌ Get friends failed:", error);
       throw error;
     }
   }
@@ -273,16 +291,24 @@ class FriendsService {
     try {
       const db = this.getDB();
       const batch = db.batch();
-      
+
       for (const friendId of danglingFriendIds) {
-        const friendshipRef = db.collection('users').doc(userId).collection('friends').doc(friendId);
+        const friendshipRef = db
+          .collection("users")
+          .doc(userId)
+          .collection("friends")
+          .doc(friendId);
         batch.delete(friendshipRef);
       }
-      
+
       await batch.commit();
-      console.log('✅ Cleaned up', danglingFriendIds.length, 'dangling friendships');
+      console.log(
+        "✅ Cleaned up",
+        danglingFriendIds.length,
+        "dangling friendships",
+      );
     } catch (error) {
-      console.error('❌ Failed to clean up dangling friendships:', error);
+      console.error("❌ Failed to clean up dangling friendships:", error);
       // Don't throw - this is cleanup, main function should continue
     }
   }
@@ -295,54 +321,60 @@ class FriendsService {
   async getPendingFriendRequests(userId) {
     try {
       const db = this.getDB();
-      
+
       // Get incoming requests
       const incomingSnapshot = await db
-        .collection('friendRequests')
-        .where('toUserId', '==', userId)
-        .where('status', '==', 'pending')
-        .orderBy('createdAt', 'desc')
+        .collection("friendRequests")
+        .where("toUserId", "==", userId)
+        .where("status", "==", "pending")
+        .orderBy("createdAt", "desc")
         .get();
-      
+
       // Get outgoing requests
       const outgoingSnapshot = await db
-        .collection('friendRequests')
-        .where('fromUserId', '==', userId)
-        .where('status', '==', 'pending')
-        .orderBy('createdAt', 'desc')
+        .collection("friendRequests")
+        .where("fromUserId", "==", userId)
+        .where("status", "==", "pending")
+        .orderBy("createdAt", "desc")
         .get();
-      
+
       const requests = [];
-      
+
       // Process incoming requests
       for (const doc of incomingSnapshot.docs) {
         const requestData = doc.data();
-        const userDoc = await db.collection('users').doc(requestData.fromUserId).get();
-        
+        const userDoc = await db
+          .collection("users")
+          .doc(requestData.fromUserId)
+          .get();
+
         requests.push({
           id: doc.id,
-          type: 'incoming',
+          type: "incoming",
           user: userDoc.exists ? userDoc.data() : null,
-          ...requestData
+          ...requestData,
         });
       }
-      
+
       // Process outgoing requests
       for (const doc of outgoingSnapshot.docs) {
         const requestData = doc.data();
-        const userDoc = await db.collection('users').doc(requestData.toUserId).get();
-        
+        const userDoc = await db
+          .collection("users")
+          .doc(requestData.toUserId)
+          .get();
+
         requests.push({
           id: doc.id,
-          type: 'outgoing',
+          type: "outgoing",
           user: userDoc.exists ? userDoc.data() : null,
-          ...requestData
+          ...requestData,
         });
       }
-      
+
       return requests;
     } catch (error) {
-      console.error('❌ Get pending friend requests failed:', error);
+      console.error("❌ Get pending friend requests failed:", error);
       throw error;
     }
   }
@@ -357,40 +389,43 @@ class FriendsService {
     try {
       const db = this.getDB();
       const results = [];
-      
+
       // Search by username (case-insensitive)
       const usernameSnapshot = await db
-        .collection('users')
-        .where('username', '>=', query.toLowerCase())
-        .where('username', '<=', query.toLowerCase() + '\uf8ff')
+        .collection("users")
+        .where("username", ">=", query.toLowerCase())
+        .where("username", "<=", query.toLowerCase() + "\uf8ff")
         .limit(20)
         .get();
-      
-      usernameSnapshot.forEach(doc => {
+
+      usernameSnapshot.forEach((doc) => {
         const userData = doc.data();
         if (doc.id !== currentUserId) {
           results.push({ id: doc.id, ...userData });
         }
       });
-      
+
       // Search by display name
       const displayNameSnapshot = await db
-        .collection('users')
-        .where('displayName', '>=', query)
-        .where('displayName', '<=', query + '\uf8ff')
+        .collection("users")
+        .where("displayName", ">=", query)
+        .where("displayName", "<=", query + "\uf8ff")
         .limit(20)
         .get();
-      
-      displayNameSnapshot.forEach(doc => {
+
+      displayNameSnapshot.forEach((doc) => {
         const userData = doc.data();
-        if (doc.id !== currentUserId && !results.find(user => user.id === doc.id)) {
+        if (
+          doc.id !== currentUserId &&
+          !results.find((user) => user.id === doc.id)
+        ) {
           results.push({ id: doc.id, ...userData });
         }
       });
-      
+
       return results;
     } catch (error) {
-      console.error('❌ Search users failed:', error);
+      console.error("❌ Search users failed:", error);
       throw error;
     }
   }
@@ -405,46 +440,50 @@ class FriendsService {
     try {
       const db = this.getDB();
       const suggestions = [];
-      
+
       // Get current friends to exclude them
       const currentFriends = await this.getFriendIds(userId);
       const excludeIds = [...currentFriends, userId];
-      
+
       // Find users by phone numbers from contacts
       if (contactNumbers.length > 0) {
         const batchSize = 10;
         for (let i = 0; i < contactNumbers.length; i += batchSize) {
           const batch = contactNumbers.slice(i, i + batchSize);
-          
+
           const contactSnapshot = await db
-            .collection('users')
-            .where('phoneNumber', 'in', batch)
+            .collection("users")
+            .where("phoneNumber", "in", batch)
             .get();
-          
-          contactSnapshot.forEach(doc => {
+
+          contactSnapshot.forEach((doc) => {
             if (!excludeIds.includes(doc.id)) {
               suggestions.push({
                 id: doc.id,
                 ...doc.data(),
-                reason: 'contact'
+                reason: "contact",
               });
             }
           });
         }
       }
-      
+
       // Get mutual friend suggestions
-      const mutualSuggestions = await this.getMutualFriendSuggestions(userId, currentFriends);
-      suggestions.push(...mutualSuggestions);
-      
-      // Remove duplicates and limit results
-      const uniqueSuggestions = suggestions.filter((suggestion, index, self) =>
-        index === self.findIndex(s => s.id === suggestion.id)
+      const mutualSuggestions = await this.getMutualFriendSuggestions(
+        userId,
+        currentFriends,
       );
-      
+      suggestions.push(...mutualSuggestions);
+
+      // Remove duplicates and limit results
+      const uniqueSuggestions = suggestions.filter(
+        (suggestion, index, self) =>
+          index === self.findIndex((s) => s.id === suggestion.id),
+      );
+
       return uniqueSuggestions.slice(0, 20);
     } catch (error) {
-      console.error('❌ Get friend suggestions failed:', error);
+      console.error("❌ Get friend suggestions failed:", error);
       throw error;
     }
   }
@@ -458,17 +497,17 @@ class FriendsService {
   async areFriends(userId1, userId2) {
     try {
       const db = this.getDB();
-      
+
       const friendDoc = await db
-        .collection('users')
+        .collection("users")
         .doc(userId1)
-        .collection('friends')
+        .collection("friends")
         .doc(userId2)
         .get();
-      
+
       return friendDoc.exists;
     } catch (error) {
-      console.error('❌ Check friendship failed:', error);
+      console.error("❌ Check friendship failed:", error);
       return false;
     }
   }
@@ -482,22 +521,22 @@ class FriendsService {
   async getFriendRequest(fromUserId, toUserId) {
     try {
       const db = this.getDB();
-      
+
       const requestSnapshot = await db
-        .collection('friendRequests')
-        .where('fromUserId', '==', fromUserId)
-        .where('toUserId', '==', toUserId)
-        .where('status', '==', 'pending')
+        .collection("friendRequests")
+        .where("fromUserId", "==", fromUserId)
+        .where("toUserId", "==", toUserId)
+        .where("status", "==", "pending")
         .get();
-      
+
       if (requestSnapshot.empty) {
         return null;
       }
-      
+
       const doc = requestSnapshot.docs[0];
       return { id: doc.id, ...doc.data() };
     } catch (error) {
-      console.error('❌ Get friend request failed:', error);
+      console.error("❌ Get friend request failed:", error);
       return null;
     }
   }
@@ -510,16 +549,16 @@ class FriendsService {
   async getFriendIds(userId) {
     try {
       const db = this.getDB();
-      
+
       const friendsSnapshot = await db
-        .collection('users')
+        .collection("users")
         .doc(userId)
-        .collection('friends')
+        .collection("friends")
         .get();
-      
-      return friendsSnapshot.docs.map(doc => doc.id);
+
+      return friendsSnapshot.docs.map((doc) => doc.id);
     } catch (error) {
-      console.error('❌ Get friend IDs failed:', error);
+      console.error("❌ Get friend IDs failed:", error);
       return [];
     }
   }
@@ -535,40 +574,44 @@ class FriendsService {
       const db = this.getDB();
       const suggestions = [];
       const excludeIds = [...currentFriends, userId];
-      
+
       // For each friend, get their friends
-      for (const friendId of currentFriends.slice(0, 10)) { // Limit to avoid too many queries
+      for (const friendId of currentFriends.slice(0, 10)) {
+        // Limit to avoid too many queries
         const friendsFriendsSnapshot = await db
-          .collection('users')
+          .collection("users")
           .doc(friendId)
-          .collection('friends')
+          .collection("friends")
           .get();
-        
-        const friendsFriends = friendsFriendsSnapshot.docs.map(doc => doc.id);
-        
+
+        const friendsFriends = friendsFriendsSnapshot.docs.map((doc) => doc.id);
+
         // Find potential suggestions (friends of friends)
         for (const potentialFriendId of friendsFriends) {
           if (!excludeIds.includes(potentialFriendId)) {
             // Get user data
-            const userDoc = await db.collection('users').doc(potentialFriendId).get();
-            
+            const userDoc = await db
+              .collection("users")
+              .doc(potentialFriendId)
+              .get();
+
             if (userDoc.exists) {
               suggestions.push({
                 id: potentialFriendId,
                 ...userDoc.data(),
-                reason: 'mutual_friend',
-                mutualFriendId: friendId
+                reason: "mutual_friend",
+                mutualFriendId: friendId,
               });
-              
+
               excludeIds.push(potentialFriendId); // Avoid duplicates
             }
           }
         }
       }
-      
+
       return suggestions.slice(0, 10); // Limit results
     } catch (error) {
-      console.error('❌ Get mutual friend suggestions failed:', error);
+      console.error("❌ Get mutual friend suggestions failed:", error);
       return [];
     }
   }
@@ -582,20 +625,20 @@ class FriendsService {
   async sendFriendRequestNotification(recipientId, senderId) {
     try {
       const db = this.getDB();
-      const { firebase } = require('../../config/firebase');
-      
+      const { firebase } = require("../../config/firebase");
+
       const notificationData = {
         userId: recipientId,
-        type: 'friend_request',
+        type: "friend_request",
         senderId,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        read: false
+        read: false,
       };
-      
-      await db.collection('notifications').add(notificationData);
-      console.log('✅ Friend request notification sent');
+
+      await db.collection("notifications").add(notificationData);
+      console.log("✅ Friend request notification sent");
     } catch (error) {
-      console.error('❌ Send friend request notification failed:', error);
+      console.error("❌ Send friend request notification failed:", error);
     }
   }
 
@@ -608,20 +651,20 @@ class FriendsService {
   async sendFriendAcceptedNotification(recipientId, accepterId) {
     try {
       const db = this.getDB();
-      const { firebase } = require('../../config/firebase');
-      
+      const { firebase } = require("../../config/firebase");
+
       const notificationData = {
         userId: recipientId,
-        type: 'friend_accepted',
+        type: "friend_accepted",
         accepterId,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        read: false
+        read: false,
       };
-      
-      await db.collection('notifications').add(notificationData);
-      console.log('✅ Friend accepted notification sent');
+
+      await db.collection("notifications").add(notificationData);
+      console.log("✅ Friend accepted notification sent");
     } catch (error) {
-      console.error('❌ Send friend accepted notification failed:', error);
+      console.error("❌ Send friend accepted notification failed:", error);
     }
   }
 
@@ -636,15 +679,17 @@ class FriendsService {
       // Get friends of both users
       const [user1Friends, user2Friends] = await Promise.all([
         this.getFriendIds(userId1),
-        this.getFriendIds(userId2)
+        this.getFriendIds(userId2),
       ]);
-      
+
       // Find intersection (mutual friends)
-      const mutualFriends = user1Friends.filter(friendId => user2Friends.includes(friendId));
-      
+      const mutualFriends = user1Friends.filter((friendId) =>
+        user2Friends.includes(friendId),
+      );
+
       return mutualFriends.length;
     } catch (error) {
-      console.error('❌ Get mutual friends count failed:', error);
+      console.error("❌ Get mutual friends count failed:", error);
       return 0;
     }
   }
@@ -658,41 +703,43 @@ class FriendsService {
   async getMutualFriends(userId1, userId2) {
     try {
       const db = this.getDB();
-      const { firebase } = require('../../config/firebase');
-      
+      const { firebase } = require("../../config/firebase");
+
       // Get friends of both users
       const [user1Friends, user2Friends] = await Promise.all([
         this.getFriendIds(userId1),
-        this.getFriendIds(userId2)
+        this.getFriendIds(userId2),
       ]);
-      
+
       // Find intersection (mutual friends)
-      const mutualFriendIds = user1Friends.filter(friendId => user2Friends.includes(friendId));
-      
+      const mutualFriendIds = user1Friends.filter((friendId) =>
+        user2Friends.includes(friendId),
+      );
+
       if (mutualFriendIds.length === 0) {
         return [];
       }
-      
+
       // Get user data for mutual friends
       const mutualFriends = [];
       const batchSize = 10;
-      
+
       for (let i = 0; i < mutualFriendIds.length; i += batchSize) {
         const batch = mutualFriendIds.slice(i, i + batchSize);
-        
+
         const usersSnapshot = await db
-          .collection('users')
-          .where(firebase.firestore.FieldPath.documentId(), 'in', batch)
+          .collection("users")
+          .where(firebase.firestore.FieldPath.documentId(), "in", batch)
           .get();
-        
-        usersSnapshot.forEach(doc => {
+
+        usersSnapshot.forEach((doc) => {
           mutualFriends.push({ id: doc.id, ...doc.data() });
         });
       }
-      
+
       return mutualFriends;
     } catch (error) {
-      console.error('❌ Get mutual friends failed:', error);
+      console.error("❌ Get mutual friends failed:", error);
       return [];
     }
   }
@@ -711,25 +758,25 @@ class FriendsService {
 
       // Get current user's friends once
       const currentUserFriends = await this.getFriendIds(currentUserId);
-      
+
       // Get all other users' friends in parallel
       const otherUsersFriends = await Promise.all(
-        userIds.map(userId => this.getFriendIds(userId))
+        userIds.map((userId) => this.getFriendIds(userId)),
       );
-      
+
       // Calculate mutual friends count for each user
       const results = {};
       userIds.forEach((userId, index) => {
         const otherUserFriends = otherUsersFriends[index];
-        const mutualFriends = currentUserFriends.filter(friendId => 
-          otherUserFriends.includes(friendId)
+        const mutualFriends = currentUserFriends.filter((friendId) =>
+          otherUserFriends.includes(friendId),
         );
         results[userId] = mutualFriends.length;
       });
-      
+
       return results;
     } catch (error) {
-      console.error('❌ Get batch mutual friends count failed:', error);
+      console.error("❌ Get batch mutual friends count failed:", error);
       return {};
     }
   }
@@ -742,15 +789,19 @@ class FriendsService {
   async getUserStats(userId) {
     try {
       const db = this.getDB();
-      
+
       // Get user stats document - handle gracefully if collection doesn't exist
-      const statsDoc = await db.collection('userStats').doc(userId).get();
-      
+      const statsDoc = await db.collection("userStats").doc(userId).get();
+
       if (statsDoc.exists) {
         return statsDoc.data();
       } else {
         // Return default stats if document doesn't exist
-        console.log('📊 No user stats found for user:', userId, '- returning defaults');
+        console.log(
+          "📊 No user stats found for user:",
+          userId,
+          "- returning defaults",
+        );
         return {
           snapsSent: 0,
           snapsReceived: 0,
@@ -758,11 +809,11 @@ class FriendsService {
           storiesShared: 0,
           totalFriends: 0,
           joinedDate: new Date(),
-          lastActive: new Date()
+          lastActive: new Date(),
         };
       }
     } catch (error) {
-      console.warn('⚠️ Get user stats failed (using defaults):', error.message);
+      console.warn("⚠️ Get user stats failed (using defaults):", error.message);
       // Return default stats instead of throwing - this prevents the entire profile load from failing
       return {
         snapsSent: 0,
@@ -771,7 +822,7 @@ class FriendsService {
         storiesShared: 0,
         totalFriends: 0,
         joinedDate: new Date(),
-        lastActive: new Date()
+        lastActive: new Date(),
       };
     }
   }
@@ -785,16 +836,22 @@ class FriendsService {
   async updateUserStats(userId, updates) {
     try {
       const db = this.getDB();
-      const { firebase } = require('../../config/firebase');
-      
-      await db.collection('userStats').doc(userId).set({
-        ...updates,
-        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
-      
-      console.log('✅ User stats updated successfully');
+      const { firebase } = require("../../config/firebase");
+
+      await db
+        .collection("userStats")
+        .doc(userId)
+        .set(
+          {
+            ...updates,
+            lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true },
+        );
+
+      console.log("✅ User stats updated successfully");
     } catch (error) {
-      console.error('❌ Update user stats failed:', error);
+      console.error("❌ Update user stats failed:", error);
       throw error;
     }
   }
@@ -807,31 +864,38 @@ class FriendsService {
   async getUserPresence(userId) {
     try {
       const db = this.getDB();
-      
-      const presenceDoc = await db.collection('presence').doc(userId).get();
-      
+
+      const presenceDoc = await db.collection("presence").doc(userId).get();
+
       if (presenceDoc.exists) {
         const data = presenceDoc.data();
         return {
-          status: data.status || 'offline',
+          status: data.status || "offline",
           lastActive: data.lastActive?.toDate() || new Date(),
-          isOnline: data.status === 'online'
+          isOnline: data.status === "online",
         };
       } else {
-        console.log('👤 No presence data found for user:', userId, '- returning defaults');
+        console.log(
+          "👤 No presence data found for user:",
+          userId,
+          "- returning defaults",
+        );
         return {
-          status: 'offline',
+          status: "offline",
           lastActive: new Date(),
-          isOnline: false
+          isOnline: false,
         };
       }
     } catch (error) {
-      console.warn('⚠️ Get user presence failed (using defaults):', error.message);
+      console.warn(
+        "⚠️ Get user presence failed (using defaults):",
+        error.message,
+      );
       // Return default presence instead of throwing
       return {
-        status: 'offline',
+        status: "offline",
         lastActive: new Date(),
-        isOnline: false
+        isOnline: false,
       };
     }
   }
@@ -848,44 +912,44 @@ class FriendsService {
       }
 
       const db = this.getDB();
-      const { firebase } = require('../../config/firebase');
+      const { firebase } = require("../../config/firebase");
       const results = {};
-      
+
       // Batch get presence documents
       const batchSize = 10;
       for (let i = 0; i < userIds.length; i += batchSize) {
         const batch = userIds.slice(i, i + batchSize);
-        
+
         const presenceSnapshot = await db
-          .collection('presence')
-          .where(firebase.firestore.FieldPath.documentId(), 'in', batch)
+          .collection("presence")
+          .where(firebase.firestore.FieldPath.documentId(), "in", batch)
           .get();
-        
+
         // Process found presence data
-        presenceSnapshot.forEach(doc => {
+        presenceSnapshot.forEach((doc) => {
           const data = doc.data();
           results[doc.id] = {
-            status: data.status || 'offline',
+            status: data.status || "offline",
             lastActive: data.lastActive?.toDate() || new Date(),
-            isOnline: data.status === 'online'
+            isOnline: data.status === "online",
           };
         });
-        
+
         // Set default for users not found
-        batch.forEach(userId => {
+        batch.forEach((userId) => {
           if (!results[userId]) {
             results[userId] = {
-              status: 'offline',
+              status: "offline",
               lastActive: new Date(),
-              isOnline: false
+              isOnline: false,
             };
           }
         });
       }
-      
+
       return results;
     } catch (error) {
-      console.error('❌ Get batch user presence failed:', error);
+      console.error("❌ Get batch user presence failed:", error);
       return {};
     }
   }
@@ -898,65 +962,67 @@ class FriendsService {
   async getUserProfile(userId) {
     try {
       const db = this.getDB();
-      
-      const userDoc = await db.collection('users').doc(userId).get();
-      
+
+      const userDoc = await db.collection("users").doc(userId).get();
+
       if (!userDoc.exists) {
-        console.warn('⚠️ User profile not found:', userId);
+        console.warn("⚠️ User profile not found:", userId);
         return null;
       }
-      
+
       return { id: userDoc.id, ...userDoc.data() };
     } catch (error) {
-      console.error('❌ Get user profile failed:', error);
+      console.error("❌ Get user profile failed:", error);
       return null;
     }
   }
 
   /**
    * Check specific friendship status between two users
-   * @param {string} currentUserId - Current user ID  
+   * @param {string} currentUserId - Current user ID
    * @param {string} targetUserId - Target user ID to check friendship with
    * @returns {Promise<string>} Friendship status: 'friends', 'pending_sent', 'pending_received', 'none'
    */
   async checkFriendshipStatus(currentUserId, targetUserId) {
     try {
       const db = this.getDB();
-      
+
       // Check if they're friends first (most common case)
       const isFriend = await this.areFriends(currentUserId, targetUserId);
       if (isFriend) {
-        return 'friends';
+        return "friends";
       }
-      
+
       // Check for pending friend requests
       const [sentRequest, receivedRequest] = await Promise.all([
         // Check if current user sent a request to target user
-        db.collection('friendRequests')
-          .where('fromUserId', '==', currentUserId)
-          .where('toUserId', '==', targetUserId)
-          .where('status', '==', 'pending')
+        db
+          .collection("friendRequests")
+          .where("fromUserId", "==", currentUserId)
+          .where("toUserId", "==", targetUserId)
+          .where("status", "==", "pending")
           .get(),
-        // Check if current user received a request from target user  
-        db.collection('friendRequests')
-          .where('fromUserId', '==', targetUserId)
-          .where('toUserId', '==', currentUserId)
-          .where('status', '==', 'pending')
-          .get()
+        // Check if current user received a request from target user
+        db
+          .collection("friendRequests")
+          .where("fromUserId", "==", targetUserId)
+          .where("toUserId", "==", currentUserId)
+          .where("status", "==", "pending")
+          .get(),
       ]);
-      
+
       if (!sentRequest.empty) {
-        return 'pending_sent';
+        return "pending_sent";
       }
-      
+
       if (!receivedRequest.empty) {
-        return 'pending_received';
+        return "pending_received";
       }
-      
-      return 'none';
+
+      return "none";
     } catch (error) {
-      console.error('❌ Check friendship status failed:', error);
-      return 'none';
+      console.error("❌ Check friendship status failed:", error);
+      return "none";
     }
   }
 
@@ -973,29 +1039,40 @@ class FriendsService {
       if (!userProfile) {
         return null;
       }
-      
+
       // Get additional data in parallel for better performance
-      const [friendIds, userStats, userPresence, mutualFriendsCount, friendshipStatus] = await Promise.all([
+      const [
+        friendIds,
+        userStats,
+        userPresence,
+        mutualFriendsCount,
+        friendshipStatus,
+      ] = await Promise.all([
         this.getFriendIds(targetUserId),
         this.getUserStats(targetUserId),
         this.getUserPresence(targetUserId),
-        currentUserId !== targetUserId ? this.getMutualFriendsCount(currentUserId, targetUserId) : Promise.resolve(0),
-        currentUserId !== targetUserId ? this.checkFriendshipStatus(currentUserId, targetUserId) : Promise.resolve('self')
+        currentUserId !== targetUserId
+          ? this.getMutualFriendsCount(currentUserId, targetUserId)
+          : Promise.resolve(0),
+        currentUserId !== targetUserId
+          ? this.checkFriendshipStatus(currentUserId, targetUserId)
+          : Promise.resolve("self"),
       ]);
-      
+
       // Helper function to safely convert dates
       const safeToDate = (dateValue) => {
         if (!dateValue) return new Date();
         if (dateValue instanceof Date) return dateValue;
-        if (dateValue && typeof dateValue.toDate === 'function') return dateValue.toDate();
-        if (typeof dateValue === 'number') return new Date(dateValue);
-        if (typeof dateValue === 'string') {
+        if (dateValue && typeof dateValue.toDate === "function")
+          return dateValue.toDate();
+        if (typeof dateValue === "number") return new Date(dateValue);
+        if (typeof dateValue === "string") {
           const parsed = new Date(dateValue);
           return isNaN(parsed.getTime()) ? new Date() : parsed;
         }
         return new Date();
       };
-      
+
       // Combine all data into enriched profile
       return {
         ...userProfile,
@@ -1004,7 +1081,8 @@ class FriendsService {
         snapsReceived: userStats.snapsReceived || 0,
         streaks: userStats.streaks || 0,
         storiesShared: userStats.storiesShared || 0,
-        joinedDate: safeToDate(userProfile.createdAt) || safeToDate(userStats.joinedDate),
+        joinedDate:
+          safeToDate(userProfile.createdAt) || safeToDate(userStats.joinedDate),
         lastActive: userPresence.lastActive,
         isOnline: userPresence.isOnline,
         status: userPresence.status,
@@ -1012,11 +1090,11 @@ class FriendsService {
         friendshipStatus: friendshipStatus,
       };
     } catch (error) {
-      console.error('❌ Get enriched user profile failed:', error);
+      console.error("❌ Get enriched user profile failed:", error);
       return null;
     }
   }
 }
 
 export const friendsService = new FriendsService();
-export default friendsService; 
+export default friendsService;

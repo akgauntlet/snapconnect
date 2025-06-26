@@ -7,35 +7,38 @@ module.exports = function (api) {
     ],
     plugins: [
       [
-        'module-resolver',
+        "module-resolver",
         {
-          root: ['./src'],
+          root: ["./src"],
           alias: {
-            '@': './src',
-            '@components': './src/components',
-            '@screens': './src/screens',
-            '@services': './src/services',
-            '@config': './src/config',
-            '@hooks': './src/hooks',
-            '@stores': './src/stores',
-            '@utils': './src/utils',
-            '@types': './src/types',
-            '@navigation': './src/navigation',
+            "@": "./src",
+            "@components": "./src/components",
+            "@screens": "./src/screens",
+            "@services": "./src/services",
+            "@config": "./src/config",
+            "@hooks": "./src/hooks",
+            "@stores": "./src/stores",
+            "@utils": "./src/utils",
+            "@types": "./src/types",
+            "@navigation": "./src/navigation",
           },
         },
       ],
       // Transform import.meta statements for React Native Web compatibility
-      function() {
+      function () {
         return {
           visitor: {
             MetaProperty(path) {
-              if (path.node.meta.name === 'import' && path.node.property.name === 'meta') {
-                path.replaceWithSourceString('{}');
+              if (
+                path.node.meta.name === "import" &&
+                path.node.property.name === "meta"
+              ) {
+                path.replaceWithSourceString("{}");
               }
-            }
-          }
+            },
+          },
         };
-      }
+      },
     ],
   };
 };

@@ -2,27 +2,27 @@
  * @file alertService.ts
  * @description Centralized alert service for web-compatible alerts
  * Provides a simple interface to show alerts that work on both web and mobile
- * 
+ *
  * @author SnapConnect Team
  * @created 2024-01-24
- * 
+ *
  * @usage
  * import { showAlert } from '@/utils/alertService';
  * showAlert('Title', 'Message');
  * showAlert('Title', 'Message', [{ text: 'OK' }, { text: 'Cancel', style: 'cancel' }]);
- * 
+ *
  * @ai_context
  * Essential for web build compatibility - replaces React Native Alert.alert
  */
 
-import { customAlert } from '../components/common/CustomAlert';
+import { customAlert } from "../components/common/CustomAlert";
 
 /**
  * Alert button interface
  */
 export interface AlertButton {
   text: string;
-  style?: 'default' | 'cancel' | 'destructive';
+  style?: "default" | "cancel" | "destructive";
   onPress?: () => void;
 }
 
@@ -35,7 +35,7 @@ export interface AlertButton {
 export const showAlert = (
   title: string,
   message?: string,
-  buttons?: AlertButton[]
+  buttons?: AlertButton[],
 ) => {
   customAlert(title, message, buttons);
 };
@@ -46,7 +46,7 @@ export const showAlert = (
  * @param message - Alert message
  */
 export const showSimpleAlert = (title: string, message: string) => {
-  customAlert(title, message, [{ text: 'OK' }]);
+  customAlert(title, message, [{ text: "OK" }]);
 };
 
 /**
@@ -60,11 +60,11 @@ export const showConfirmAlert = (
   title: string,
   message: string,
   onConfirm: () => void,
-  onCancel?: () => void
+  onCancel?: () => void,
 ) => {
   customAlert(title, message, [
-    { text: 'No', style: 'cancel', onPress: onCancel },
-    { text: 'Yes', style: 'default', onPress: onConfirm }
+    { text: "No", style: "cancel", onPress: onCancel },
+    { text: "Yes", style: "default", onPress: onConfirm },
   ]);
 };
 
@@ -73,8 +73,8 @@ export const showConfirmAlert = (
  * @param message - Error message
  * @param title - Error title (optional, defaults to "Error")
  */
-export const showErrorAlert = (message: string, title: string = 'Error') => {
-  customAlert(title, message, [{ text: 'OK' }]);
+export const showErrorAlert = (message: string, title: string = "Error") => {
+  customAlert(title, message, [{ text: "OK" }]);
 };
 
 /**
@@ -82,8 +82,11 @@ export const showErrorAlert = (message: string, title: string = 'Error') => {
  * @param message - Success message
  * @param title - Success title (optional, defaults to "Success")
  */
-export const showSuccessAlert = (message: string, title: string = 'Success') => {
-  customAlert(title, message, [{ text: 'OK' }]);
+export const showSuccessAlert = (
+  message: string,
+  title: string = "Success",
+) => {
+  customAlert(title, message, [{ text: "OK" }]);
 };
 
 /**
@@ -99,11 +102,11 @@ export const showDestructiveAlert = (
   message: string,
   onConfirm: () => void,
   onCancel?: () => void,
-  confirmText: string = 'Delete'
+  confirmText: string = "Delete",
 ) => {
   customAlert(title, message, [
-    { text: 'Cancel', style: 'cancel', onPress: onCancel },
-    { text: confirmText, style: 'destructive', onPress: onConfirm }
+    { text: "Cancel", style: "cancel", onPress: onCancel },
+    { text: confirmText, style: "destructive", onPress: onConfirm },
   ]);
 };
 
@@ -113,5 +116,5 @@ export default {
   showConfirmAlert,
   showErrorAlert,
   showSuccessAlert,
-  showDestructiveAlert
-}; 
+  showDestructiveAlert,
+};

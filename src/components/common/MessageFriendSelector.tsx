@@ -2,44 +2,44 @@
  * @file MessageFriendSelector.tsx
  * @description Friend selection component for starting new conversations.
  * Allows users to select friends from their friend list to begin messaging.
- * 
+ *
  * @author SnapConnect Team
  * @created 2024-01-24
- * 
+ *
  * @dependencies
  * - react: React hooks
  * - react-native: Core components
  * - expo-haptics: Haptic feedback
  * - @/services/firebase/friendsService: Friends management
- * 
+ *
  * @usage
  * <MessageFriendSelector
  *   visible={isVisible}
  *   onSelectFriend={handleFriendSelect}
  *   onClose={handleClose}
  * />
- * 
+ *
  * @ai_context
  * Integrates with AI-powered friend suggestions based on conversation patterns.
  * Supports smart friend recommendations and recent interaction analysis.
  */
 
-import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import React, { useCallback, useEffect, useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import React, { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    Modal,
-    SafeAreaView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
-} from 'react-native';
-import { friendsService } from '../../services/firebase/friendsService';
-import { useAuthStore } from '../../stores/authStore';
-import { useThemeStore } from '../../stores/themeStore';
+  ActivityIndicator,
+  FlatList,
+  Modal,
+  SafeAreaView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { friendsService } from "../../services/firebase/friendsService";
+import { useAuthStore } from "../../stores/authStore";
+import { useThemeStore } from "../../stores/themeStore";
 
 /**
  * Friend interface for selection
@@ -51,7 +51,7 @@ interface Friend {
   profilePhoto?: string;
   lastActive?: Date;
   isOnline?: boolean;
-  status: 'online' | 'offline' | 'away';
+  status: "online" | "offline" | "away";
 }
 
 /**
@@ -69,16 +69,16 @@ interface MessageFriendSelectorProps {
 const MessageFriendSelector: React.FC<MessageFriendSelectorProps> = ({
   visible,
   onSelectFriend,
-  onClose
+  onClose,
 }) => {
   const theme = useThemeStore((state) => state.theme);
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
   const { user } = useAuthStore();
-  
+
   // Component state
   const [friends, setFriends] = useState<Friend[]>([]);
   const [filteredFriends, setFilteredFriends] = useState<Friend[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -87,54 +87,62 @@ const MessageFriendSelector: React.FC<MessageFriendSelectorProps> = ({
    */
   const loadFriends = useCallback(async () => {
     if (!user) return;
-    
+
     try {
       setIsLoading(true);
       setError(null);
-      
+
       // Get friends from Firebase
       const friendsData = await friendsService.getFriends(user.uid);
-      
+
       // Get real presence data for all friends
-      const friendIds = friendsData.map(friend => friend.id);
-      const presenceData = await friendsService.getBatchUserPresence(friendIds) as Record<string, {
-        status: 'online' | 'offline' | 'away';
-        lastActive: Date;
-        isOnline: boolean;
-      }>;
-      
+      const friendIds = friendsData.map((friend) => friend.id);
+      const presenceData = (await friendsService.getBatchUserPresence(
+        friendIds,
+      )) as Record<
+        string,
+        {
+          status: "online" | "offline" | "away";
+          lastActive: Date;
+          isOnline: boolean;
+        }
+      >;
+
       // Transform to our interface format with real presence data
-      const formattedFriends: Friend[] = friendsData.map(friend => {
-        const presence = presenceData[friend.id] || { status: 'offline', lastActive: new Date(), isOnline: false };
-        
+      const formattedFriends: Friend[] = friendsData.map((friend) => {
+        const presence = presenceData[friend.id] || {
+          status: "offline",
+          lastActive: new Date(),
+          isOnline: false,
+        };
+
         return {
           id: friend.id,
-          displayName: friend.displayName || friend.username || 'Unknown',
-          username: friend.username || 'no-username',
+          displayName: friend.displayName || friend.username || "Unknown",
+          username: friend.username || "no-username",
           profilePhoto: friend.profilePhoto,
           lastActive: presence.lastActive,
           isOnline: presence.isOnline,
           status: presence.status,
         };
       });
-      
+
       // Sort by online status, then by display name
       formattedFriends.sort((a, b) => {
-        if (a.status === 'online' && b.status !== 'online') return -1;
-        if (b.status === 'online' && a.status !== 'online') return 1;
+        if (a.status === "online" && b.status !== "online") return -1;
+        if (b.status === "online" && a.status !== "online") return 1;
         return a.displayName.localeCompare(b.displayName);
       });
-      
+
       setFriends(formattedFriends);
-      
+
       // If no friends, show helpful message
       if (formattedFriends.length === 0) {
-        setError('No friends found. Add friends to start messaging!');
+        setError("No friends found. Add friends to start messaging!");
       }
-      
     } catch (error) {
-      console.error('Load friends failed:', error);
-      setError('Failed to load friends. Please try again.');
+      console.error("Load friends failed:", error);
+      setError("Failed to load friends. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -153,12 +161,15 @@ const MessageFriendSelector: React.FC<MessageFriendSelectorProps> = ({
    * Filter friends based on search query
    */
   useEffect(() => {
-    if (searchQuery.trim() === '') {
+    if (searchQuery.trim() === "") {
       setFilteredFriends(friends);
     } else {
-      const filtered = friends.filter(friend =>
-        friend.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        friend.username.toLowerCase().includes(searchQuery.toLowerCase())
+      const filtered = friends.filter(
+        (friend) =>
+          friend.displayName
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          friend.username.toLowerCase().includes(searchQuery.toLowerCase()),
       );
       setFilteredFriends(filtered);
     }
@@ -170,38 +181,44 @@ const MessageFriendSelector: React.FC<MessageFriendSelectorProps> = ({
   const handleClose = useCallback(async () => {
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      
+
       // Clear search
-      setSearchQuery('');
+      setSearchQuery("");
       setError(null);
-      
+
       onClose();
     } catch (error) {
-      console.error('Handle close failed:', error);
+      console.error("Handle close failed:", error);
     }
   }, [onClose]);
 
   /**
    * Handle friend selection
    */
-  const handleSelectFriend = useCallback(async (friend: Friend) => {
-    try {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      onSelectFriend(friend.id, friend);
-      handleClose();
-    } catch (error) {
-      console.error('Select friend failed:', error);
-    }
-  }, [onSelectFriend, handleClose]);
+  const handleSelectFriend = useCallback(
+    async (friend: Friend) => {
+      try {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        onSelectFriend(friend.id, friend);
+        handleClose();
+      } catch (error) {
+        console.error("Select friend failed:", error);
+      }
+    },
+    [onSelectFriend, handleClose],
+  );
 
   /**
    * Get status color
    */
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'online': return '#10b981'; // green
-      case 'away': return '#f59e0b'; // yellow
-      default: return '#6b7280'; // gray
+      case "online":
+        return "#10b981"; // green
+      case "away":
+        return "#f59e0b"; // yellow
+      default:
+        return "#6b7280"; // gray
     }
   };
 
@@ -209,18 +226,18 @@ const MessageFriendSelector: React.FC<MessageFriendSelectorProps> = ({
    * Format last seen time
    */
   const formatLastSeen = (lastActive: Date, isOnline: boolean) => {
-    if (isOnline) return 'Online now';
-    
+    if (isOnline) return "Online now";
+
     const now = new Date();
     const diffMs = now.getTime() - lastActive.getTime();
     const diffMins = Math.floor(diffMs / 60000);
-    
-    if (diffMins < 1) return 'Just now';
+
+    if (diffMins < 1) return "Just now";
     if (diffMins < 60) return `${diffMins}m ago`;
-    
+
     const diffHours = Math.floor(diffMins / 60);
     if (diffHours < 24) return `${diffHours}h ago`;
-    
+
     const diffDays = Math.floor(diffHours / 24);
     return `${diffDays}d ago`;
   };
@@ -230,7 +247,11 @@ const MessageFriendSelector: React.FC<MessageFriendSelectorProps> = ({
    */
   const getFriendInitials = (friend: Friend) => {
     const name = friend.displayName || friend.username;
-    return name.split(' ').map(n => n.charAt(0).toUpperCase()).join('').slice(0, 2);
+    return name
+      .split(" ")
+      .map((n) => n.charAt(0).toUpperCase())
+      .join("")
+      .slice(0, 2);
   };
 
   /**
@@ -250,12 +271,12 @@ const MessageFriendSelector: React.FC<MessageFriendSelectorProps> = ({
             </Text>
           </View>
           {/* Status indicator */}
-          <View 
+          <View
             className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-cyber-black"
             style={{ backgroundColor: getStatusColor(item.status) }}
           />
         </View>
-        
+
         {/* Friend info */}
         <View className="flex-1">
           <Text className="text-white font-inter font-medium text-base">
@@ -265,13 +286,19 @@ const MessageFriendSelector: React.FC<MessageFriendSelectorProps> = ({
             @{item.username}
           </Text>
           <Text className="text-white/40 font-inter text-xs mt-1">
-            {item.lastActive ? formatLastSeen(item.lastActive, item.isOnline || false) : 'Offline'}
+            {item.lastActive
+              ? formatLastSeen(item.lastActive, item.isOnline || false)
+              : "Offline"}
           </Text>
         </View>
-        
+
         {/* Arrow indicator */}
         <View className="ml-3">
-          <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.4)" />
+          <Ionicons
+            name="chevron-forward"
+            size={20}
+            color="rgba(255,255,255,0.4)"
+          />
         </View>
       </TouchableOpacity>
     );
@@ -314,7 +341,11 @@ const MessageFriendSelector: React.FC<MessageFriendSelectorProps> = ({
     if (searchQuery && filteredFriends.length === 0) {
       return (
         <View className="items-center py-20 px-8">
-          <Ionicons name="search-outline" size={48} color="rgba(255,255,255,0.3)" />
+          <Ionicons
+            name="search-outline"
+            size={48}
+            color="rgba(255,255,255,0.3)"
+          />
           <Text className="text-white/60 font-inter text-base mt-4 mb-2 text-center">
             No friends found
           </Text>
@@ -327,7 +358,11 @@ const MessageFriendSelector: React.FC<MessageFriendSelectorProps> = ({
 
     return (
       <View className="items-center py-20 px-8">
-        <Ionicons name="people-outline" size={48} color="rgba(255,255,255,0.3)" />
+        <Ionicons
+          name="people-outline"
+          size={48}
+          color="rgba(255,255,255,0.3)"
+        />
         <Text className="text-white/60 font-inter text-base mt-4 mb-2 text-center">
           No friends yet
         </Text>
@@ -345,18 +380,20 @@ const MessageFriendSelector: React.FC<MessageFriendSelectorProps> = ({
       presentationStyle="pageSheet"
       onRequestClose={handleClose}
     >
-      <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background.primary }}>
+      <SafeAreaView
+        style={{ flex: 1, backgroundColor: theme.colors.background.primary }}
+      >
         <View className="flex-1 bg-cyber-black">
           {/* Header */}
           <View className="flex-row justify-between items-center px-6 py-4 border-b border-cyber-gray/20">
             <TouchableOpacity onPress={handleClose} className="p-2">
               <Ionicons name="close" size={24} color="white" />
             </TouchableOpacity>
-            
+
             <Text className="text-white font-orbitron text-lg">
               New Message
             </Text>
-            
+
             <View className="w-8" />
           </View>
 
@@ -374,8 +411,12 @@ const MessageFriendSelector: React.FC<MessageFriendSelectorProps> = ({
                 autoCorrect={false}
               />
               {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <Ionicons name="close-circle" size={20} color="rgba(255,255,255,0.5)" />
+                <TouchableOpacity onPress={() => setSearchQuery("")}>
+                  <Ionicons
+                    name="close-circle"
+                    size={20}
+                    color="rgba(255,255,255,0.5)"
+                  />
                 </TouchableOpacity>
               )}
             </View>
@@ -392,7 +433,7 @@ const MessageFriendSelector: React.FC<MessageFriendSelectorProps> = ({
           <FlatList
             data={filteredFriends}
             renderItem={renderFriendItem}
-            keyExtractor={item => item.id}
+            keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 20 }}
             ListEmptyComponent={renderEmptyState}
@@ -403,4 +444,4 @@ const MessageFriendSelector: React.FC<MessageFriendSelectorProps> = ({
   );
 };
 
-export default MessageFriendSelector; 
+export default MessageFriendSelector;

@@ -7,9 +7,11 @@ This document establishes the comprehensive coding standards, file structure, an
 ## AI-First Development Principles
 
 ### **Core Philosophy**
+
 SnapConnect is built as an **AI-first codebase**, meaning every architectural decision prioritizes compatibility with AI development tools, code clarity, and intelligent automation.
 
 ### **AI Compatibility Requirements**
+
 - **File Size Limit**: Maximum 500 lines per file for optimal AI tool processing
 - **Modular Architecture**: Each file should have a single, clear responsibility
 - **Descriptive Naming**: File and function names should be self-documenting
@@ -17,6 +19,7 @@ SnapConnect is built as an **AI-first codebase**, meaning every architectural de
 - **Predictable Structure**: Consistent patterns that AI tools can easily understand and extend
 
 ### **Intelligent Development Goals**
+
 - **RAG Integration**: Code structure should support easy integration of retrieval-augmented generation features
 - **Context Awareness**: Components should be designed to adapt based on gaming context and user behavior
 - **Scalable Intelligence**: Architecture should support expanding AI capabilities without major refactoring
@@ -27,6 +30,7 @@ SnapConnect is built as an **AI-first codebase**, meaning every architectural de
 ## Project Directory Structure
 
 ### **Root Level Organization**
+
 ```
 snapconnect/
 ├── src/                          # Main application source code
@@ -44,6 +48,7 @@ snapconnect/
 ```
 
 ### **Source Code Structure (`src/`)**
+
 ```
 src/
 ├── components/                   # Reusable UI components
@@ -105,6 +110,7 @@ src/
 ```
 
 ### **Assets Organization (`assets/`)**
+
 ```
 assets/
 ├── images/                       # Image assets
@@ -131,64 +137,70 @@ assets/
 ## File Naming Conventions
 
 ### **Component Files**
+
 ```javascript
 // Format: PascalCase with descriptive, hierarchical naming
-CyberButton.jsx                   // Gaming-themed button component
-MessageBubble.jsx                 // Chat message display component
-CameraOverlay.jsx                 // Camera interface overlay
-GamingAchievementCard.jsx         // Gaming achievement display
-AIContentSuggestion.jsx           // AI-powered content suggestions
+CyberButton.jsx; // Gaming-themed button component
+MessageBubble.jsx; // Chat message display component
+CameraOverlay.jsx; // Camera interface overlay
+GamingAchievementCard.jsx; // Gaming achievement display
+AIContentSuggestion.jsx; // AI-powered content suggestions
 ```
 
 ### **Screen Files**
+
 ```javascript
 // Format: PascalCase ending with "Screen"
-LoginScreen.jsx                   // Authentication login
-CameraScreen.jsx                  // Main camera interface
-ChatScreen.jsx                    // Individual conversation
-ProfileScreen.jsx                 // User profile display
-StoriesScreen.jsx                 // Stories feed display
-GamingDashboardScreen.jsx         // Gaming-specific dashboard
+LoginScreen.jsx; // Authentication login
+CameraScreen.jsx; // Main camera interface
+ChatScreen.jsx; // Individual conversation
+ProfileScreen.jsx; // User profile display
+StoriesScreen.jsx; // Stories feed display
+GamingDashboardScreen.jsx; // Gaming-specific dashboard
 ```
 
 ### **Service Files**
+
 ```javascript
 // Format: camelCase describing the service
-authService.js                    // Authentication operations
-firebaseService.js               // Firebase integrations
-aiService.js                     // AI service integrations
-cameraService.js                 // Camera functionality
-gamingService.js                 // Gaming platform integrations
+authService.js; // Authentication operations
+firebaseService.js; // Firebase integrations
+aiService.js; // AI service integrations
+cameraService.js; // Camera functionality
+gamingService.js; // Gaming platform integrations
 ```
 
 ### **Hook Files**
+
 ```javascript
 // Format: camelCase starting with "use"
-useAuth.js                       // Authentication state and operations
-useCamera.js                     // Camera functionality
-useGamingContext.js              // Gaming state and preferences
-useAIEnhancement.js              // AI-powered features
-useTheme.js                      // Theme and styling utilities
+useAuth.js; // Authentication state and operations
+useCamera.js; // Camera functionality
+useGamingContext.js; // Gaming state and preferences
+useAIEnhancement.js; // AI-powered features
+useTheme.js; // Theme and styling utilities
 ```
 
 ### **Utility Files**
+
 ```javascript
 // Format: camelCase describing purpose
-themeUtils.js                    // Theme-related utilities
-validationUtils.js               // Input validation helpers
-gamingUtils.js                   // Gaming-specific utilities
-aiUtils.js                       // AI helper functions
-performanceUtils.js              // Performance optimization
+themeUtils.js; // Theme-related utilities
+validationUtils.js; // Input validation helpers
+gamingUtils.js; // Gaming-specific utilities
+aiUtils.js; // AI helper functions
+performanceUtils.js; // Performance optimization
 ```
 
 ### **Store Files**
+
 ```javascript
 // Format: camelCase describing state domain
-authStore.js                     // Authentication state
-messagesStore.js                 // Messaging state
-cameraStore.js                   // Camera state
-gamingStore.js                   // Gaming preferences and state
-aiStore.js                       // AI context and preferences
+authStore.js; // Authentication state
+messagesStore.js; // Messaging state
+cameraStore.js; // Camera state
+gamingStore.js; // Gaming preferences and state
+aiStore.js; // AI context and preferences
 ```
 
 ---
@@ -196,6 +208,7 @@ aiStore.js                       // AI context and preferences
 ## File Documentation Standards
 
 ### **File Header Template**
+
 Every file must begin with a comprehensive header comment:
 
 ```javascript
@@ -203,24 +216,24 @@ Every file must begin with a comprehensive header comment:
  * @file CyberButton.jsx
  * @description Gaming-themed button component with RGB gradient styling and neon glow effects.
  * Supports multiple variants (primary, secondary, danger) and integrates with the cyber gaming aesthetic.
- * 
+ *
  * @author SnapConnect Team
  * @created 2024-01-15
  * @modified 2024-01-20
- * 
+ *
  * @dependencies
  * - react-native: TouchableOpacity, Text
  * - nativewind: Styling utilities
  * - @/utils/theme: Theme constants
- * 
+ *
  * @usage
  * import CyberButton from '@/components/common/CyberButton';
  * <CyberButton title="Join Game" variant="primary" onPress={handlePress} />
- * 
+ *
  * @testing
  * - Unit tests: __tests__/CyberButton.test.js
  * - Integration tests: Screen component tests
- * 
+ *
  * @ai_context
  * This component is designed for gaming contexts and should adapt based on user gaming preferences.
  * It integrates with the gaming theme system and supports AI-driven customization.
@@ -228,29 +241,30 @@ Every file must begin with a comprehensive header comment:
 ```
 
 ### **Function Documentation Template**
+
 All functions must use JSDoc/TSDoc format:
 
 ```javascript
 /**
  * Handles user authentication with gaming platform integration
- * 
+ *
  * @param {string} email - User's email address
  * @param {string} password - User's password
  * @param {Object} options - Additional authentication options
  * @param {boolean} options.rememberMe - Whether to persist session
  * @param {string} options.gamingPlatform - Gaming platform for integration
- * 
+ *
  * @returns {Promise<AuthResult>} Authentication result with user data
- * 
+ *
  * @throws {AuthError} When authentication fails
  * @throws {NetworkError} When network request fails
- * 
+ *
  * @example
  * const result = await authenticateUser('user@example.com', 'password123', {
  *   rememberMe: true,
  *   gamingPlatform: 'steam'
  * });
- * 
+ *
  * @ai_enhancement
  * This function supports AI-powered user preference detection and gaming platform
  * integration for personalized onboarding experiences.
@@ -261,13 +275,14 @@ async function authenticateUser(email, password, options = {}) {
 ```
 
 ### **Component Documentation Template**
+
 React components require additional documentation:
 
 ```javascript
 /**
  * @component CyberButton
  * @description Gaming-themed button with customizable variants and AI-enhanced interactions
- * 
+ *
  * @param {Object} props - Component properties
  * @param {string} props.title - Button text content
  * @param {'primary'|'secondary'|'danger'} props.variant - Button style variant
@@ -275,19 +290,19 @@ React components require additional documentation:
  * @param {boolean} props.disabled - Whether button is disabled
  * @param {boolean} props.loading - Whether to show loading state
  * @param {Object} props.aiContext - AI context for personalization
- * 
+ *
  * @returns {ReactElement} Rendered button component
- * 
+ *
  * @accessibility
  * - Supports screen readers with proper labels
  * - Maintains minimum 48dp touch target
  * - High contrast mode compatible
- * 
+ *
  * @performance
  * - Uses React.memo for re-render optimization
  * - Implements haptic feedback efficiently
  * - GPU-accelerated animations
- * 
+ *
  * @ai_integration
  * - Adapts styling based on user gaming preferences
  * - Supports AI-driven A/B testing variants
@@ -300,6 +315,7 @@ React components require additional documentation:
 ## Code Organization Principles
 
 ### **Component Structure**
+
 Every component should follow this consistent structure:
 
 ```javascript
@@ -367,8 +383,8 @@ const ComponentName: React.FC<Props> = ({
   }, [aiContext]);
 
   // 9. Derived values and computations
-  const buttonStyles = useMemo(() => 
-    themeUtils.getButtonStyles(variant, theme), 
+  const buttonStyles = useMemo(() =>
+    themeUtils.getButtonStyles(variant, theme),
     [variant, theme]
   );
 
@@ -394,6 +410,7 @@ export type { Props as ComponentNameProps };
 ```
 
 ### **Service Module Structure**
+
 Service modules should follow this pattern:
 
 ```javascript
@@ -455,6 +472,7 @@ export default aiService;
 ## Styling Organization
 
 ### **Theme Configuration Structure**
+
 Following the cyber gaming aesthetic defined in `theme-rules.md`:
 
 ```javascript
@@ -467,16 +485,16 @@ export const CyberTheme = {
   // Color system from theme-rules.md
   colors: {
     background: {
-      primary: '#0a0a0a',      // Deep black
-      secondary: '#1a1a1a',    // Dark gray
-      tertiary: '#2a2a2a',     // Medium gray
+      primary: "#0a0a0a", // Deep black
+      secondary: "#1a1a1a", // Dark gray
+      tertiary: "#2a2a2a", // Medium gray
     },
     accent: {
-      cyan: '#00ffff',         // Primary brand color
-      magenta: '#ff00ff',      // Secondary brand color
-      green: '#00ff41',        // Matrix green
-      blue: '#0080ff',         // Electric blue
-      orange: '#ff8000',       // Gaming orange
+      cyan: "#00ffff", // Primary brand color
+      magenta: "#ff00ff", // Secondary brand color
+      green: "#00ff41", // Matrix green
+      blue: "#0080ff", // Electric blue
+      orange: "#ff8000", // Gaming orange
     },
     // ... rest of color system
   },
@@ -484,44 +502,54 @@ export const CyberTheme = {
   // Typography system
   typography: {
     fonts: {
-      display: 'Orbitron',      // Gaming headers (max 20% usage)
-      body: 'Inter',            // Readable content (70% usage)
-      mono: 'JetBrains Mono',   // Technical content (10% usage)
+      display: "Orbitron", // Gaming headers (max 20% usage)
+      body: "Inter", // Readable content (70% usage)
+      mono: "JetBrains Mono", // Technical content (10% usage)
     },
     // ... rest of typography system
   },
 
   // Spacing scale (4px base unit)
   spacing: {
-    xs: 4, sm: 8, md: 12, lg: 16, xl: 20,
-    xxl: 24, xxxl: 32, xxxxl: 40, xxxxxl: 48, xxxxxxl: 64,
+    xs: 4,
+    sm: 8,
+    md: 12,
+    lg: 16,
+    xl: 20,
+    xxl: 24,
+    xxxl: 32,
+    xxxxl: 40,
+    xxxxxl: 48,
+    xxxxxxl: 64,
   },
 
   // Gaming effects
   effects: {
-    glowCyan: '0 0 10px rgba(0, 255, 255, 0.3)',
-    glowMagenta: '0 0 10px rgba(255, 0, 255, 0.3)',
-    glowGreen: '0 0 10px rgba(0, 255, 65, 0.3)',
+    glowCyan: "0 0 10px rgba(0, 255, 255, 0.3)",
+    glowMagenta: "0 0 10px rgba(255, 0, 255, 0.3)",
+    glowGreen: "0 0 10px rgba(0, 255, 65, 0.3)",
   },
 };
 ```
 
 ### **Component Styling Patterns**
+
 Use NativeWind with custom theme integration:
 
 ```javascript
 // Base component classes
-const baseClasses = 'px-4 py-3 rounded-lg font-inter';
+const baseClasses = "px-4 py-3 rounded-lg font-inter";
 
 // Variant-specific classes
 const variants = {
-  primary: 'bg-gradient-to-r from-cyber-cyan to-cyber-magenta text-black font-orbitron',
-  secondary: 'bg-cyber-cyan/10 border border-cyber-cyan text-cyber-cyan',
-  danger: 'bg-neon-red text-white',
+  primary:
+    "bg-gradient-to-r from-cyber-cyan to-cyber-magenta text-black font-orbitron",
+  secondary: "bg-cyber-cyan/10 border border-cyber-cyan text-cyber-cyan",
+  danger: "bg-neon-red text-white",
 };
 
 // Gaming-specific modifiers
-const gamingClasses = 'shadow-glow-cyan animate-pulse-cyber';
+const gamingClasses = "shadow-glow-cyan animate-pulse-cyber";
 ```
 
 ---
@@ -529,6 +557,7 @@ const gamingClasses = 'shadow-glow-cyan animate-pulse-cyber';
 ## State Management Guidelines
 
 ### **Zustand Store Organization**
+
 Each store should be focused and well-documented:
 
 ```javascript
@@ -577,7 +606,7 @@ export const useAuthStore = create<AuthState>()(
           try {
             const result = await authService.authenticate(email, password);
             const gamingProfile = await gamingService.getUserProfile(result.user.id);
-            
+
             set({
               user: result.user,
               gamingProfile,
@@ -632,6 +661,7 @@ export const useAuthStore = create<AuthState>()(
 ## Testing Organization
 
 ### **Test File Structure**
+
 ```
 __tests__/
 ├── components/                   # Component tests
@@ -657,30 +687,31 @@ __tests__/
 ```
 
 ### **Test Documentation Template**
+
 ```javascript
 /**
  * @file CyberButton.test.js
  * @description Comprehensive tests for CyberButton component including gaming features and AI integration
  */
 
-import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import { CyberButton } from '@/components/common';
-import { aiService } from '@/services';
+import React from "react";
+import { render, fireEvent, waitFor } from "@testing-library/react-native";
+import { CyberButton } from "@/components/common";
+import { aiService } from "@/services";
 
 // Mock dependencies
-jest.mock('@/services/aiService');
+jest.mock("@/services/aiService");
 
-describe('CyberButton Component', () => {
+describe("CyberButton Component", () => {
   /**
    * Test basic rendering functionality
    */
-  describe('Rendering', () => {
-    it('renders with primary variant styling', () => {
+  describe("Rendering", () => {
+    it("renders with primary variant styling", () => {
       // Test implementation
     });
 
-    it('applies gaming theme correctly', () => {
+    it("applies gaming theme correctly", () => {
       // Test implementation
     });
   });
@@ -688,12 +719,12 @@ describe('CyberButton Component', () => {
   /**
    * Test AI integration features
    */
-  describe('AI Integration', () => {
-    it('tracks user interactions with AI service', async () => {
+  describe("AI Integration", () => {
+    it("tracks user interactions with AI service", async () => {
       // Test implementation
     });
 
-    it('adapts styling based on AI context', () => {
+    it("adapts styling based on AI context", () => {
       // Test implementation
     });
   });
@@ -705,12 +736,14 @@ describe('CyberButton Component', () => {
 ## Performance & Security Guidelines
 
 ### **Performance Rules**
+
 - **60fps Target**: All animations must maintain 60fps during gaming
 - **Memory Management**: Proper cleanup of camera resources and event listeners
 - **Bundle Optimization**: Code splitting for gaming features and AI components
 - **AI Caching**: Cache AI responses and user preferences efficiently
 
 ### **Security Standards**
+
 - **Environment Variables**: Store all API keys in environment-specific configs
 - **Input Validation**: Validate all user inputs, especially for AI processing
 - **Data Encryption**: Encrypt gaming preferences and AI personalization data
@@ -721,15 +754,17 @@ describe('CyberButton Component', () => {
 ## AI Enhancement Integration
 
 ### **RAG Implementation Guidelines**
+
 - **Phase 1**: Basic AI features (content suggestions, user preferences)
 - **Phase 2**: Advanced RAG (personalized recommendations, gaming context awareness)
 - **Scalability**: Architecture should support expanding AI capabilities
 
 ### **Gaming Context Integration**
+
 - **Detection**: Automatically detect gaming content and context
 - **Adaptation**: UI should adapt based on gaming preferences and activity
 - **Community**: AI should understand gaming community dynamics
 
 ---
 
-This document serves as the comprehensive guide for maintaining consistency, quality, and AI-first principles throughout SnapConnect's development lifecycle. All team members must follow these guidelines to ensure a scalable, maintainable, and intelligent codebase. 
+This document serves as the comprehensive guide for maintaining consistency, quality, and AI-first principles throughout SnapConnect's development lifecycle. All team members must follow these guidelines to ensure a scalable, maintainable, and intelligent codebase.

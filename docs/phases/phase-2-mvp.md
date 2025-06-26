@@ -16,9 +16,11 @@ This phase transforms the foundation into a usable messaging platform. Users can
 ## Core Features & Tasks
 
 ### 1. **User Authentication System**
+
 **Goal**: Enable users to sign up, log in, and manage their accounts with phone/email verification.
 
 **Steps**:
+
 1. Implement phone number and email authentication using Firebase Auth
 2. Create onboarding screens with cyber gaming styling and user flow from user-flow.md
 3. Build profile creation with username, display name, and profile photo
@@ -26,6 +28,7 @@ This phase transforms the foundation into a usable messaging platform. Users can
 5. Implement persistent authentication state with secure token management
 
 **Acceptance Criteria**:
+
 - Users can sign up with phone number or email
 - SMS verification working with proper error handling
 - Profile creation flow complete with gaming-themed UI
@@ -33,9 +36,11 @@ This phase transforms the foundation into a usable messaging platform. Users can
 - Authentication state properly managed across app restart
 
 ### 2. **Camera & Media Capture**
+
 **Goal**: Implement camera interface for photo/video capture with gaming overlay integration.
 
 **Steps**:
+
 1. Set up Expo Camera with front/rear camera switching and flash controls
 2. Create camera overlay UI with minimal design following ui-rules.md
 3. Implement photo capture (tap) and video recording (hold) with haptic feedback
@@ -43,6 +48,7 @@ This phase transforms the foundation into a usable messaging platform. Users can
 5. Create media preview screen with editing options and send/save functionality
 
 **Acceptance Criteria**:
+
 - Camera initializes quickly with proper permissions handling
 - Photo and video capture working smoothly on both platforms
 - Camera overlay minimal and gaming-themed
@@ -50,9 +56,11 @@ This phase transforms the foundation into a usable messaging platform. Users can
 - Preview screen allows confirmation before sending
 
 ### 3. **Ephemeral Messaging Core**
+
 **Goal**: Enable users to send and receive disappearing photos/videos with timers.
 
 **Steps**:
+
 1. Implement message sending with recipient selection and timer configuration (1s, 3s, 5s, 10s)
 2. Create message viewing interface with countdown timer and screenshot detection
 3. Build message storage system in Firebase with automatic deletion
@@ -60,6 +68,7 @@ This phase transforms the foundation into a usable messaging platform. Users can
 5. Implement push notifications for new messages using Firebase Cloud Messaging
 
 **Acceptance Criteria**:
+
 - Messages send successfully with proper timer configuration
 - Viewing interface shows countdown and auto-deletes content
 - Firebase automatically removes expired messages
@@ -67,9 +76,11 @@ This phase transforms the foundation into a usable messaging platform. Users can
 - Screenshot detection alerts sender
 
 ### 4. **Friend Management System**
+
 **Goal**: Allow users to add friends, manage contacts, and discover other users.
 
 **Steps**:
+
 1. Create friend discovery through phone contacts sync and username search
 2. Implement friend request system with accept/decline functionality
 3. Build friend list interface with online status and recent activity
@@ -77,6 +88,7 @@ This phase transforms the foundation into a usable messaging platform. Users can
 5. Create friend profile views with mutual friends and shared activity
 
 **Acceptance Criteria**:
+
 - Contact sync working with proper permissions
 - Friend requests sent and received correctly
 - Friend list shows current status and activity
@@ -84,9 +96,11 @@ This phase transforms the foundation into a usable messaging platform. Users can
 - Friend profiles display relevant information
 
 ### 5. **Basic Stories Feature**
+
 **Goal**: Enable users to post and view 24-hour disappearing stories.
 
 **Steps**:
+
 1. Implement story creation from camera with multiple media support
 2. Create story viewing interface with tap-to-advance and user navigation
 3. Build story privacy controls (public, friends only, custom lists)
@@ -94,6 +108,7 @@ This phase transforms the foundation into a usable messaging platform. Users can
 5. Implement automatic story deletion after 24 hours
 
 **Acceptance Criteria**:
+
 - Users can create multi-media stories easily
 - Story viewing interface intuitive and smooth
 - Privacy controls working correctly
@@ -105,6 +120,7 @@ This phase transforms the foundation into a usable messaging platform. Users can
 ## Technical Implementation
 
 ### **Database Schema Design**
+
 ```javascript
 // Firebase Realtime Database structure
 {
@@ -118,7 +134,7 @@ This phase transforms the foundation into a usable messaging platform. Users can
       lastActive: "timestamp"
     }
   },
-  
+
   messages: {
     messageId: {
       senderId: "string",
@@ -131,13 +147,13 @@ This phase transforms the foundation into a usable messaging platform. Users can
       expiresAt: "timestamp"
     }
   },
-  
+
   friends: {
     userId: {
       friendId: "timestamp" // when friendship was established
     }
   },
-  
+
   stories: {
     userId: {
       storyId: {
@@ -153,6 +169,7 @@ This phase transforms the foundation into a usable messaging platform. Users can
 ```
 
 ### **Security Rules Configuration**
+
 ```javascript
 // Firebase Security Rules
 {
@@ -180,13 +197,14 @@ This phase transforms the foundation into a usable messaging platform. Users can
 ```
 
 ### **State Management Structure**
+
 ```javascript
 // Store organization following project-rules.md
-authStore.js      // User authentication and profile
-messagesStore.js  // Message sending/receiving state
-cameraStore.js    // Camera settings and media capture
-friendsStore.js   // Friend management and discovery
-storiesStore.js   // Story creation and viewing
+authStore.js; // User authentication and profile
+messagesStore.js; // Message sending/receiving state
+cameraStore.js; // Camera settings and media capture
+friendsStore.js; // Friend management and discovery
+storiesStore.js; // Story creation and viewing
 ```
 
 ---
@@ -194,6 +212,7 @@ storiesStore.js   // Story creation and viewing
 ## User Experience Flow
 
 ### **New User Journey**
+
 1. **Welcome Screen**: Cyber-themed intro with sign up/login options
 2. **Authentication**: Phone verification with gaming UI feedback
 3. **Profile Setup**: Username selection with gaming suggestions
@@ -202,6 +221,7 @@ storiesStore.js   // Story creation and viewing
 6. **Tutorial**: Interactive camera tutorial and first snap creation
 
 ### **Core Usage Flow**
+
 1. **App Launch**: Opens to camera interface (camera-first design)
 2. **Capture**: Tap for photo, hold for video with gaming feedback
 3. **Send**: Select friends, set timer, add optional text/effects
@@ -213,6 +233,7 @@ storiesStore.js   // Story creation and viewing
 ## Performance & Security
 
 ### **Performance Optimization**
+
 - **Camera Performance**: Fast initialization and smooth capture
 - **Image Compression**: Automatic resizing based on device and network
 - **Real-time Sync**: Optimized Firebase queries with minimal data transfer
@@ -220,6 +241,7 @@ storiesStore.js   // Story creation and viewing
 - **Offline Handling**: Queue messages and sync when connection restored
 
 ### **Security Implementation**
+
 - **End-to-End Security**: Secure media upload with signed URLs
 - **Privacy Controls**: User data protection and consent management
 - **Content Moderation**: Basic inappropriate content detection
@@ -231,6 +253,7 @@ storiesStore.js   // Story creation and viewing
 ## Testing Strategy
 
 ### **Feature Testing**
+
 ```javascript
 // Key test scenarios
 - Authentication flow with phone/email verification
@@ -242,6 +265,7 @@ storiesStore.js   // Story creation and viewing
 ```
 
 ### **Cross-Platform Testing**
+
 - iOS and Android compatibility testing
 - Different device sizes and orientations
 - Various network conditions (3G, WiFi, offline)
@@ -253,6 +277,7 @@ storiesStore.js   // Story creation and viewing
 ## UI/UX Implementation
 
 ### **Screen Components**
+
 Following cyber gaming aesthetic from theme-rules.md:
 
 1. **AuthScreen**: RGB gradient backgrounds with Orbitron headings
@@ -262,6 +287,7 @@ Following cyber gaming aesthetic from theme-rules.md:
 5. **StoriesScreen**: Immersive viewing with RGB progress indicators
 
 ### **Component Library**
+
 - **CyberButton**: Gaming-styled buttons with hover effects
 - **MessageBubble**: Ephemeral message display with timer
 - **FriendCard**: Gaming-themed friend list items
@@ -273,6 +299,7 @@ Following cyber gaming aesthetic from theme-rules.md:
 ## Quality Assurance
 
 ### **MVP Completion Checklist**
+
 - [ ] User authentication working end-to-end
 - [ ] Camera capture functioning on both platforms
 - [ ] Messages send and receive with proper timers
@@ -285,6 +312,7 @@ Following cyber gaming aesthetic from theme-rules.md:
 - [ ] Basic error handling implemented
 
 ### **User Acceptance Testing**
+
 1. New user can complete onboarding flow
 2. Users can capture and send ephemeral messages
 3. Friend discovery and management works smoothly
@@ -297,12 +325,14 @@ Following cyber gaming aesthetic from theme-rules.md:
 ## Documentation & Deployment
 
 ### **Documentation Updates**
+
 - API documentation for service modules
 - Component documentation with usage examples
 - User guide for testing team
 - Deployment guide for staging environment
 
 ### **Deployment Preparation**
+
 - Environment configuration for staging
 - Firebase project setup for testing
 - App store preparation (icons, descriptions)
@@ -313,6 +343,7 @@ Following cyber gaming aesthetic from theme-rules.md:
 ## Success Metrics
 
 ### **MVP Success Criteria**:
+
 - [ ] 100% of core user flows functional
 - [ ] Authentication success rate > 95%
 - [ ] Message delivery success rate > 98%
@@ -323,7 +354,9 @@ Following cyber gaming aesthetic from theme-rules.md:
 - [ ] Gaming aesthetic consistently applied
 
 ### **Demo Requirements**
+
 Prepare a 10-minute demo showing:
+
 1. Complete user registration and onboarding
 2. Camera capture and message sending
 3. Message receiving and viewing with timer
@@ -333,4 +366,4 @@ Prepare a 10-minute demo showing:
 
 ---
 
-**Next Phase**: With core functionality established, Phase 3 will focus on gaming-specific enhancements, advanced UI features, and gaming community integration to differentiate SnapConnect from standard messaging apps. 
+**Next Phase**: With core functionality established, Phase 3 will focus on gaming-specific enhancements, advanced UI features, and gaming community integration to differentiate SnapConnect from standard messaging apps.

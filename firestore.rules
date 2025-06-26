@@ -88,7 +88,15 @@ service cloud.firestore {
     match /stories/{storyId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow update: if request.auth != null && (
+        // Owner can update any field
+        request.auth.uid == resource.data.userId ||
+        // Other users can only update viewers and viewCount fields (for viewing stories)
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewers', 'viewCount']) &&
+         request.resource.data.viewers is map &&
+         request.resource.data.viewCount is number)
+      );
+      allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
     }
     
     // Gaming data - users can read and write their own gaming data

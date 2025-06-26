@@ -2,26 +2,26 @@
  * @file LoadingSpinner.tsx
  * @description Cyber gaming themed loading spinner with RGB effects and customizable animations.
  * Provides consistent loading indicators throughout the SnapConnect application.
- * 
+ *
  * @author SnapConnect Team
  * @created 2024-01-25
- * 
+ *
  * @dependencies
  * - react: React hooks and types
  * - react-native: View, Text, Animated
  * - react-native-reanimated: Advanced animations
- * 
+ *
  * @usage
  * import { LoadingSpinner } from '@/components/common/LoadingSpinner';
  * <LoadingSpinner variant="cyber" size="large" message="Loading game..." />
- * 
+ *
  * @ai_context
  * Loading component that adapts to gaming context and provides engaging feedback.
  * Supports various animation styles and customizable messaging.
  */
 
-import React, { useEffect } from 'react';
-import { Text, View } from 'react-native';
+import React, { useEffect } from "react";
+import { Text, View } from "react-native";
 import Animated, {
   Easing,
   interpolate,
@@ -29,23 +29,23 @@ import Animated, {
   useSharedValue,
   withRepeat,
   withTiming,
-} from 'react-native-reanimated';
+} from "react-native-reanimated";
 
 /**
  * Loading spinner variants for different contexts
  */
-export type LoadingSpinnerVariant = 
-  | 'cyber'        // Cyber gaming themed
-  | 'matrix'       // Matrix rain effect
-  | 'pulse'        // Pulsing glow effect
-  | 'dots'         // Animated dots
-  | 'bars'         // Audio bars style
-  | 'orbital';     // Orbital ring animation
+export type LoadingSpinnerVariant =
+  | "cyber" // Cyber gaming themed
+  | "matrix" // Matrix rain effect
+  | "pulse" // Pulsing glow effect
+  | "dots" // Animated dots
+  | "bars" // Audio bars style
+  | "orbital"; // Orbital ring animation
 
 /**
  * Spinner size variants
  */
-export type LoadingSpinnerSize = 'small' | 'medium' | 'large';
+export type LoadingSpinnerSize = "small" | "medium" | "large";
 
 /**
  * LoadingSpinner component props
@@ -79,26 +79,26 @@ function getSizeConfig(size: LoadingSpinnerSize): {
   spacing: number;
 } {
   switch (size) {
-    case 'small':
+    case "small":
       return {
         spinnerSize: 24,
         strokeWidth: 2,
-        textSize: 'text-sm',
+        textSize: "text-sm",
         spacing: 8,
       };
-    case 'large':
+    case "large":
       return {
         spinnerSize: 60,
         strokeWidth: 4,
-        textSize: 'text-lg',
+        textSize: "text-lg",
         spacing: 16,
       };
-    case 'medium':
+    case "medium":
     default:
       return {
         spinnerSize: 40,
         strokeWidth: 3,
-        textSize: 'text-base',
+        textSize: "text-base",
         spacing: 12,
       };
   }
@@ -120,14 +120,13 @@ const CyberRingSpinner: React.FC<{
         duration: 2000,
         easing: Easing.linear,
       }),
-      -1
+      -1,
     );
   }, [rotation]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${rotation.value}deg` }],
   }));
-
 
   return (
     <Animated.View style={[animatedStyle, { width: size, height: size }]}>
@@ -137,7 +136,7 @@ const CyberRingSpinner: React.FC<{
           height: size,
           borderRadius: size / 2,
           borderWidth: strokeWidth,
-          borderColor: 'transparent',
+          borderColor: "transparent",
           borderTopColor: color,
           borderRightColor: color,
         }}
@@ -165,7 +164,7 @@ const PulseDotsSpinner: React.FC<{
           easing: Easing.inOut(Easing.ease),
         }),
         -1,
-        true
+        true,
       );
     };
 
@@ -174,15 +173,15 @@ const PulseDotsSpinner: React.FC<{
     setTimeout(() => animateDot(dot3, 400), 400);
   }, [dot1, dot2, dot3]);
 
-     const useDotStyle = (dot: Animated.SharedValue<number>) =>
-     useAnimatedStyle(() => ({
-       opacity: interpolate(dot.value, [0, 1], [0.3, 1]),
-       transform: [
-         {
-           scale: interpolate(dot.value, [0, 1], [0.8, 1.2]),
-         },
-       ],
-     }));
+  const useDotStyle = (dot: Animated.SharedValue<number>) =>
+    useAnimatedStyle(() => ({
+      opacity: interpolate(dot.value, [0, 1], [0.3, 1]),
+      transform: [
+        {
+          scale: interpolate(dot.value, [0, 1], [0.8, 1.2]),
+        },
+      ],
+    }));
 
   const dotSize = size / 4;
 
@@ -190,7 +189,7 @@ const PulseDotsSpinner: React.FC<{
     <View className="flex-row items-center" style={{ gap: size / 8 }}>
       <Animated.View
         style={[
-                     useDotStyle(dot1),
+          useDotStyle(dot1),
           {
             width: dotSize,
             height: dotSize,
@@ -201,7 +200,7 @@ const PulseDotsSpinner: React.FC<{
       />
       <Animated.View
         style={[
-                     useDotStyle(dot2),
+          useDotStyle(dot2),
           {
             width: dotSize,
             height: dotSize,
@@ -212,7 +211,7 @@ const PulseDotsSpinner: React.FC<{
       />
       <Animated.View
         style={[
-                     useDotStyle(dot3),
+          useDotStyle(dot3),
           {
             width: dotSize,
             height: dotSize,
@@ -246,7 +245,7 @@ const AudioBarsSpinner: React.FC<{
             easing: Easing.inOut(Easing.ease),
           }),
           -1,
-          true
+          true,
         );
       }, delay);
     };
@@ -257,10 +256,10 @@ const AudioBarsSpinner: React.FC<{
     animateBar(bar4, 450);
   }, [bar1, bar2, bar3, bar4]);
 
-     const useBarStyle = (bar: Animated.SharedValue<number>) =>
-     useAnimatedStyle(() => ({
-       height: interpolate(bar.value, [0, 1], [size * 0.2, size]),
-     }));
+  const useBarStyle = (bar: Animated.SharedValue<number>) =>
+    useAnimatedStyle(() => ({
+      height: interpolate(bar.value, [0, 1], [size * 0.2, size]),
+    }));
 
   const barWidth = size / 6;
 
@@ -268,7 +267,7 @@ const AudioBarsSpinner: React.FC<{
     <View className="flex-row items-end" style={{ gap: size / 12 }}>
       <Animated.View
         style={[
-                     useBarStyle(bar1),
+          useBarStyle(bar1),
           {
             width: barWidth,
             backgroundColor: color,
@@ -278,7 +277,7 @@ const AudioBarsSpinner: React.FC<{
       />
       <Animated.View
         style={[
-                     useBarStyle(bar2),
+          useBarStyle(bar2),
           {
             width: barWidth,
             backgroundColor: color,
@@ -288,7 +287,7 @@ const AudioBarsSpinner: React.FC<{
       />
       <Animated.View
         style={[
-                     useBarStyle(bar3),
+          useBarStyle(bar3),
           {
             width: barWidth,
             backgroundColor: color,
@@ -298,7 +297,7 @@ const AudioBarsSpinner: React.FC<{
       />
       <Animated.View
         style={[
-                     useBarStyle(bar4),
+          useBarStyle(bar4),
           {
             width: barWidth,
             backgroundColor: color,
@@ -313,10 +312,10 @@ const AudioBarsSpinner: React.FC<{
 /**
  * LoadingSpinner Component
  * Gaming-themed loading spinner with multiple animation variants
- * 
+ *
  * @param props - Component props
  * @returns Rendered spinner component
- * 
+ *
  * @example
  * <LoadingSpinner
  *   variant="cyber"
@@ -326,12 +325,12 @@ const AudioBarsSpinner: React.FC<{
  * />
  */
 export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
-  variant = 'cyber',
-  size = 'medium',
+  variant = "cyber",
+  size = "medium",
   message,
-  color = '#00ffff',
+  color = "#00ffff",
   visible = true,
-  className = '',
+  className = "",
   testID,
 }) => {
   const sizeConfig = getSizeConfig(size);
@@ -343,8 +342,8 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
    */
   const renderSpinner = () => {
     switch (variant) {
-      case 'cyber':
-      case 'orbital':
+      case "cyber":
+      case "orbital":
         return (
           <CyberRingSpinner
             size={sizeConfig.spinnerSize}
@@ -352,22 +351,12 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
             color={color}
           />
         );
-      case 'pulse':
-      case 'dots':
-        return (
-          <PulseDotsSpinner
-            size={sizeConfig.spinnerSize}
-            color={color}
-          />
-        );
-      case 'bars':
-        return (
-          <AudioBarsSpinner
-            size={sizeConfig.spinnerSize}
-            color={color}
-          />
-        );
-      case 'matrix':
+      case "pulse":
+      case "dots":
+        return <PulseDotsSpinner size={sizeConfig.spinnerSize} color={color} />;
+      case "bars":
+        return <AudioBarsSpinner size={sizeConfig.spinnerSize} color={color} />;
+      case "matrix":
         return (
           <CyberRingSpinner
             size={sizeConfig.spinnerSize}
@@ -387,7 +376,7 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   };
 
   return (
-    <View 
+    <View
       className={`items-center justify-center ${className}`}
       testID={testID}
     >
@@ -398,7 +387,7 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 
       {/* Loading Message */}
       {message && (
-        <Text 
+        <Text
           className={`text-white/80 font-inter ${sizeConfig.textSize} text-center`}
           style={{ color: color }}
         >
@@ -409,4 +398,4 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   );
 };
 
-export default LoadingSpinner; 
+export default LoadingSpinner;

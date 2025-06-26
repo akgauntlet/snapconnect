@@ -2,39 +2,39 @@
  * @file FriendProfileExample.tsx
  * @description Example friend profile screen showcasing the new base components.
  * Demonstrates proper usage of GameCard, CyberButton, GamingInput, and other components.
- * 
+ *
  * @author SnapConnect Team
  * @created 2024-01-25
- * 
+ *
  * @dependencies
  * - react: React hooks
  * - react-native: Core components
  * - @/components/common: Base gaming components
- * 
+ *
  * @usage
  * Example screen showing base component integration
- * 
+ *
  * @ai_context
  * Demonstrates gaming-themed UI patterns and component composition.
  */
 
-import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
-import { SafeAreaView, ScrollView, Text, View } from 'react-native';
+import { Ionicons } from "@expo/vector-icons";
+import React, { useState } from "react";
+import { SafeAreaView, ScrollView, Text, View } from "react-native";
 import {
-    CyberButton,
-    GameCard,
-    GamingInput,
-    IconButton,
-    LoadingSpinner,
-} from '../../components/common';
+  CyberButton,
+  GameCard,
+  GamingInput,
+  IconButton,
+  LoadingSpinner,
+} from "../../components/common";
 
 /**
  * Friend Profile Example Component
  * Showcases how to properly integrate base components
  */
 const FriendProfileExample: React.FC = () => {
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   /**
@@ -44,7 +44,7 @@ const FriendProfileExample: React.FC = () => {
     setIsLoading(true);
     setTimeout(() => {
       setIsLoading(false);
-      setMessage('');
+      setMessage("");
     }, 2000);
   };
 
@@ -52,14 +52,14 @@ const FriendProfileExample: React.FC = () => {
    * Handle adding friend
    */
   const handleAddFriend = () => {
-    console.log('Adding friend...');
+    console.log("Adding friend...");
   };
 
   /**
    * Handle viewing achievements
    */
   const handleViewAchievements = () => {
-    console.log('Viewing achievements...');
+    console.log("Viewing achievements...");
   };
 
   return (
@@ -70,14 +70,14 @@ const FriendProfileExample: React.FC = () => {
           icon="arrow-back"
           variant="ghost"
           size="medium"
-          onPress={() => console.log('Go back')}
+          onPress={() => console.log("Go back")}
         />
         <Text className="text-white font-orbitron text-xl">Friend Profile</Text>
         <IconButton
           icon="ellipsis-vertical"
           variant="ghost"
           size="medium"
-          onPress={() => console.log('More options')}
+          onPress={() => console.log("More options")}
         />
       </View>
 
@@ -107,10 +107,10 @@ const FriendProfileExample: React.FC = () => {
             rarity="legendary"
             status="online"
             stats={[
-              { label: 'Wins', value: 127, icon: 'trophy' },
-              { label: 'Kills', value: 2456, icon: 'skull' },
-              { label: 'Hours', value: 89, icon: 'time' },
-              { label: 'Rank', value: 'Diamond', icon: 'diamond' },
+              { label: "Wins", value: 127, icon: "trophy" },
+              { label: "Kills", value: 2456, icon: "skull" },
+              { label: "Hours", value: 89, icon: "time" },
+              { label: "Rank", value: "Diamond", icon: "diamond" },
             ]}
             onPress={handleViewAchievements}
           />
@@ -118,8 +118,10 @@ const FriendProfileExample: React.FC = () => {
 
         {/* Recent Achievements */}
         <View className="px-6 mb-6">
-          <Text className="text-white font-orbitron text-lg mb-4">Recent Achievements</Text>
-          
+          <Text className="text-white font-orbitron text-lg mb-4">
+            Recent Achievements
+          </Text>
+
           <GameCard
             title="First Blood Master"
             subtitle="Achievement Unlocked"
@@ -127,8 +129,8 @@ const FriendProfileExample: React.FC = () => {
             type="achievement"
             rarity="epic"
             stats={[
-              { label: 'Unlocked', value: '2 days ago', icon: 'calendar' },
-              { label: 'Rarity', value: '5.2%', icon: 'star' },
+              { label: "Unlocked", value: "2 days ago", icon: "calendar" },
+              { label: "Rarity", value: "5.2%", icon: "star" },
             ]}
             className="mb-3"
           />
@@ -140,16 +142,18 @@ const FriendProfileExample: React.FC = () => {
             type="achievement"
             rarity="rare"
             stats={[
-              { label: 'Unlocked', value: '1 week ago', icon: 'calendar' },
-              { label: 'Rarity', value: '12.8%', icon: 'star' },
+              { label: "Unlocked", value: "1 week ago", icon: "calendar" },
+              { label: "Rarity", value: "12.8%", icon: "star" },
             ]}
           />
         </View>
 
         {/* Quick Message */}
         <View className="px-6 mb-6">
-          <Text className="text-white font-orbitron text-lg mb-4">Send Message</Text>
-          
+          <Text className="text-white font-orbitron text-lg mb-4">
+            Send Message
+          </Text>
+
           <GamingInput
             placeholder="Type a quick message..."
             value={message}
@@ -178,7 +182,7 @@ const FriendProfileExample: React.FC = () => {
               icon="gift"
               variant="legendary"
               size="large"
-              onPress={() => console.log('Send gift')}
+              onPress={() => console.log("Send gift")}
             />
           </View>
         </View>
@@ -198,7 +202,7 @@ const FriendProfileExample: React.FC = () => {
             variant="secondary"
             icon="game-controller"
             fullWidth
-            onPress={() => console.log('Invite to game')}
+            onPress={() => console.log("Invite to game")}
           >
             Invite to Game
           </CyberButton>
@@ -207,7 +211,7 @@ const FriendProfileExample: React.FC = () => {
             variant="warning"
             icon="flag"
             fullWidth
-            onPress={() => console.log('Report user')}
+            onPress={() => console.log("Report user")}
           >
             Report User
           </CyberButton>
@@ -229,4 +233,4 @@ const FriendProfileExample: React.FC = () => {
   );
 };
 
-export default FriendProfileExample; 
+export default FriendProfileExample;

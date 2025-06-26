@@ -2,34 +2,40 @@
  * @file CustomAlert.tsx
  * @description Web-compatible custom alert modal that replaces React Native's Alert.alert
  * Provides proper modal-based alerts for web builds while maintaining native functionality.
- * 
+ *
  * @author SnapConnect Team
  * @created 2024-01-24
- * 
+ *
  * @dependencies
  * - react: React hooks
  * - react-native: Modal, SafeAreaView, TouchableOpacity
  * - @expo/vector-icons: Icons
- * 
+ *
  * @usage
  * import { customAlert } from '@/components/common/CustomAlert';
  * customAlert('Title', 'Message', [{ text: 'OK' }]);
- * 
+ *
  * @ai_context
  * Essential for web build compatibility - React Native Alert.alert doesn't work on web
  */
 
-import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
-import { Alert, Modal, Platform, Text, TouchableOpacity, View } from 'react-native';
-
+import { Ionicons } from "@expo/vector-icons";
+import React, { useState } from "react";
+import {
+  Alert,
+  Modal,
+  Platform,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 /**
  * Alert button interface
  */
 interface AlertButton {
   text: string;
-  style?: 'default' | 'cancel' | 'destructive';
+  style?: "default" | "cancel" | "destructive";
   onPress?: () => void;
 }
 
@@ -59,14 +65,18 @@ class AlertManager {
 
   setCallbacks(
     setAlertData: (data: AlertData | null) => void,
-    setVisible: (visible: boolean) => void
+    setVisible: (visible: boolean) => void,
   ) {
     this.setAlertData = setAlertData;
     this.setVisible = setVisible;
   }
 
-  show(title: string, message?: string, buttons: AlertButton[] = [{ text: 'OK' }]) {
-    if (Platform.OS === 'web') {
+  show(
+    title: string,
+    message?: string,
+    buttons: AlertButton[] = [{ text: "OK" }],
+  ) {
+    if (Platform.OS === "web") {
       // Use custom modal on web
       if (this.setAlertData && this.setVisible) {
         this.setAlertData({ title, message, buttons });
@@ -105,7 +115,7 @@ const CustomAlertModal: React.FC = () => {
   const handleButtonPress = (button: AlertButton) => {
     setVisible(false);
     setAlertData(null);
-    
+
     // Call button's onPress after a small delay to allow modal to close
     setTimeout(() => {
       if (button.onPress) {
@@ -117,28 +127,28 @@ const CustomAlertModal: React.FC = () => {
   /**
    * Get button style based on button type
    */
-  const getButtonStyle = (style?: AlertButton['style']) => {
+  const getButtonStyle = (style?: AlertButton["style"]) => {
     switch (style) {
-      case 'destructive':
-        return 'bg-red-500';
-      case 'cancel':
-        return 'bg-gray-600';
+      case "destructive":
+        return "bg-red-500";
+      case "cancel":
+        return "bg-gray-600";
       default:
-        return 'bg-cyber-cyan';
+        return "bg-cyber-cyan";
     }
   };
 
   /**
    * Get button text color based on button type
    */
-  const getButtonTextStyle = (style?: AlertButton['style']) => {
+  const getButtonTextStyle = (style?: AlertButton["style"]) => {
     switch (style) {
-      case 'destructive':
-        return 'text-white';
-      case 'cancel':
-        return 'text-white';
+      case "destructive":
+        return "text-white";
+      case "cancel":
+        return "text-white";
       default:
-        return 'text-cyber-black';
+        return "text-cyber-black";
     }
   };
 
@@ -182,7 +192,9 @@ const CustomAlertModal: React.FC = () => {
                 onPress={() => handleButtonPress(button)}
                 className={`px-4 py-3 rounded-lg ${getButtonStyle(button.style)}`}
               >
-                <Text className={`font-inter font-medium text-center ${getButtonTextStyle(button.style)}`}>
+                <Text
+                  className={`font-inter font-medium text-center ${getButtonTextStyle(button.style)}`}
+                >
                   {button.text}
                 </Text>
               </TouchableOpacity>
@@ -198,7 +210,9 @@ const CustomAlertModal: React.FC = () => {
  * Custom Alert Provider Component
  * Wrap your app with this to enable custom alerts
  */
-export const CustomAlertProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const CustomAlertProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   return (
     <>
       {children}
@@ -216,7 +230,7 @@ export const CustomAlertProvider: React.FC<{ children: React.ReactNode }> = ({ c
 export const customAlert = (
   title: string,
   message?: string,
-  buttons: AlertButton[] = [{ text: 'OK' }]
+  buttons: AlertButton[] = [{ text: "OK" }],
 ) => {
   const manager = AlertManager.getInstance();
   manager.show(title, message, buttons);
@@ -227,4 +241,4 @@ export const customAlert = (
  */
 export { AlertManager };
 
-export default CustomAlertModal; 
+export default CustomAlertModal;

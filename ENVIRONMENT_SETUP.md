@@ -5,11 +5,13 @@ This guide explains how to set up environment variables for SnapConnect to keep 
 ## Quick Setup
 
 1. **Copy the example file:**
+
    ```powershell
    Copy-Item .env.example .env
    ```
 
 2. **Edit the `.env` file** with your actual configuration values:
+
    ```powershell
    notepad .env
    ```
@@ -19,6 +21,7 @@ This guide explains how to set up environment variables for SnapConnect to keep 
 ## Required Environment Variables
 
 ### Firebase Configuration
+
 These are required for the app to function. Get them from your Firebase project console:
 
 ```env
@@ -31,6 +34,7 @@ EXPO_PUBLIC_FIREBASE_APP_ID=your_app_id
 ```
 
 ### API Configuration
+
 Configure your API endpoints:
 
 ```env
@@ -50,6 +54,7 @@ EXPO_PUBLIC_API_BASE_URL_PROD=https://api.snapconnect.com
 ## Optional Configuration
 
 ### AI Services
+
 When you're ready to integrate AI features:
 
 ```env
@@ -58,6 +63,7 @@ EXPO_PUBLIC_ANTHROPIC_API_KEY=your_anthropic_api_key_here
 ```
 
 ### Gaming Platform APIs
+
 For gaming integrations:
 
 ```env
@@ -83,13 +89,16 @@ TWITCH_CLIENT_SECRET=your_twitch_client_secret_here
 ## Troubleshooting
 
 ### "Missing required Firebase environment variables" Error
+
 This means one or more required environment variables are not set. Check that:
+
 1. Your `.env` file exists in the project root
 2. All Firebase variables are set with valid values
 3. There are no typos in variable names
 4. You've restarted the development server after adding variables
 
 ### Environment Variables Not Loading
+
 - Make sure your `.env` file is in the project root directory
 - Restart your development server (`npm start` or `expo start`)
 - For Expo, variables must start with `EXPO_PUBLIC_` to be accessible in client code
@@ -97,8 +106,9 @@ This means one or more required environment variables are not set. Check that:
 ## Team Setup
 
 When a new team member joins:
+
 1. They should copy `.env.example` to `.env`
 2. Get the actual configuration values from a team lead (never commit these to git)
 3. Fill in their `.env` file with the provided values
 
-This keeps everyone's environment consistent while maintaining security. 
+This keeps everyone's environment consistent while maintaining security.

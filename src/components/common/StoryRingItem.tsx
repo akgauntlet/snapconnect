@@ -2,33 +2,33 @@
  * @file StoryRingItem.tsx
  * @description Reusable story ring item component for displaying story previews.
  * Shows user avatars with story indicators and unviewed status in cyber gaming style.
- * 
+ *
  * @author SnapConnect Team
  * @created 2024-01-24
- * 
+ *
  * @dependencies
  * - react: React hooks
  * - react-native: Core components
  * - expo-image: Optimized image component
  * - @expo/vector-icons: Icons
- * 
+ *
  * @usage
  * <StoryRingItem
  *   type="user"
  *   story={userStory}
  *   onPress={handlePress}
  * />
- * 
+ *
  * @ai_context
  * Displays AI-enhanced story previews with smart engagement indicators.
  * Supports gaming achievement highlighting and content type recognition.
  */
 
-import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
-import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
-import { useThemeStore } from '../../stores/themeStore';
+import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import React from "react";
+import { Text, TouchableOpacity, View } from "react-native";
+import { useThemeStore } from "../../stores/themeStore";
 
 /**
  * Story user interface
@@ -43,7 +43,7 @@ export interface StoryUser {
   stories: {
     id: string;
     mediaUrl: string;
-    mediaType: 'photo' | 'video';
+    mediaType: "photo" | "video";
     text?: string;
     createdAt: any;
     hasViewed: boolean;
@@ -57,7 +57,7 @@ export interface StoryUser {
 export interface MyStory {
   id: string;
   mediaUrl: string;
-  mediaType: 'photo' | 'video';
+  mediaType: "photo" | "video";
   text?: string;
   createdAt: any;
   viewCount: number;
@@ -68,7 +68,7 @@ export interface MyStory {
  * Props for StoryRingItem component
  */
 interface StoryRingItemProps {
-  type: 'user' | 'friend' | 'create';
+  type: "user" | "friend" | "create";
   story?: MyStory;
   storyUser?: StoryUser;
   onPress: () => void;
@@ -76,10 +76,10 @@ interface StoryRingItemProps {
 
 /**
  * Story ring item component with cyber gaming aesthetic
- * 
+ *
  * @param {StoryRingItemProps} props - Component props
  * @returns {React.ReactElement} Rendered story ring item
- * 
+ *
  * @performance
  * - Optimized image loading with expo-image
  * - Efficient render cycles with proper memoization
@@ -89,7 +89,7 @@ const StoryRingItem: React.FC<StoryRingItemProps> = ({
   type,
   story,
   storyUser,
-  onPress
+  onPress,
 }) => {
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
 
@@ -97,11 +97,11 @@ const StoryRingItem: React.FC<StoryRingItemProps> = ({
    * Get user initials for avatar fallback
    */
   const getUserInitials = (name?: string) => {
-    if (!name) return '?';
+    if (!name) return "?";
     return name
-      .split(' ')
-      .map(n => n.charAt(0).toUpperCase())
-      .join('')
+      .split(" ")
+      .map((n) => n.charAt(0).toUpperCase())
+      .join("")
       .slice(0, 2);
   };
 
@@ -109,17 +109,17 @@ const StoryRingItem: React.FC<StoryRingItemProps> = ({
    * Render create story button
    */
   const renderCreateStory = () => (
-    <TouchableOpacity
-      onPress={onPress}
-      className="items-center w-20"
-    >
+    <TouchableOpacity onPress={onPress} className="items-center w-20">
       <View className="w-16 h-16 bg-cyber-cyan/10 border-2 border-dashed border-cyber-cyan/30 rounded-full justify-center items-center relative">
         <Ionicons name="add" size={24} color={accentColor} />
-        
+
         {/* Pulsing effect */}
         <View className="absolute inset-0 border-2 border-cyber-cyan/20 rounded-full animate-pulse" />
       </View>
-      <Text className="text-white font-inter text-xs mt-2 text-center" numberOfLines={1}>
+      <Text
+        className="text-white font-inter text-xs mt-2 text-center"
+        numberOfLines={1}
+      >
         Your Story
       </Text>
     </TouchableOpacity>
@@ -132,21 +132,18 @@ const StoryRingItem: React.FC<StoryRingItemProps> = ({
     if (!story) return renderCreateStory();
 
     return (
-      <TouchableOpacity
-        onPress={onPress}
-        className="items-center w-20"
-      >
+      <TouchableOpacity onPress={onPress} className="items-center w-20">
         <View className="relative">
           <View className="w-16 h-16 border-2 border-cyber-cyan rounded-full p-1 bg-cyber-cyan/10">
             <Image
               source={{ uri: story.mediaUrl }}
-              style={{ width: '100%', height: '100%', borderRadius: 28 }}
+              style={{ width: "100%", height: "100%", borderRadius: 28 }}
               contentFit="cover"
               placeholder={null}
               transition={200}
             />
           </View>
-          
+
           {/* View count badge */}
           <View className="absolute -bottom-1 -right-1 bg-cyber-cyan min-w-5 h-5 rounded-full justify-center items-center px-1">
             <Text className="text-cyber-black font-inter text-xs font-bold">
@@ -155,14 +152,17 @@ const StoryRingItem: React.FC<StoryRingItemProps> = ({
           </View>
 
           {/* Media type indicator */}
-          {story.mediaType === 'video' && (
+          {story.mediaType === "video" && (
             <View className="absolute top-1 right-1 w-4 h-4 bg-cyber-black/70 rounded-full justify-center items-center">
               <Ionicons name="videocam" size={10} color="white" />
             </View>
           )}
         </View>
-        
-        <Text className="text-white font-inter text-xs mt-2 text-center" numberOfLines={1}>
+
+        <Text
+          className="text-white font-inter text-xs mt-2 text-center"
+          numberOfLines={1}
+        >
           Your Story
         </Text>
       </TouchableOpacity>
@@ -176,25 +176,25 @@ const StoryRingItem: React.FC<StoryRingItemProps> = ({
     if (!storyUser) return null;
 
     const latestStory = storyUser.stories[0];
-    const displayName = storyUser.user.displayName || storyUser.user.username || 'Unknown';
+    const displayName =
+      storyUser.user.displayName || storyUser.user.username || "Unknown";
 
     return (
-      <TouchableOpacity
-        onPress={onPress}
-        className="items-center w-20"
-      >
+      <TouchableOpacity onPress={onPress} className="items-center w-20">
         <View className="relative">
           {/* Story ring with gradient for unviewed */}
-          <View className={`w-16 h-16 rounded-full p-1 ${
-            storyUser.hasUnviewed 
-              ? 'bg-gradient-to-r from-cyber-cyan via-cyber-magenta to-cyber-green' 
-              : 'bg-cyber-gray/30'
-          }`}>
+          <View
+            className={`w-16 h-16 rounded-full p-1 ${
+              storyUser.hasUnviewed
+                ? "bg-gradient-to-r from-cyber-cyan via-cyber-magenta to-cyber-green"
+                : "bg-cyber-gray/30"
+            }`}
+          >
             <View className="w-full h-full bg-cyber-black rounded-full p-0.5">
               {latestStory.mediaUrl ? (
                 <Image
                   source={{ uri: latestStory.mediaUrl }}
-                  style={{ width: '100%', height: '100%', borderRadius: 24 }}
+                  style={{ width: "100%", height: "100%", borderRadius: 24 }}
                   contentFit="cover"
                   placeholder={null}
                   transition={200}
@@ -219,7 +219,7 @@ const StoryRingItem: React.FC<StoryRingItemProps> = ({
           )}
 
           {/* Media type indicator */}
-          {latestStory.mediaType === 'video' && (
+          {latestStory.mediaType === "video" && (
             <View className="absolute bottom-1 right-1 w-4 h-4 bg-cyber-black/70 rounded-full justify-center items-center">
               <Ionicons name="play" size={8} color="white" />
             </View>
@@ -230,8 +230,11 @@ const StoryRingItem: React.FC<StoryRingItemProps> = ({
             <View className="absolute top-1 left-1 w-3 h-3 bg-cyber-cyan rounded-full" />
           )}
         </View>
-        
-        <Text className="text-white font-inter text-xs mt-2 text-center" numberOfLines={1}>
+
+        <Text
+          className="text-white font-inter text-xs mt-2 text-center"
+          numberOfLines={1}
+        >
           {displayName}
         </Text>
       </TouchableOpacity>
@@ -240,15 +243,15 @@ const StoryRingItem: React.FC<StoryRingItemProps> = ({
 
   // Render based on type
   switch (type) {
-    case 'create':
+    case "create":
       return renderCreateStory();
-    case 'user':
+    case "user":
       return renderMyStory();
-    case 'friend':
+    case "friend":
       return renderFriendStory();
     default:
       return null;
   }
 };
 
-export default StoryRingItem; 
+export default StoryRingItem;

@@ -2,30 +2,30 @@
  * @file ConversationItem.tsx
  * @description Reusable conversation item component for the messages screen.
  * Shows conversation preview with sender info, last message, and online status.
- * 
+ *
  * @author SnapConnect Team
  * @created 2024-01-24
- * 
+ *
  * @dependencies
  * - react: React hooks
  * - react-native: Core components
  * - @expo/vector-icons: Icons
- * 
+ *
  * @usage
  * <ConversationItem
- *   conversation={conversation}  
+ *   conversation={conversation}
  *   onPress={handlePress}
  *   onLongPress={handleLongPress}
  * />
- * 
+ *
  * @ai_context
  * Displays AI-enhanced conversation previews with smart message summaries.
  * Supports gaming context awareness and priority conversation highlighting.
  */
 
-import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from "@expo/vector-icons";
+import React from "react";
+import { Text, TouchableOpacity, View } from "react-native";
 
 /**
  * Interface for conversation data
@@ -53,10 +53,10 @@ interface ConversationItemProps {
 
 /**
  * Individual conversation item component with cyber gaming aesthetic
- * 
+ *
  * @param {ConversationItemProps} props - Component props
  * @returns {React.ReactElement} Rendered conversation item
- * 
+ *
  * @performance
  * - Optimized for FlatList rendering
  * - Minimal re-renders with proper memoization strategy
@@ -65,16 +65,16 @@ interface ConversationItemProps {
 const ConversationItem: React.FC<ConversationItemProps> = ({
   conversation,
   onPress,
-  onLongPress
+  onLongPress,
 }) => {
   /**
    * Get user initials for avatar display
    */
   const getUserInitials = (name: string) => {
     return name
-      .split(' ')
-      .map(n => n.charAt(0).toUpperCase())
-      .join('')
+      .split(" ")
+      .map((n) => n.charAt(0).toUpperCase())
+      .join("")
       .slice(0, 2);
   };
 
@@ -82,7 +82,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
    * Get status indicator color based on online status
    */
   const getStatusColor = () => {
-    return conversation.isOnline ? '#00ff41' : '#6b7280'; // Gaming green or gray
+    return conversation.isOnline ? "#00ff41" : "#6b7280"; // Gaming green or gray
   };
 
   /**
@@ -112,9 +112,9 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
             {getUserInitials(conversation.name)}
           </Text>
         </View>
-        
+
         {/* Online status indicator */}
-        <View 
+        <View
           className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-cyber-black"
           style={{ backgroundColor: getStatusColor() }}
         >
@@ -130,7 +130,10 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
       <View className="flex-1">
         {/* Name and Time Row */}
         <View className="flex-row justify-between items-center mb-1">
-          <Text className="text-white font-inter font-semibold text-base flex-1" numberOfLines={1}>
+          <Text
+            className="text-white font-inter font-semibold text-base flex-1"
+            numberOfLines={1}
+          >
             {conversation.name}
           </Text>
           <Text className="text-white/40 font-jetbrains text-xs ml-2">
@@ -140,8 +143,8 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
 
         {/* Last Message Preview */}
         <View className="flex-row items-center">
-          <Text 
-            className="text-white/60 font-inter text-sm flex-1" 
+          <Text
+            className="text-white/60 font-inter text-sm flex-1"
             numberOfLines={1}
           >
             {conversation.lastMessage}
@@ -154,11 +157,13 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
                 <View className="w-2 h-2 bg-cyber-cyan rounded-full animate-pulse" />
               </View>
             )}
-            
+
             {conversation.unreadCount && conversation.unreadCount > 0 && (
               <View className="bg-cyber-cyan min-w-5 h-5 rounded-full justify-center items-center px-1">
                 <Text className="text-cyber-black font-inter font-bold text-xs">
-                  {conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}
+                  {conversation.unreadCount > 99
+                    ? "99+"
+                    : conversation.unreadCount}
                 </Text>
               </View>
             )}
@@ -175,14 +180,14 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
 
       {/* Arrow indicator */}
       <View className="ml-3">
-        <Ionicons 
-          name="chevron-forward" 
-          size={16} 
-          color="rgba(0, 255, 255, 0.3)" 
+        <Ionicons
+          name="chevron-forward"
+          size={16}
+          color="rgba(0, 255, 255, 0.3)"
         />
       </View>
     </TouchableOpacity>
   );
 };
 
-export default ConversationItem; 
+export default ConversationItem;

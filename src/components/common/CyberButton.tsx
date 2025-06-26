@@ -2,44 +2,44 @@
  * @file CyberButton.tsx
  * @description Cyber gaming themed button component with RGB effects and gaming aesthetics.
  * Provides consistent button styling throughout the SnapConnect application.
- * 
+ *
  * @author SnapConnect Team
  * @created 2024-01-25
- * 
+ *
  * @dependencies
  * - react: React hooks and types
  * - react-native: TouchableOpacity, Text, View
  * - @expo/vector-icons: Optional icons
- * 
+ *
  * @usage
  * import { CyberButton } from '@/components/common/CyberButton';
  * <CyberButton variant="primary" onPress={handlePress}>Click Me</CyberButton>
- * 
+ *
  * @ai_context
  * Core UI component that adapts based on gaming context and user preferences.
  * Supports dynamic theming and accessibility features.
  */
 
-import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from "@expo/vector-icons";
+import React from "react";
+import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 
 /**
  * Button variant types for different gaming contexts
  */
-export type CyberButtonVariant = 
-  | 'primary'      // Cyan accent - main actions
-  | 'secondary'    // Magenta accent - secondary actions  
-  | 'success'      // Green accent - positive actions
-  | 'danger'       // Red accent - destructive actions
-  | 'warning'      // Orange accent - warning actions
-  | 'ghost'        // Transparent with border - subtle actions
-  | 'legendary';   // Gold gradient - premium actions
+export type CyberButtonVariant =
+  | "primary" // Cyan accent - main actions
+  | "secondary" // Magenta accent - secondary actions
+  | "success" // Green accent - positive actions
+  | "danger" // Red accent - destructive actions
+  | "warning" // Orange accent - warning actions
+  | "ghost" // Transparent with border - subtle actions
+  | "legendary"; // Gold gradient - premium actions
 
 /**
  * Button size variants
  */
-export type CyberButtonSize = 'small' | 'medium' | 'large';
+export type CyberButtonSize = "small" | "medium" | "large";
 
 /**
  * CyberButton component props
@@ -60,7 +60,7 @@ export interface CyberButtonProps {
   /** Optional icon name from Ionicons */
   icon?: keyof typeof Ionicons.glyphMap;
   /** Icon position relative to text */
-  iconPosition?: 'left' | 'right';
+  iconPosition?: "left" | "right";
   /** Whether button should take full width */
   fullWidth?: boolean;
   /** Additional CSS classes */
@@ -75,28 +75,31 @@ export interface CyberButtonProps {
  * @param disabled - Whether button is disabled
  * @returns CSS classes for the variant
  */
-function getVariantClasses(variant: CyberButtonVariant, disabled: boolean): string {
+function getVariantClasses(
+  variant: CyberButtonVariant,
+  disabled: boolean,
+): string {
   if (disabled) {
-    return 'bg-gray-600 border-gray-500';
+    return "bg-gray-600 border-gray-500";
   }
 
   switch (variant) {
-    case 'primary':
-      return 'bg-cyber-cyan border-cyber-cyan shadow-glow-cyan';
-    case 'secondary':
-      return 'bg-cyber-magenta border-cyber-magenta shadow-glow-magenta';
-    case 'success':
-      return 'bg-cyber-green border-cyber-green shadow-glow-green';
-    case 'danger':
-      return 'bg-neon-red border-neon-red shadow-glow-red';
-    case 'warning':
-      return 'bg-cyber-orange border-cyber-orange shadow-glow-orange';
-    case 'ghost':
-      return 'bg-transparent border-cyber-cyan text-cyber-cyan';
-    case 'legendary':
-      return 'bg-gradient-legendary border-gaming-legendary shadow-glow-orange';
+    case "primary":
+      return "bg-cyber-cyan border-cyber-cyan shadow-glow-cyan";
+    case "secondary":
+      return "bg-cyber-magenta border-cyber-magenta shadow-glow-magenta";
+    case "success":
+      return "bg-cyber-green border-cyber-green shadow-glow-green";
+    case "danger":
+      return "bg-neon-red border-neon-red shadow-glow-red";
+    case "warning":
+      return "bg-cyber-orange border-cyber-orange shadow-glow-orange";
+    case "ghost":
+      return "bg-transparent border-cyber-cyan text-cyber-cyan";
+    case "legendary":
+      return "bg-gradient-legendary border-gaming-legendary shadow-glow-orange";
     default:
-      return 'bg-cyber-cyan border-cyber-cyan shadow-glow-cyan';
+      return "bg-cyber-cyan border-cyber-cyan shadow-glow-cyan";
   }
 }
 
@@ -106,23 +109,26 @@ function getVariantClasses(variant: CyberButtonVariant, disabled: boolean): stri
  * @param disabled - Whether button is disabled
  * @returns CSS classes for text color
  */
-function getTextClasses(variant: CyberButtonVariant, disabled: boolean): string {
+function getTextClasses(
+  variant: CyberButtonVariant,
+  disabled: boolean,
+): string {
   if (disabled) {
-    return 'text-gray-300';
+    return "text-gray-300";
   }
 
   switch (variant) {
-    case 'ghost':
-      return 'text-cyber-cyan';
-    case 'primary':
-    case 'secondary':
-    case 'success':
-    case 'danger':
-    case 'warning':
-    case 'legendary':
-      return 'text-cyber-black';
+    case "ghost":
+      return "text-cyber-cyan";
+    case "primary":
+    case "secondary":
+    case "success":
+    case "danger":
+    case "warning":
+    case "legendary":
+      return "text-cyber-black";
     default:
-      return 'text-cyber-black';
+      return "text-cyber-black";
   }
 }
 
@@ -131,29 +137,29 @@ function getTextClasses(variant: CyberButtonVariant, disabled: boolean): string 
  * @param size - Button size
  * @returns CSS classes for the size
  */
-function getSizeClasses(size: CyberButtonSize): { 
-  container: string; 
-  text: string; 
-  icon: number; 
+function getSizeClasses(size: CyberButtonSize): {
+  container: string;
+  text: string;
+  icon: number;
 } {
   switch (size) {
-    case 'small':
+    case "small":
       return {
-        container: 'px-3 py-2 rounded-lg',
-        text: 'text-sm font-inter-medium',
+        container: "px-3 py-2 rounded-lg",
+        text: "text-sm font-inter-medium",
         icon: 16,
       };
-    case 'large':
+    case "large":
       return {
-        container: 'px-6 py-4 rounded-xl',
-        text: 'text-lg font-inter-semibold',
+        container: "px-6 py-4 rounded-xl",
+        text: "text-lg font-inter-semibold",
         icon: 24,
       };
-    case 'medium':
+    case "medium":
     default:
       return {
-        container: 'px-4 py-3 rounded-lg',
-        text: 'text-base font-inter-medium',
+        container: "px-4 py-3 rounded-lg",
+        text: "text-base font-inter-medium",
         icon: 20,
       };
   }
@@ -162,14 +168,14 @@ function getSizeClasses(size: CyberButtonSize): {
 /**
  * CyberButton Component
  * Gaming-themed button with RGB effects and multiple variants
- * 
+ *
  * @param props - Component props
  * @returns Rendered button component
- * 
+ *
  * @example
- * <CyberButton 
- *   variant="primary" 
- *   icon="rocket" 
+ * <CyberButton
+ *   variant="primary"
+ *   icon="rocket"
  *   onPress={handleLaunch}
  * >
  *   Launch Game
@@ -178,20 +184,20 @@ function getSizeClasses(size: CyberButtonSize): {
 export const CyberButton: React.FC<CyberButtonProps> = ({
   children,
   onPress,
-  variant = 'primary',
-  size = 'medium',
+  variant = "primary",
+  size = "medium",
   disabled = false,
   loading = false,
   icon,
-  iconPosition = 'left',
+  iconPosition = "left",
   fullWidth = false,
-  className = '',
+  className = "",
   testID,
 }) => {
   const variantClasses = getVariantClasses(variant, disabled || loading);
   const textClasses = getTextClasses(variant, disabled || loading);
   const sizeClasses = getSizeClasses(size);
-  
+
   const isDisabled = disabled || loading;
 
   /**
@@ -210,9 +216,9 @@ export const CyberButton: React.FC<CyberButtonProps> = ({
     if (loading) {
       return (
         <View className="flex-row items-center justify-center">
-          <ActivityIndicator 
-            size="small" 
-            color={variant === 'ghost' ? '#00ffff' : '#0a0a0a'} 
+          <ActivityIndicator
+            size="small"
+            color={variant === "ghost" ? "#00ffff" : "#0a0a0a"}
           />
           <Text className={`ml-2 ${textClasses} ${sizeClasses.text}`}>
             Loading...
@@ -223,24 +229,22 @@ export const CyberButton: React.FC<CyberButtonProps> = ({
 
     const content = (
       <>
-        {icon && iconPosition === 'left' && (
+        {icon && iconPosition === "left" && (
           <Ionicons
             name={icon}
             size={sizeClasses.icon}
-            color={variant === 'ghost' ? '#00ffff' : '#0a0a0a'}
+            color={variant === "ghost" ? "#00ffff" : "#0a0a0a"}
             style={{ marginRight: 8 }}
           />
         )}
-        
-        <Text className={`${textClasses} ${sizeClasses.text}`}>
-          {children}
-        </Text>
-        
-        {icon && iconPosition === 'right' && (
+
+        <Text className={`${textClasses} ${sizeClasses.text}`}>{children}</Text>
+
+        {icon && iconPosition === "right" && (
           <Ionicons
             name={icon}
             size={sizeClasses.icon}
-            color={variant === 'ghost' ? '#00ffff' : '#0a0a0a'}
+            color={variant === "ghost" ? "#00ffff" : "#0a0a0a"}
             style={{ marginLeft: 8 }}
           />
         )}
@@ -248,13 +252,9 @@ export const CyberButton: React.FC<CyberButtonProps> = ({
     );
 
     return icon ? (
-      <View className="flex-row items-center justify-center">
-        {content}
-      </View>
+      <View className="flex-row items-center justify-center">{content}</View>
     ) : (
-      <View className="items-center justify-center">
-        {content}
-      </View>
+      <View className="items-center justify-center">{content}</View>
     );
   };
 
@@ -267,12 +267,12 @@ export const CyberButton: React.FC<CyberButtonProps> = ({
         border-2 
         ${variantClasses} 
         ${sizeClasses.container}
-        ${fullWidth ? 'w-full' : 'self-start'}
-        ${isDisabled ? 'opacity-50' : 'active:scale-95'}
+        ${fullWidth ? "w-full" : "self-start"}
+        ${isDisabled ? "opacity-50" : "active:scale-95"}
         ${className}
       `}
       style={{
-        shadowColor: variant === 'ghost' ? 'transparent' : '#00ffff',
+        shadowColor: variant === "ghost" ? "transparent" : "#00ffff",
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: isDisabled ? 0 : 0.3,
         shadowRadius: 8,
@@ -284,4 +284,4 @@ export const CyberButton: React.FC<CyberButtonProps> = ({
   );
 };
 
-export default CyberButton; 
+export default CyberButton;

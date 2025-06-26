@@ -2,17 +2,17 @@
  * @file common.ts
  * @description Common TypeScript type definitions for SnapConnect application.
  * Provides shared types across the entire application with gaming-specific extensions.
- * 
+ *
  * @author SnapConnect Team
  * @created 2024-01-15
  * @modified 2024-01-20
- * 
+ *
  * @dependencies
  * - None (Pure type definitions)
- * 
+ *
  * @usage
  * import type { User, APIResponse, GamingContext } from '@/types/common';
- * 
+ *
  * @ai_context
  * Types include AI-enhanced features and gaming platform integrations.
  * Extensible for future AI capabilities and gaming context awareness.
@@ -21,7 +21,13 @@
 // Base utility types
 export type ID = string;
 export type Timestamp = number;
-export type JSONValue = string | number | boolean | null | JSONObject | JSONArray;
+export type JSONValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JSONObject
+  | JSONArray;
 export type JSONObject = { [key: string]: JSONValue };
 export type JSONArray = JSONValue[];
 
@@ -63,7 +69,7 @@ export interface GamingProfile {
 }
 
 export interface GamingPlatformConnection {
-  platform: 'steam' | 'discord' | 'xbox' | 'playstation' | 'twitch';
+  platform: "steam" | "discord" | "xbox" | "playstation" | "twitch";
   platformId: string;
   username: string;
   isVerified: boolean;
@@ -75,7 +81,7 @@ export interface CurrentGame {
   name: string;
   platform: string;
   gameId: string;
-  status: 'playing' | 'streaming' | 'idle';
+  status: "playing" | "streaming" | "idle";
   startedAt: Timestamp;
   metadata?: Record<string, any>;
 }
@@ -85,7 +91,7 @@ export interface Achievement {
   title: string;
   description: string;
   icon: string;
-  tier: 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
+  tier: "bronze" | "silver" | "gold" | "platinum" | "diamond";
   unlockedAt: Timestamp;
   points: number;
 }
@@ -107,7 +113,7 @@ export interface GamingPreferences {
 
 // User preferences
 export interface UserPreferences {
-  theme: 'dark' | 'light' | 'auto';
+  theme: "dark" | "light" | "auto";
   notifications: NotificationPreferences;
   privacy: PrivacyPreferences;
   gaming: GamingPreferences;
@@ -124,7 +130,7 @@ export interface NotificationPreferences {
 }
 
 export interface PrivacyPreferences {
-  profileVisibility: 'public' | 'friends' | 'private';
+  profileVisibility: "public" | "friends" | "private";
   shareGamingActivity: boolean;
   allowFriendRequests: boolean;
   showOnlineStatus: boolean;
@@ -135,8 +141,8 @@ export interface AIPreferences {
   enableContentGeneration: boolean;
   enableSmartReplies: boolean;
   enableGamingInsights: boolean;
-  personalizationLevel: 'minimal' | 'moderate' | 'aggressive';
-  dataSharing: 'none' | 'anonymous' | 'full';
+  personalizationLevel: "minimal" | "moderate" | "aggressive";
+  dataSharing: "none" | "anonymous" | "full";
 }
 
 export interface AIContext {
@@ -148,18 +154,18 @@ export interface AIContext {
 }
 
 export interface ActivityData {
-  type: 'message' | 'game_session' | 'social_interaction';
+  type: "message" | "game_session" | "social_interaction";
   timestamp: Timestamp;
   data: Record<string, any>;
 }
 
 // Gaming context types
-export type GamingContext = 
-  | 'playing'
-  | 'streaming' 
-  | 'watching'
-  | 'idle'
-  | 'offline';
+export type GamingContext =
+  | "playing"
+  | "streaming"
+  | "watching"
+  | "idle"
+  | "offline";
 
 // Message types
 export interface Message {
@@ -176,15 +182,15 @@ export interface Message {
   aiGenerated?: boolean;
 }
 
-export type MessageType = 
-  | 'text'
-  | 'image'
-  | 'video'
-  | 'audio'
-  | 'gaming_clip'
-  | 'achievement'
-  | 'gaming_invite'
-  | 'poll';
+export type MessageType =
+  | "text"
+  | "image"
+  | "video"
+  | "audio"
+  | "gaming_clip"
+  | "achievement"
+  | "gaming_invite"
+  | "poll";
 
 export interface MessageContent {
   text?: string;
@@ -207,7 +213,7 @@ export interface GamingContent {
   gameId: string;
   gameName: string;
   platform: string;
-  contentType: 'clip' | 'achievement' | 'invite' | 'stats';
+  contentType: "clip" | "achievement" | "invite" | "stats";
   data: Record<string, any>;
 }
 
@@ -259,7 +265,7 @@ export interface ThemeConfig {
 // Error types
 export interface AppError extends Error {
   code: string;
-  type: 'network' | 'auth' | 'validation' | 'gaming' | 'ai' | 'unknown';
+  type: "network" | "auth" | "validation" | "gaming" | "ai" | "unknown";
   recoverable: boolean;
   metadata?: Record<string, any>;
 }
@@ -285,9 +291,19 @@ export interface FormState<T = Record<string, any>> {
 }
 
 // Utility types for gaming
-export type GamePlatform = 'steam' | 'discord' | 'xbox' | 'playstation' | 'twitch';
-export type UserStatus = 'online' | 'away' | 'busy' | 'invisible' | 'offline';
-export type MessageStatus = 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
+export type GamePlatform =
+  | "steam"
+  | "discord"
+  | "xbox"
+  | "playstation"
+  | "twitch";
+export type UserStatus = "online" | "away" | "busy" | "invisible" | "offline";
+export type MessageStatus =
+  | "sending"
+  | "sent"
+  | "delivered"
+  | "read"
+  | "failed";
 
 // Export a collection type for convenience
 export interface AppTypes {
@@ -297,4 +313,4 @@ export interface AppTypes {
   AIContext: AIContext;
   APIResponse: APIResponse;
   AppError: AppError;
-} 
+}
