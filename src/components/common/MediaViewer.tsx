@@ -37,7 +37,6 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    Alert,
     Animated,
     Dimensions,
     Pressable,
@@ -49,6 +48,7 @@ import {
 } from 'react-native';
 import { messagingService } from '../../services/firebase/messagingService';
 import { useAuthStore } from '../../stores/authStore';
+import { showAlert, showErrorAlert } from '../../utils/alertService';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -208,7 +208,7 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
       
     } catch (error) {
       console.error('Start viewing failed:', error);
-      Alert.alert('Error', 'Failed to view message.');
+      showErrorAlert('Failed to view message.');
       handleExpire();
     }
   }, [isViewing, hasViewed, messageId, timer, user, onView, fadeAnimation, progressAnimation, scaleAnimation, mediaType, handleExpire]);
@@ -249,7 +249,7 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
         onScreenshot(messageId);
         
         // Show alert
-        Alert.alert(
+        showAlert(
           'Screenshot Detected',
           'The sender has been notified that you took a screenshot.',
           [{ text: 'OK', style: 'default' }]

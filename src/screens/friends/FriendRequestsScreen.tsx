@@ -13,7 +13,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useCallback, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     FlatList,
     RefreshControl,
     SafeAreaView,
@@ -26,6 +25,7 @@ import { useFriendRequests } from '../../hooks/useFriendRequests';
 import { friendsService } from '../../services/firebase/friendsService';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
+import { showConfirmAlert, showErrorAlert, showSuccessAlert } from '../../utils/alertService';
 
 interface FriendRequest {
   id: string;
@@ -89,10 +89,10 @@ const FriendRequestsScreen: React.FC = () => {
       // Refresh requests to update the UI and badge count
       await refreshRequests();
       
-      Alert.alert('Friend Added!', `You are now friends with ${request.user.displayName}!`);
+      showSuccessAlert(`You are now friends with ${request.user.displayName}!`, 'Friend Added!');
     } catch (error) {
       console.error('Accept request failed:', error);
-      Alert.alert('Error', 'Failed to accept friend request. Please try again.');
+      showErrorAlert('Failed to accept friend request. Please try again.');
     } finally {
       setProcessingRequests(prev => {
         const newSet = new Set(prev);
@@ -105,34 +105,27 @@ const FriendRequestsScreen: React.FC = () => {
   const declineRequest = useCallback(async (request: FriendRequest) => {
     if (!user) return;
 
-    Alert.alert(
+    showConfirmAlert(
       'Decline Request',
       `Decline friend request from ${request.user.displayName}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Decline',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setProcessingRequests(prev => new Set(prev).add(request.id));
-              await friendsService.declineFriendRequest(request.id, user.uid);
-              
-              // Refresh requests to update the UI and badge count
-              await refreshRequests();
-            } catch (error) {
-              console.error('Decline request failed:', error);
-              Alert.alert('Error', 'Failed to decline friend request. Please try again.');
-            } finally {
-              setProcessingRequests(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(request.id);
-                return newSet;
-              });
-            }
-          }
+      async () => {
+        try {
+          setProcessingRequests(prev => new Set(prev).add(request.id));
+          await friendsService.declineFriendRequest(request.id, user.uid);
+          
+          // Refresh requests to update the UI and badge count
+          await refreshRequests();
+        } catch (error) {
+          console.error('Decline request failed:', error);
+          showErrorAlert('Failed to decline friend request. Please try again.');
+        } finally {
+          setProcessingRequests(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(request.id);
+            return newSet;
+          });
         }
-      ]
+      }
     );
   }, [user, refreshRequests]);
 

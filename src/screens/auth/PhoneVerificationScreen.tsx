@@ -5,12 +5,13 @@
  * 
  * @author SnapConnect Team
  * @created 2024-01-20
- * @modified 2024-01-20
+ * @modified 2024-01-24
  * 
  * @dependencies
  * - react-native: Core components
  * - @react-navigation/native: Navigation
  * - @/stores/authStore: Authentication state
+ * - @/utils/alertService: Web-compatible alerts
  * 
  * @usage
  * Used after phone number input to verify SMS code.
@@ -23,13 +24,13 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Alert,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useAuthStore } from '../../stores/authStore';
+import { showErrorAlert, showSuccessAlert } from '../../utils/alertService';
 
 // Type definitions
 type PhoneVerificationScreenNavigationProp = NativeStackNavigationProp<any, 'PhoneVerification'>;
@@ -144,7 +145,7 @@ const PhoneVerificationScreen: React.FC<PhoneVerificationScreenProps> = () => {
     const codeToVerify = verificationCode || code.join('');
     
     if (codeToVerify.length !== 6) {
-      Alert.alert('Error', 'Please enter the complete 6-digit code.');
+      showErrorAlert('Please enter the complete 6-digit code.');
       return;
     }
 
@@ -158,7 +159,7 @@ const PhoneVerificationScreen: React.FC<PhoneVerificationScreenProps> = () => {
         // Navigation will be handled by auth state change for existing users
       }
     } catch (error: any) {
-      Alert.alert('Verification Failed', error.message);
+      showErrorAlert(error.message, 'Verification Failed');
       // Clear the code inputs on error
       setCode(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
@@ -179,9 +180,9 @@ const PhoneVerificationScreen: React.FC<PhoneVerificationScreenProps> = () => {
       setCanResend(false);
       setCode(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
-      Alert.alert('Code Sent', 'A new verification code has been sent to your phone.');
+      showSuccessAlert('A new verification code has been sent to your phone.', 'Code Sent');
     } catch (error: any) {
-      Alert.alert('Resend Failed', error.message);
+      showErrorAlert(error.message, 'Resend Failed');
     }
   };
 

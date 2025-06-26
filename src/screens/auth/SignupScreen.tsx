@@ -11,6 +11,7 @@
  * - react-native: Core components
  * - @react-navigation/native: Navigation
  * - @/stores/authStore: Authentication state
+ * - @/utils/alertService: Web-compatible alerts
  * 
  * @usage
  * Used in authentication flow for user registration.
@@ -23,7 +24,6 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useRef, useState } from 'react';
 import {
-    Alert,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -33,6 +33,7 @@ import {
     View,
 } from 'react-native';
 import { useAuthStore } from '../../stores/authStore';
+import { showErrorAlert } from '../../utils/alertService';
 import { REGEX_PATTERNS } from '../../utils/constants';
 
 // Type definitions
@@ -136,27 +137,27 @@ const SignupScreen: React.FC<SignupScreenProps> = () => {
    */
   const handleEmailSignup = async () => {
     if (!email || !password || !confirmPassword || !displayName || !username) {
-      Alert.alert('Error', 'Please fill in all fields.');
+      showErrorAlert('Please fill in all fields.');
       return;
     }
 
     if (!isValidUsernameFormat(username)) {
-      Alert.alert('Error', 'Username must be 3-20 characters, letters, numbers, and underscores only.');
+      showErrorAlert('Username must be 3-20 characters, letters, numbers, and underscores only.');
       return;
     }
 
     if (usernameError) {
-      Alert.alert('Error', 'Please resolve username issues before continuing.');
+      showErrorAlert('Please resolve username issues before continuing.');
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match.');
+      showErrorAlert('Passwords do not match.');
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters long.');
+      showErrorAlert('Password must be at least 6 characters long.');
       return;
     }
 
@@ -171,7 +172,7 @@ const SignupScreen: React.FC<SignupScreenProps> = () => {
       }
     } catch (error) {
       setIsCheckingUsername(false);
-      Alert.alert('Error', 'Unable to verify username availability. Please try again.');
+      showErrorAlert('Unable to verify username availability. Please try again.');
       return;
     }
     setIsCheckingUsername(false);
@@ -180,7 +181,7 @@ const SignupScreen: React.FC<SignupScreenProps> = () => {
       await signUpWithEmail(email, password, displayName, { username });
       // Navigation will be handled by auth state change
     } catch (error: any) {
-      Alert.alert('Sign Up Failed', error.message);
+      showErrorAlert(error.message, 'Sign Up Failed');
     }
   };
 

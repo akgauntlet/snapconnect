@@ -28,7 +28,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     FlatList,
     SafeAreaView,
     StatusBar,
@@ -42,6 +41,7 @@ import { useFriendRequests } from '../../hooks/useFriendRequests';
 import { friendsService } from '../../services/firebase/friendsService';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
+import { showErrorAlert, showSuccessAlert } from '../../utils/alertService';
 
 /**
  * User search result interface
@@ -216,9 +216,9 @@ const AddFriendsScreen: React.FC = () => {
 
       await friendsService.sendFriendRequest(user.uid, targetUser.id);
 
-      Alert.alert(
-        'Friend Request Sent',
-        `Friend request sent to ${targetUser.displayName}!`
+      showSuccessAlert(
+        `Friend request sent to ${targetUser.displayName}!`,
+        'Friend Request Sent'
       );
 
       // Update local state
@@ -239,7 +239,7 @@ const AddFriendsScreen: React.FC = () => {
         return newSet;
       });
       
-      Alert.alert('Error', 'Failed to send friend request. Please try again.');
+      showErrorAlert('Failed to send friend request. Please try again.');
     }
   }, [user]);
 

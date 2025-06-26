@@ -25,6 +25,9 @@ import './global.css';
 import { initializeFirebaseServices } from './src/config/firebase';
 import { loadFonts } from './src/config/fonts';
 
+// Import custom alert provider for web compatibility
+import { CustomAlertProvider } from './src/components/common/CustomAlert';
+
 /**
  * Loading screen with gaming aesthetic
  */
@@ -94,13 +97,15 @@ const App = () => {
   }
 
   return (
-    <SafeAreaProvider>
-      <NavigationContainer>
-        <StatusBar barStyle="light-content" backgroundColor="#000000" />
-        <ExpoStatusBar style="light" />
-        <AppNavigator />
-      </NavigationContainer>
-    </SafeAreaProvider>
+    <CustomAlertProvider>
+      <SafeAreaProvider>
+        <NavigationContainer>
+          <StatusBar barStyle="light-content" backgroundColor="#000000" />
+          <ExpoStatusBar style="light" />
+          <AppNavigator />
+        </NavigationContainer>
+      </SafeAreaProvider>
+    </CustomAlertProvider>
   );
 };
 

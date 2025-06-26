@@ -5,7 +5,7 @@
  * 
  * @author SnapConnect Team
  * @created 2024-01-20
- * @modified 2024-01-20
+ * @modified 2024-01-24
  * 
  * @dependencies
  * - react: React hooks
@@ -15,6 +15,7 @@
  * - expo-image-picker: Media library access
  * - @/stores/themeStore: Theme management
  * - @/services/firebase/messagingService: Message sending
+ * - @/utils/alertService: Web-compatible alerts
  * 
  * @usage
  * Primary interface for capturing photos, videos, and sharing content.
@@ -34,7 +35,6 @@ import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    Alert,
     Animated,
     Dimensions,
     Image,
@@ -54,6 +54,7 @@ import { messagingService } from '../../services/firebase/messagingService';
 import { storiesService } from '../../services/firebase/storiesService';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
+import { showAlert, showErrorAlert, showSuccessAlert } from '../../utils/alertService';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -351,12 +352,12 @@ const CameraScreen: React.FC = () => {
    */
   const takePicture = async () => {
     if (!cameraRef.current) {
-      Alert.alert('Error', 'Camera not available. Please try again.');
+      showErrorAlert('Camera not available. Please try again.');
       return;
     }
     
     if (!cameraReady) {
-      Alert.alert('Error', 'Camera is still initializing. Please wait a moment and try again.');
+      showErrorAlert('Camera is still initializing. Please wait a moment and try again.');
       return;
     }
     
@@ -397,12 +398,12 @@ const CameraScreen: React.FC = () => {
         setMediaType('photo');
       } else {
         console.error('Photo capture failed - no image data received');
-        Alert.alert('Error', 'Photo capture failed - no image data received.');
+        showErrorAlert('Photo capture failed - no image data received.');
       }
     } catch (error) {
       console.error('Photo capture failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      Alert.alert('Error', `Failed to capture photo: ${errorMessage}`);
+      showErrorAlert(`Failed to capture photo: ${errorMessage}`);
     } finally {
       setIsProcessing(false);
     }
@@ -417,7 +418,7 @@ const CameraScreen: React.FC = () => {
     try {
       // Check web recording support
       if (Platform.OS === 'web' && !isWebRecordingSupported()) {
-        Alert.alert(
+        showAlert(
           'Recording Not Supported',
           'Video recording is not supported in your current browser. Please try using a modern browser like Chrome, Firefox, or Safari.',
           [{ text: 'OK', style: 'default' }]
@@ -459,11 +460,11 @@ const CameraScreen: React.FC = () => {
       // Provide more specific error messages
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       if (Platform.OS === 'web' && errorMessage.includes('MediaDevices API not available')) {
-        Alert.alert('Camera Access Required', 'Please allow camera and microphone access in your browser to record videos.');
+        showErrorAlert('Please allow camera and microphone access in your browser to record videos.', 'Camera Access Required');
       } else if (Platform.OS === 'web' && errorMessage.includes('MediaRecorder API not available')) {
-        Alert.alert('Browser Not Supported', 'Your browser does not support video recording. Please try using Chrome, Firefox, or Safari.');
+        showErrorAlert('Your browser does not support video recording. Please try using Chrome, Firefox, or Safari.', 'Browser Not Supported');
       } else {
-        Alert.alert('Error', `Failed to start recording: ${errorMessage}`);
+        showErrorAlert(`Failed to start recording: ${errorMessage}`);
       }
     }
   };
@@ -492,13 +493,12 @@ const CameraScreen: React.FC = () => {
         .catch((error) => {
           console.error('Recording promise failed:', error);
           if (!error.message.includes('Recording was cancelled')) {
-            Alert.alert('Error', 'Video recording failed. Please try again.');
+            showErrorAlert('Video recording failed. Please try again.');
           }
         })
         .finally(() => {
           recordingPromise.current = null;
           setIsRecording(false);
-          setRecordingDuration(0);
           if (recordingInterval.current) {
             clearInterval(recordingInterval.current);
             recordingInterval.current = null;
@@ -506,7 +506,7 @@ const CameraScreen: React.FC = () => {
         });
     } catch (error) {
       console.error('Mobile recording failed:', error);
-      throw error;
+      throw error; // Re-throw to be handled by startRecording
     }
   };
 
@@ -515,163 +515,123 @@ const CameraScreen: React.FC = () => {
    */
   const startWebRecording = async () => {
     try {
-      // Check if web APIs are available
-      if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('MediaDevices API not available');
-      }
-
-      if (typeof window === 'undefined' || !window.MediaRecorder) {
-        throw new Error('MediaRecorder API not available');
-      }
-
-      // Build video constraints
-      const videoConstraints: any = {
-        width: { ideal: 1920 },
-        height: { ideal: 1080 }
+      // Get user media stream
+      const constraints = {
+        video: {
+          facingMode: facing === 'front' ? 'user' : 'environment',
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          ...(selectedCameraId && { deviceId: { exact: selectedCameraId } })
+        },
+        audio: true
       };
-
-      // Use specific device ID if available, otherwise use facingMode
-      if (selectedCameraId) {
-        videoConstraints.deviceId = { exact: selectedCameraId };
-      } else {
-        videoConstraints.facingMode = facing === 'front' ? 'user' : 'environment';
-      }
-
-      // Get user media for web recording
-      let stream: MediaStream;
       
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: videoConstraints,
-          audio: true
-        });
-      } catch (exactError) {
-        // If exact fails, try ideal
-        if (selectedCameraId && videoConstraints.deviceId) {
-          videoConstraints.deviceId = { ideal: selectedCameraId };
-          try {
-            stream = await navigator.mediaDevices.getUserMedia({
-              video: videoConstraints,
-              audio: true
-            });
-          } catch {
-            // Final fallback - use facingMode
-            delete videoConstraints.deviceId;
-            videoConstraints.facingMode = facing === 'front' ? 'user' : 'environment';
-            stream = await navigator.mediaDevices.getUserMedia({
-              video: videoConstraints,
-              audio: true
-            });
-          }
-        } else {
-          throw exactError;
-        }
-      }
-
-      videoStreamRef.current = stream;
+      videoStreamRef.current = await navigator.mediaDevices.getUserMedia(constraints);
+      
+      // Initialize MediaRecorder
       recordedChunksRef.current = [];
-
-      // Create MediaRecorder with type assertion for React Native Web
-      const mediaRecorder = new (window as any).MediaRecorder(stream, {
-        mimeType: 'video/webm;codecs=vp9' // Use VP9 for better compression
-      });
-
-      mediaRecorderRef.current = mediaRecorder;
-
-      // Handle data available event
-      mediaRecorder.ondataavailable = (event: any) => {
-        if (event.data && event.data.size > 0) {
+      
+      const options = {
+        mimeType: 'video/webm;codecs=vp9,opus',
+        videoBitsPerSecond: 2000000, // 2 Mbps
+      };
+      
+      // Fallback for browsers that don't support VP9
+      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+        options.mimeType = 'video/webm;codecs=vp8,opus';
+      }
+      
+      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+        options.mimeType = 'video/webm';
+      }
+      
+      mediaRecorderRef.current = new MediaRecorder(videoStreamRef.current, options);
+      
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        if (event.data.size > 0) {
           recordedChunksRef.current.push(event.data);
         }
       };
-
-      // Handle recording stop
-      mediaRecorder.onstop = () => {
+      
+      mediaRecorderRef.current.onstop = () => {
         const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
-        const videoUrl = (window as any).URL.createObjectURL(blob);
-        
-        setCapturedMedia(videoUrl);
+        const url = URL.createObjectURL(blob);
+        setCapturedMedia(url);
         setMediaType('video');
         
-        // Cleanup
+        // Cleanup stream
         if (videoStreamRef.current) {
           videoStreamRef.current.getTracks().forEach(track => track.stop());
           videoStreamRef.current = null;
         }
-        
-        setIsRecording(false);
-        setRecordingDuration(0);
-        if (recordingInterval.current) {
-          clearInterval(recordingInterval.current);
-          recordingInterval.current = null;
-        }
       };
-
+      
       // Start recording
-      mediaRecorder.start(1000); // Record in 1-second chunks
+      mediaRecorderRef.current.start();
       
     } catch (error) {
-      console.error('Web recording setup failed:', error);
-      throw error;
+      console.error('Web recording failed:', error);
+      throw error; // Re-throw to be handled by startRecording
     }
   };
 
   /**
-   * Stop video recording with minimum duration check
+   * Stop video recording
    */
   const stopRecording = async () => {
     if (!isRecording) return;
 
     try {
-      const currentTime = Date.now();
-      const recordingTime = currentTime - recordingStartTime;
-      const minimumRecordingTime = 500; // 500ms minimum
-      
-      // Ensure minimum recording time
-      if (recordingTime < minimumRecordingTime) {
-        setTimeout(() => {
-          if (isRecording) {
-            stopRecording();
-          }
-        }, minimumRecordingTime - recordingTime);
-        return;
-      }
-      
       if (Platform.OS === 'web') {
-        // Stop web recording using MediaRecorder
+        // Stop web recording
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
           mediaRecorderRef.current.stop();
         }
       } else {
-        // Stop mobile recording using Expo Camera
-        if (cameraRef.current) {
-          cameraRef.current.stopRecording();
+        // Stop mobile recording
+        if (cameraRef.current && recordingPromise.current) {
+          await cameraRef.current.stopRecording();
         }
       }
       
-      // Haptic feedback
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      // Clear recording timer
+      if (recordingInterval.current) {
+        clearInterval(recordingInterval.current);
+        recordingInterval.current = null;
+      }
+      
+      setIsRecording(false);
+      setRecordingDuration(0);
+      setRecordingStartTime(0);
+      
     } catch (error) {
       console.error('Stop recording failed:', error);
+      setIsRecording(false);
+      setRecordingDuration(0);
+      setRecordingStartTime(0);
     }
   };
 
   /**
-   * Handle capture button press
+   * Handle capture button press (photo)
    */
   const handleCapturePress = () => {
-    takePicture();
+    if (!isRecording && !isProcessing) {
+      takePicture();
+    }
   };
 
   /**
-   * Handle capture button long press for video
+   * Handle capture button long press (video recording start)
    */
   const handleCaptureLongPress = () => {
-    startRecording();
+    if (!isRecording && !isProcessing) {
+      startRecording();
+    }
   };
 
   /**
-   * Handle capture button press out - only stop if recording for minimum time
+   * Handle capture button press out (video recording stop)
    */
   const handlePressOut = () => {
     if (isRecording) {
@@ -680,46 +640,46 @@ const CameraScreen: React.FC = () => {
   };
 
   /**
-   * Access media library
+   * Open media library to select existing media
    */
   const openMediaLibrary = async () => {
     try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.All,
-        allowsEditing: true,
-        aspect: [9, 16],
+        allowsEditing: false,
         quality: 0.8,
       });
 
-      if (!result.canceled && result.assets[0]) {
+      if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
         setCapturedMedia(asset.uri);
         setMediaType(asset.type === 'video' ? 'video' : 'photo');
       }
     } catch (error) {
       console.error('Media library access failed:', error);
-      Alert.alert('Error', 'Failed to access media library.');
+      showErrorAlert('Failed to access media library.');
     }
   };
 
   /**
-   * Navigate to messages screen
+   * Handle messages press - placeholder for messaging feature
    */
   const handleMessagesPress = () => {
-    // TODO: Navigate to messages
-    Alert.alert('Coming Soon', 'Messages feature will be implemented next!');
+    showAlert('Coming Soon', 'Messages feature will be implemented next!');
   };
 
   /**
-   * Handle sending to multiple recipients  
+   * Handle sending to recipients
    */
   const handleSendToRecipients = async (recipients: string[], timer: number) => {
     if (!capturedMedia || !mediaType || !user) return;
-    
+
     try {
       setIsProcessing(true);
       
-      // Get file size for better tracking
+      // Get file size for tracking
       let fileSize = 0;
       try {
         const response = await fetch(capturedMedia);
@@ -735,28 +695,29 @@ const CameraScreen: React.FC = () => {
         size: fileSize
       };
       
-      // Send to all recipients
+      // Send to each recipient
       for (const recipientId of recipients) {
         await messagingService.sendMessage(
           user.uid,
           recipientId,
           mediaData,
-          timer
+          timer,
+          '' // text message
         );
       }
+      
+      // Haptic feedback
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       
       // Clear captured media
       setCapturedMedia(null);
       setMediaType(null);
       setShowRecipientSelector(false);
       
-      // Haptic feedback
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      
-      Alert.alert('Sent!', `Your snap has been sent to ${recipients.length} recipient${recipients.length !== 1 ? 's' : ''}.`);
+      showSuccessAlert(`Your snap has been sent to ${recipients.length} recipient${recipients.length !== 1 ? 's' : ''}.`, 'Sent!');
     } catch (error) {
-      console.error('Send media failed:', error);
-      Alert.alert('Error', 'Failed to send snap. Please try again.');
+      console.error('Send snap failed:', error);
+      showErrorAlert('Failed to send snap. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -767,11 +728,11 @@ const CameraScreen: React.FC = () => {
    */
   const handleCreateStory = async (privacy: 'public' | 'friends' | 'custom' = 'friends', allowedUsers: string[] = []) => {
     if (!capturedMedia || !mediaType || !user) return;
-    
+
     try {
       setIsProcessing(true);
       
-      // Get file size for better tracking
+      // Get file size for tracking
       let fileSize = 0;
       try {
         const response = await fetch(capturedMedia);
@@ -805,10 +766,10 @@ const CameraScreen: React.FC = () => {
       // Haptic feedback
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       
-      Alert.alert('Story Created!', 'Your story has been shared successfully.');
+      showSuccessAlert('Your story has been shared successfully.', 'Story Created!');
     } catch (error) {
       console.error('Create story failed:', error);
-      Alert.alert('Error', 'Failed to create story. Please try again.');
+      showErrorAlert('Failed to create story. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -940,17 +901,15 @@ const CameraScreen: React.FC = () => {
               await requestAllPermissions();
               
               if (!cameraPermission?.granted) {
-                Alert.alert(
+                showAlert(
                   'Camera Access Required',
                   'Please check the camera icon in your browser address bar and allow camera access, then refresh the page.',
-                  [
-                    { text: 'OK', style: 'default' }
-                  ]
+                  [{ text: 'OK', style: 'default' }]
                 );
               }
             } catch (error) {
               console.error('Permission request failed:', error);
-              Alert.alert('Error', 'Failed to request permissions. Please check your browser settings.');
+              showErrorAlert('Failed to request permissions. Please check your browser settings.');
             }
           }}
           className="bg-cyber-cyan px-6 py-3 rounded-lg"

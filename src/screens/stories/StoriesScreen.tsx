@@ -5,13 +5,14 @@
  * 
  * @author SnapConnect Team
  * @created 2024-01-20
- * @modified 2024-01-20
+ * @modified 2024-01-24
  * 
  * @dependencies
  * - react: React hooks
  * - react-native: Core components
  * - @/stores/themeStore: Theme management
  * - @/services/firebase/storiesService: Stories management
+ * - @/utils/alertService: Web-compatible alerts
  * 
  * @usage
  * Interface for viewing gaming stories and ephemeral community content.
@@ -24,12 +25,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import React, { useCallback, useState } from 'react';
-import { Alert, FlatList, Image, Modal, RefreshControl, SafeAreaView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Image, Modal, RefreshControl, SafeAreaView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import StoryViewer from '../../components/common/StoryViewer';
 import { useTabBarHeight } from '../../hooks/useTabBarHeight';
 import { storiesService } from '../../services/firebase/storiesService';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
+import { showDestructiveAlert, showErrorAlert, showSuccessAlert } from '../../utils/alertService';
 
 /**
  * Story user interface
@@ -99,6 +101,14 @@ const StoriesScreen: React.FC = () => {
   const [initialUserIndex, setInitialUserIndex] = useState(0);
   const [initialStoryIndex, setInitialStoryIndex] = useState(0);
 
+  // Story stats modal state
+  const [showStoryStats, setShowStoryStats] = useState(false);
+  const [storyStatsData, setStoryStatsData] = useState<{
+    story: MyStory;
+    viewers: any[];
+    viewerNames: string;
+  } | null>(null);
+
   /**
    * Load all stories (friends' and user's own)
    */
@@ -124,7 +134,7 @@ const StoriesScreen: React.FC = () => {
       
     } catch (error) {
       console.error('❌ Load stories failed:', error);
-      Alert.alert('Error', 'Failed to load stories. Please try again.');
+      showErrorAlert('Failed to load stories. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -163,7 +173,7 @@ const StoriesScreen: React.FC = () => {
       
     } catch (error) {
       console.error('❌ View story failed:', error);
-      Alert.alert('Error', 'Failed to view story.');
+      showErrorAlert('Failed to view story.');
     }
   }, [user]);
 
@@ -195,11 +205,11 @@ const StoriesScreen: React.FC = () => {
   const handleDeleteStory = useCallback(async (storyId: string) => {
     try {
       await storiesService.deleteStory(storyId);
-      Alert.alert('Success', 'Story deleted successfully.');
+      showSuccessAlert('Story deleted successfully.');
       loadStories(); // Refresh the list
     } catch (error) {
       console.error('❌ Delete story failed:', error);
-      Alert.alert('Error', 'Failed to delete story.');
+      showErrorAlert('Failed to delete story.');
     }
   }, [loadStories]);
 
@@ -207,23 +217,60 @@ const StoriesScreen: React.FC = () => {
    * Handle my story press
    */
   const handleMyStoryPress = useCallback(async (story: MyStory) => {
+    console.log('🔍 handleMyStoryPress called with story:', story);
+    
+    if (!story || !story.id) {
+      console.error('❌ Invalid story data:', story);
+      showErrorAlert('Invalid story data.');
+      return;
+    }
+    
+    if (!user) {
+      console.error('❌ No user found');
+      showErrorAlert('User not authenticated.');
+      return;
+    }
+    
     try {
-      // Get story viewers
-      const viewers = await storiesService.getStoryViewers(story.id, user!.uid);
+      console.log('📊 Getting story viewers for story ID:', story.id);
       
-      // Show story stats
-      Alert.alert(
-        'Story Stats',
-        `Views: ${story.viewCount}\nViewers: ${viewers.map(v => v.displayName || v.username || 'Unknown').join(', ')}`,
-        [
-          { text: 'Delete Story', style: 'destructive', onPress: () => handleDeleteStory(story.id) },
-          { text: 'Close', style: 'cancel' }
-        ]
-      );
+      // Get story viewers
+      const viewers = await storiesService.getStoryViewers(story.id, user.uid);
+      
+      console.log('✅ Story viewers retrieved:', viewers);
+      
+      // Format viewer names
+      const viewerNames = viewers.length > 0 
+        ? viewers.map(v => v.displayName || v.username || 'Unknown').join(', ')
+        : 'No viewers yet';
+      
+      console.log('📱 About to show story stats modal with data:', {
+        viewCount: story.viewCount || 0,
+        viewerNames,
+        viewersLength: viewers.length
+      });
+      
+      // Show story stats modal (web-compatible)
+      setStoryStatsData({
+        story,
+        viewers,
+        viewerNames
+      });
+      setShowStoryStats(true);
+      
+      console.log('📱 Story stats modal opened successfully');
       
     } catch (error) {
       console.error('❌ Get story stats failed:', error);
-      Alert.alert('Error', 'Failed to load story stats.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Show error in modal (web-compatible)
+      setStoryStatsData({
+        story,
+        viewers: [],
+        viewerNames: `Error: ${errorMessage}`
+      });
+      setShowStoryStats(true);
     }
   }, [user, handleDeleteStory]);
 
@@ -236,13 +283,7 @@ const StoriesScreen: React.FC = () => {
       (navigation as any).navigate('Camera', { mode: 'story' });
     } catch (error) {
       console.error('Navigation to camera failed:', error);
-      Alert.alert(
-        'Create Story', 
-        'Switch to the Camera tab to create your story!',
-        [
-          { text: 'OK', style: 'default' }
-        ]
-      );
+      showErrorAlert('Switch to the Camera tab to create your story!', 'Create Story');
     }
   }, [navigation]);
 
@@ -283,9 +324,14 @@ const StoriesScreen: React.FC = () => {
     }
 
     const latestStory = myStories[0];
+    console.log('🔍 renderMyStory - latestStory:', latestStory);
+    
     return (
       <TouchableOpacity
-        onPress={() => handleMyStoryPress(latestStory)}
+        onPress={() => {
+          console.log('📱 My story TouchableOpacity pressed');
+          handleMyStoryPress(latestStory);
+        }}
         className="items-center mr-4"
       >
         <View className="relative">
@@ -295,7 +341,7 @@ const StoriesScreen: React.FC = () => {
           />
           <View className="absolute -bottom-1 -right-1 bg-cyber-cyan rounded-full px-2 py-1 min-w-[20px] items-center">
             <Text className="text-cyber-black font-inter text-xs font-bold">
-              {latestStory.viewCount}
+              {latestStory.viewCount || 0}
             </Text>
           </View>
         </View>
@@ -400,91 +446,215 @@ const StoriesScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
       
-             {/* Story Ring (Horizontal scroll for recent stories) */}
-       <View className="py-4">
-         <FlatList
-           horizontal
-           showsHorizontalScrollIndicator={false}
-           data={[{ type: 'my' as const }, ...friendsStories.map(item => ({ type: 'friend' as const, data: item }))]}
-           renderItem={({ item }) => (
-             <View className="ml-4">
-               {item.type === 'my' ? renderMyStory() : renderFriendStory({ item: (item as any).data })}
-             </View>
-           )}
-           keyExtractor={(item, index) => 
-             item.type === 'my' ? 'my-story' : `friend-${(item as any).data.userId}-${index}`
-           }
-          contentContainerStyle={{ paddingRight: 16 }}
-          ListEmptyComponent={
-            <View className="ml-4">
-              {renderMyStory()}
-            </View>
-          }
-        />
-      </View>
-      
-      {/* Recent Stories Grid */}
-      <View className="flex-1 px-6">
-        <Text className="text-white font-inter font-medium text-lg mb-4">
-          Recent Stories
-        </Text>
-        
+      {/* Story Ring (Horizontal scroll for recent stories) */}
+      <View className="py-4">
         <FlatList
-          data={friendsStories}
-          renderItem={renderStoryGridItem}
-          keyExtractor={item => item.userId}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              tintColor={accentColor}
-              colors={[accentColor]}
-            />
-          }
-          contentContainerStyle={{ paddingBottom: tabBarHeight + 20 }}
-          ListEmptyComponent={
-            <View className="flex-1 justify-center items-center py-20">
-              <Ionicons name="play-circle-outline" size={64} color={theme.colors.text.tertiary} />
-              <Text className="text-white/70 font-inter text-lg mt-4">
-                {isLoading ? 'Loading Stories...' : 'No Stories Yet'}
-              </Text>
-              <Text className="text-white/50 font-inter text-sm mt-2 text-center px-8">
-                {isLoading ? 'Getting the latest stories from your friends' : 'Stories from your friends will appear here'}
-              </Text>
-              {!isLoading && (
-                <TouchableOpacity
-                  onPress={handleCreateStory}
-                  className="mt-4 bg-cyber-cyan px-6 py-2 rounded-lg"
-                >
-                  <Text className="text-cyber-black font-inter font-medium">
-                    Create Your First Story
-                  </Text>
-                </TouchableOpacity>
-              )}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          data={[{ type: 'my' as const }, ...friendsStories.map(item => ({ type: 'friend' as const, data: item }))]}
+          renderItem={({ item }) => (
+            <View className="ml-4">
+              {item.type === 'my' ? renderMyStory() : renderFriendStory({ item: (item as any).data })}
             </View>
+          )}
+          keyExtractor={(item, index) => 
+            item.type === 'my' ? 'my-story' : `friend-${(item as any).data.userId}-${index}`
           }
-        />
-      </View>
+         contentContainerStyle={{ paddingRight: 16 }}
+         ListEmptyComponent={
+           <View className="ml-4">
+             {renderMyStory()}
+           </View>
+         }
+       />
+     </View>
+     
+     {/* Recent Stories Grid */}
+     <View className="flex-1 px-6">
+       <Text className="text-white font-inter font-medium text-lg mb-4">
+         Recent Stories
+       </Text>
+       
+       <FlatList
+         data={friendsStories}
+         renderItem={renderStoryGridItem}
+         keyExtractor={item => item.userId}
+         showsVerticalScrollIndicator={false}
+         refreshControl={
+           <RefreshControl
+             refreshing={refreshing}
+             onRefresh={handleRefresh}
+             tintColor={accentColor}
+             colors={[accentColor]}
+           />
+         }
+         contentContainerStyle={{ paddingBottom: tabBarHeight + 20 }}
+         ListEmptyComponent={
+           <View className="flex-1 justify-center items-center py-20">
+             <Ionicons name="play-circle-outline" size={64} color={theme.colors.text.tertiary} />
+             <Text className="text-white/70 font-inter text-lg mt-4">
+               {isLoading ? 'Loading Stories...' : 'No Stories Yet'}
+             </Text>
+             <Text className="text-white/50 font-inter text-sm mt-2 text-center px-8">
+               {isLoading ? 'Getting the latest stories from your friends' : 'Stories from your friends will appear here'}
+             </Text>
+             {!isLoading && (
+               <TouchableOpacity
+                 onPress={handleCreateStory}
+                 className="mt-4 bg-cyber-cyan px-6 py-2 rounded-lg"
+               >
+                 <Text className="text-cyber-black font-inter font-medium">
+                   Create Your First Story
+                 </Text>
+               </TouchableOpacity>
+             )}
+           </View>
+         }
+       />
+     </View>
 
-      {/* Story Viewer Modal */}
-      {showStoryViewer && storyViewerData.length > 0 && (
-        <Modal
-          visible={showStoryViewer}
-          animationType="fade"
-          presentationStyle="fullScreen"
-        >
-          <StoryViewer
-            storyUsers={storyViewerData}
-            initialUserIndex={initialUserIndex}
-            initialStoryIndex={initialStoryIndex}
-            onClose={closeStoryViewer}
-            onStoryViewed={handleStoryViewed}
-          />
-        </Modal>
-      )}
-    </SafeAreaView>
-  );
+     {/* Story Viewer Modal */}
+     {showStoryViewer && storyViewerData.length > 0 && (
+       <Modal
+         visible={showStoryViewer}
+         animationType="fade"
+         presentationStyle="fullScreen"
+       >
+         <StoryViewer
+           storyUsers={storyViewerData}
+           initialUserIndex={initialUserIndex}
+           initialStoryIndex={initialStoryIndex}
+           onClose={closeStoryViewer}
+           onStoryViewed={handleStoryViewed}
+         />
+       </Modal>
+     )}
+
+     {/* Story Stats Modal (Web-Compatible) */}
+     {showStoryStats && storyStatsData && (
+       <Modal
+         visible={showStoryStats}
+         animationType="slide"
+         presentationStyle="pageSheet"
+         onRequestClose={() => setShowStoryStats(false)}
+       >
+         <SafeAreaView className="flex-1 bg-cyber-black">
+           <View className="flex-1">
+             {/* Header */}
+             <View className="flex-row justify-between items-center px-6 py-4 border-b border-cyber-gray/20">
+               <TouchableOpacity 
+                 onPress={() => setShowStoryStats(false)} 
+                 className="p-2"
+               >
+                 <Ionicons name="close" size={24} color="white" />
+               </TouchableOpacity>
+               
+               <Text className="text-white font-orbitron text-lg">
+                 Story Stats
+               </Text>
+               
+               <View className="w-8" />
+             </View>
+             
+             {/* Story Stats Content */}
+             <View className="px-6 py-8">
+               {/* Story Preview */}
+               <View className="items-center mb-6">
+                 <Image
+                   source={{ uri: storyStatsData.story.mediaUrl }}
+                   className="w-32 h-32 rounded-lg border-2 border-cyber-cyan"
+                   resizeMode="cover"
+                 />
+               </View>
+               
+               {/* Stats */}
+               <View className="bg-cyber-gray/20 rounded-lg p-4 mb-6">
+                 <View className="flex-row justify-between items-center mb-4">
+                   <Text className="text-white font-inter font-medium">Total Views</Text>
+                   <Text className="text-cyber-cyan font-inter font-bold text-lg">
+                     {storyStatsData.story.viewCount || 0}
+                   </Text>
+                 </View>
+                 
+                 <View className="border-t border-cyber-gray/30 pt-4">
+                   <Text className="text-white font-inter font-medium mb-2">Viewers</Text>
+                   <Text className="text-white/70 font-inter">
+                     {storyStatsData.viewerNames}
+                   </Text>
+                 </View>
+                 
+                 {storyStatsData.story.createdAt && (
+                   <View className="border-t border-cyber-gray/30 pt-4 mt-4">
+                     <Text className="text-white font-inter font-medium mb-2">Posted</Text>
+                     <Text className="text-white/70 font-inter">
+                       {formatTimeAgo(storyStatsData.story.createdAt)}
+                     </Text>
+                   </View>
+                 )}
+               </View>
+               
+               {/* Viewer List */}
+               {storyStatsData.viewers.length > 0 && (
+                 <View className="mb-6">
+                   <Text className="text-white font-inter font-medium mb-4">
+                     Who Viewed Your Story
+                   </Text>
+                   {storyStatsData.viewers.map((viewer, index) => (
+                     <View key={viewer.id || index} className="flex-row items-center py-2">
+                       <View className="w-8 h-8 bg-cyber-cyan/20 rounded-full justify-center items-center mr-3">
+                         <Text className="text-white font-inter font-bold text-xs">
+                           {(viewer.displayName || viewer.username || 'U').charAt(0).toUpperCase()}
+                         </Text>
+                       </View>
+                       <View className="flex-1">
+                         <Text className="text-white font-inter">
+                           {viewer.displayName || viewer.username || 'Unknown User'}
+                         </Text>
+                         {viewer.viewedAt && (
+                           <Text className="text-white/50 font-inter text-xs">
+                             {formatTimeAgo(viewer.viewedAt)}
+                           </Text>
+                         )}
+                       </View>
+                     </View>
+                   ))}
+                 </View>
+               )}
+             </View>
+             
+             {/* Action Buttons */}
+             <View className="px-6 pb-8">
+               <TouchableOpacity
+                 onPress={() => {
+                   setShowStoryStats(false);
+                   showDestructiveAlert(
+                     'Delete Story',
+                     'Are you sure you want to delete this story? This action cannot be undone.',
+                     () => handleDeleteStory(storyStatsData.story.id)
+                   );
+                 }}
+                 className="bg-red-500 px-6 py-3 rounded-lg mb-3"
+               >
+                 <Text className="text-white font-inter font-medium text-center">
+                   Delete Story
+                 </Text>
+               </TouchableOpacity>
+               
+               <TouchableOpacity
+                 onPress={() => setShowStoryStats(false)}
+                 className="bg-cyber-gray/20 px-6 py-3 rounded-lg"
+               >
+                 <Text className="text-white font-inter font-medium text-center">
+                   Close
+                 </Text>
+               </TouchableOpacity>
+             </View>
+           </View>
+         </SafeAreaView>
+       </Modal>
+     )}
+   </SafeAreaView>
+ );
 };
 
 export default StoriesScreen; 

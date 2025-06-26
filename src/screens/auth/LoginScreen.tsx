@@ -5,12 +5,13 @@
  * 
  * @author SnapConnect Team
  * @created 2024-01-20
- * @modified 2024-01-20
+ * @modified 2024-01-24
  * 
  * @dependencies
  * - react-native: Core components
  * - @react-navigation/native: Navigation
  * - @/stores/authStore: Authentication state
+ * - @/utils/alertService: Web-compatible alerts
  * 
  * @usage
  * Used in authentication flow for user login.
@@ -23,7 +24,6 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
 import {
-    Alert,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -33,6 +33,7 @@ import {
     View,
 } from 'react-native';
 import { useAuthStore } from '../../stores/authStore';
+import { showErrorAlert } from '../../utils/alertService';
 
 // Type definitions
 type LoginScreenNavigationProp = NativeStackNavigationProp<any, 'Login'>;
@@ -85,7 +86,7 @@ const LoginScreen: React.FC<LoginScreenProps> = () => {
    */
   const handleEmailLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please enter both email and password.');
+      showErrorAlert('Please enter both email and password.');
       return;
     }
 
@@ -93,7 +94,7 @@ const LoginScreen: React.FC<LoginScreenProps> = () => {
       await signInWithEmail(email, password);
       // Navigation will be handled by auth state change
          } catch (error: any) {
-       Alert.alert('Login Failed', error.message);
+       showErrorAlert(error.message, 'Login Failed');
      }
   };
 
@@ -102,7 +103,7 @@ const LoginScreen: React.FC<LoginScreenProps> = () => {
    */
   const handlePhoneLogin = async () => {
     if (!phoneNumber) {
-      Alert.alert('Error', 'Please enter your phone number.');
+      showErrorAlert('Please enter your phone number.');
       return;
     }
 
@@ -110,7 +111,7 @@ const LoginScreen: React.FC<LoginScreenProps> = () => {
       await signInWithPhoneNumber(phoneNumber);
       navigation.navigate('PhoneVerification');
          } catch (error: any) {
-       Alert.alert('Phone Login Failed', error.message);
+       showErrorAlert(error.message, 'Phone Login Failed');
      }
   };
 

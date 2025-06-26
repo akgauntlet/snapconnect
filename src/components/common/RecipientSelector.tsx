@@ -32,7 +32,6 @@ import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     FlatList,
     Modal,
     SafeAreaView,
@@ -44,6 +43,7 @@ import {
 import { friendsService } from '../../services/firebase/friendsService';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
+import { showErrorAlert } from '../../utils/alertService';
 
 /**
  * Friend interface for typing
@@ -184,23 +184,23 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
   }, []);
 
   /**
-   * Handle sending to selected recipients
+   * Handle sending snap to selected recipients
    */
-  const handleSend = useCallback(async () => {
+  const handleSendSnap = async () => {
     if (selectedRecipients.length === 0) {
-      Alert.alert('No Recipients', 'Please select at least one friend to send to.');
+      showErrorAlert('Please select at least one friend to send to.', 'No Recipients');
       return;
     }
 
     if (!mediaData) {
-      Alert.alert('No Media', 'No media available to send.');
+      showErrorAlert('No media available to send.', 'No Media');
       return;
     }
 
     try {
       setIsSending(true);
-      
-      // Send to all selected recipients
+
+      // Send to each selected recipient using original callback
       await onSend(selectedRecipients, selectedTimer);
       
       // Clear selections
@@ -214,12 +214,12 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
       onClose();
       
     } catch (error) {
-      console.error('Send failed:', error);
-      Alert.alert('Send Failed', 'Failed to send snap. Please try again.');
+      console.error('Send snap failed:', error);
+      showErrorAlert('Failed to send snap. Please try again.', 'Send Failed');
     } finally {
       setIsSending(false);
     }
-  }, [selectedRecipients, selectedTimer, mediaData, onSend, onClose]);
+  };
 
   /**
    * Handle close modal
@@ -396,7 +396,7 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
             </Text>
             
             <TouchableOpacity
-              onPress={handleSend}
+              onPress={handleSendSnap}
               disabled={selectedRecipients.length === 0 || isSending}
               className={`px-4 py-2 rounded-lg ${
                 selectedRecipients.length > 0 && !isSending

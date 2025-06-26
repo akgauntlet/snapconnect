@@ -27,7 +27,6 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    Alert,
     KeyboardAvoidingView,
     Platform,
     SafeAreaView,
@@ -40,6 +39,7 @@ import {
 } from 'react-native';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
+import { showDestructiveAlert, showErrorAlert } from '../../utils/alertService';
 import { REGEX_PATTERNS } from '../../utils/constants';
 
 // Type definitions
@@ -183,22 +183,22 @@ const EditProfileScreen: React.FC = () => {
    */
   const handleSaveProfile = async () => {
     if (!displayName.trim()) {
-      Alert.alert('Error', 'Display name is required.');
+      showErrorAlert('Display name is required.');
       return;
     }
 
     if (!username.trim()) {
-      Alert.alert('Error', 'Username is required.');
+      showErrorAlert('Username is required.');
       return;
     }
 
     if (!isValidUsernameFormat(username)) {
-      Alert.alert('Error', 'Username must be 3-20 characters, letters, numbers, and underscores only.');
+      showErrorAlert('Username must be 3-20 characters, letters, numbers, and underscores only.');
       return;
     }
 
     if (usernameError) {
-      Alert.alert('Error', 'Please resolve username issues before saving.');
+      showErrorAlert('Please resolve username issues before saving.');
       return;
     }
 
@@ -214,7 +214,7 @@ const EditProfileScreen: React.FC = () => {
         }
       } catch (error) {
         setIsCheckingUsername(false);
-        Alert.alert('Error', 'Unable to verify username availability. Please try again.');
+        showErrorAlert('Unable to verify username availability. Please try again.');
         return;
       }
       setIsCheckingUsername(false);
@@ -251,7 +251,7 @@ const EditProfileScreen: React.FC = () => {
       const errorMessage = error.message || 'Failed to update profile. Please try again.';
       console.error('User will see error:', errorMessage);
       
-      Alert.alert('Profile Update Failed', errorMessage);
+      showErrorAlert(errorMessage, 'Profile Update Failed');
     }
   };
 
@@ -260,13 +260,12 @@ const EditProfileScreen: React.FC = () => {
    */
   const handleGoBack = () => {
     if (hasChanges) {
-      Alert.alert(
+      showDestructiveAlert(
         'Unsaved Changes',
         'You have unsaved changes. Are you sure you want to go back?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Discard', style: 'destructive', onPress: () => navigation.goBack() }
-        ]
+        () => navigation.goBack(),
+        undefined,
+        'Discard'
       );
     } else {
       navigation.goBack();

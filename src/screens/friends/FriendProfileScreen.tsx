@@ -29,7 +29,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     SafeAreaView,
     ScrollView,
     StatusBar,
@@ -40,6 +39,7 @@ import {
 import { friendsService } from '../../services/firebase/friendsService';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
+import { showDestructiveAlert, showErrorAlert, showSuccessAlert } from '../../utils/alertService';
 
 /**
  * Friend profile interface
@@ -197,13 +197,13 @@ const FriendProfileScreen: React.FC = () => {
       await friendsService.sendFriendRequest(user.uid, friendId);
       setFriendshipStatus('pending');
       
-      Alert.alert(
-        'Friend Request Sent',
-        `Friend request sent to ${friendProfile.displayName}!`
+      showSuccessAlert(
+        `Friend request sent to ${friendProfile.displayName}!`,
+        'Friend Request Sent'
       );
     } catch (error) {
       console.error('Send friend request failed:', error);
-      Alert.alert('Error', 'Failed to send friend request. Please try again.');
+      showErrorAlert('Failed to send friend request. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -215,30 +215,25 @@ const FriendProfileScreen: React.FC = () => {
   const removeFriend = useCallback(async () => {
     if (!user || !friendProfile) return;
 
-    Alert.alert(
+    showDestructiveAlert(
       'Remove Friend',
       `Are you sure you want to remove ${friendProfile.displayName} from your friends?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setIsProcessing(true);
-              await friendsService.removeFriend(user.uid, friendId);
-              setFriendshipStatus('none');
-              
-              Alert.alert('Friend Removed', `${friendProfile.displayName} has been removed from your friends.`);
-            } catch (error) {
-              console.error('Remove friend failed:', error);
-              Alert.alert('Error', 'Failed to remove friend. Please try again.');
-            } finally {
-              setIsProcessing(false);
-            }
-          }
+      async () => {
+        try {
+          setIsProcessing(true);
+          await friendsService.removeFriend(user.uid, friendId);
+          setFriendshipStatus('none');
+          
+          showSuccessAlert(`${friendProfile.displayName} has been removed from your friends.`, 'Friend Removed');
+        } catch (error) {
+          console.error('Remove friend failed:', error);
+          showErrorAlert('Failed to remove friend. Please try again.');
+        } finally {
+          setIsProcessing(false);
         }
-      ]
+      },
+      undefined,
+      'Remove'
     );
   }, [user, friendId, friendProfile]);
 

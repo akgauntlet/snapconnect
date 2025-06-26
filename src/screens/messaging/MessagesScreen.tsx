@@ -26,7 +26,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useState } from 'react';
-import { Alert, Modal, RefreshControl, SafeAreaView, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, RefreshControl, SafeAreaView, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 
 import MediaViewer from '../../components/common/MediaViewer';
 import { useTabBarHeight } from '../../hooks/useTabBarHeight';
@@ -34,6 +34,7 @@ import { messagingService } from '../../services/firebase/messagingService';
 import { realtimeService } from '../../services/firebase/realtimeService';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
+import { showAlert, showConfirmAlert, showDestructiveAlert } from '../../utils/alertService';
 
 /**
  * Interface for conversation data
@@ -122,7 +123,7 @@ const MessagesScreen: React.FC = () => {
       
       // Show notification for first media message
       const firstMedia = messagesWithSenderNames[0];
-      Alert.alert(
+      showAlert(
         `📸 New ${firstMedia.mediaType === 'photo' ? 'Photo' : 'Video'} Snap!`,
         `From ${firstMedia.senderName || 'Someone'}`,
         [
@@ -332,16 +333,13 @@ const MessagesScreen: React.FC = () => {
    */
   const handleConversationPress = useCallback((conversation: Conversation) => {
     // TODO: Navigate to conversation detail or show conversation history
-    Alert.alert(
+    showConfirmAlert(
       'Conversation',
       `Open conversation with ${conversation.name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Open', onPress: () => {
-          // TODO: Implement conversation detail view
-          Alert.alert('Coming Soon', 'Conversation details will be implemented next!');
-        }}
-      ]
+      () => {
+        // TODO: Implement conversation detail view
+        showAlert('Coming Soon', 'Conversation details will be implemented next!');
+      }
     );
   }, []);
 
@@ -350,12 +348,13 @@ const MessagesScreen: React.FC = () => {
    */
   const handleNewConversation = useCallback(() => {
     // TODO: Show friends list for new conversation
-    Alert.alert('New Conversation', 'Select a friend to start a new conversation', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Select Friend', onPress: () => {
-        Alert.alert('Coming Soon', 'Friend selection will be implemented next!');
-      }}
-    ]);
+    showConfirmAlert(
+      'New Conversation',
+      'Select a friend to start a new conversation',
+      () => {
+        showAlert('Coming Soon', 'Friend selection will be implemented next!');
+      }
+    );
   }, []);
 
   /**
@@ -364,15 +363,14 @@ const MessagesScreen: React.FC = () => {
   const handleClearUnread = useCallback(async () => {
     if (incomingMessages.length === 0) return;
     
-    Alert.alert(
+    showDestructiveAlert(
       'Clear Unread Snaps',
       'This will mark all unread snaps as viewed without opening them. Continue?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Clear All', style: 'destructive', onPress: () => {
-          setIncomingMessages([]);
-        }}
-      ]
+      () => {
+        setIncomingMessages([]);
+      },
+      undefined,
+      'Clear All'
     );
   }, [incomingMessages.length]);
 

@@ -28,7 +28,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     FlatList,
     RefreshControl,
     SafeAreaView,
@@ -44,6 +43,7 @@ import { useFriendRequests } from '../../hooks/useFriendRequests';
 import { friendsService } from '../../services/firebase/friendsService';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
+import { showDestructiveAlert, showErrorAlert, showSuccessAlert } from '../../utils/alertService';
 
 /**
  * Friend interface for display
@@ -254,29 +254,24 @@ const FriendsListScreen: React.FC = () => {
   const handleRemoveFriend = useCallback(async (friend: Friend) => {
     if (!user) return;
 
-    Alert.alert(
+    showDestructiveAlert(
       'Remove Friend',
       `Are you sure you want to remove ${friend.displayName} from your friends?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await friendsService.removeFriend(user.uid, friend.id);
-              
-              // Update local state
-              setFriends(prev => prev.filter(f => f.id !== friend.id));
-              
-              Alert.alert('Success', `${friend.displayName} has been removed from your friends.`);
-            } catch (error) {
-              console.error('Remove friend failed:', error);
-              Alert.alert('Error', 'Failed to remove friend. Please try again.');
-            }
-          }
+      async () => {
+        try {
+          await friendsService.removeFriend(user.uid, friend.id);
+          
+          // Update local state
+          setFriends(prev => prev.filter(f => f.id !== friend.id));
+          
+          showSuccessAlert(`${friend.displayName} has been removed from your friends.`);
+        } catch (error) {
+          console.error('Remove friend failed:', error);
+          showErrorAlert('Failed to remove friend. Please try again.');
         }
-      ]
+      },
+      undefined,
+      'Remove'
     );
   }, [user]);
 
