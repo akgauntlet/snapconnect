@@ -29,6 +29,7 @@ import React, { useCallback, useState } from 'react';
 import { Alert, Modal, RefreshControl, SafeAreaView, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 
 import MediaViewer from '../../components/common/MediaViewer';
+import { useTabBarHeight } from '../../hooks/useTabBarHeight';
 import { messagingService } from '../../services/firebase/messagingService';
 import { realtimeService } from '../../services/firebase/realtimeService';
 import { useAuthStore } from '../../stores/authStore';
@@ -84,6 +85,7 @@ const MessagesScreen: React.FC = () => {
   const theme = useThemeStore((state) => state.theme);
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
   const { user } = useAuthStore();
+  const { tabBarHeight } = useTabBarHeight();
   
   // Component state
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -446,6 +448,7 @@ const MessagesScreen: React.FC = () => {
         <ScrollView 
           className="flex-1" 
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: tabBarHeight + 20 }}
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}

@@ -25,6 +25,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
+import { Dimensions, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeStore } from '../stores/themeStore';
 
@@ -54,6 +55,45 @@ const TabsNavigator = () => {
   const currentTheme = useThemeStore((state) => state.theme);
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
   const gamingMode = useThemeStore((state) => state.preferences.gamingMode);
+  
+  // Get device dimensions for viewport calculations
+  const { width, height } = Dimensions.get('window');
+  const screenHeight = Dimensions.get('screen').height;
+  
+  // Detect Samsung Galaxy S20 Ultra dimensions (1440x3200 or similar)
+  const isSamsungGalaxyS20Ultra = height >= 3000 || width >= 1400;
+  
+  // Web platform adjustments for mobile browsers
+  const isWebMobile = Platform.OS === 'web' && (width < 768);
+  
+  // Calculate safe bottom padding for different scenarios
+  const calculateBottomPadding = () => {
+    if (Platform.OS === 'web') {
+      // For web, especially mobile browsers, use a more conservative approach
+      if (isWebMobile) {
+        // Mobile web browsers often have varying viewport heights
+        // Use a combination of safe area insets and viewport-relative padding
+        const basePadding = isSamsungGalaxyS20Ultra ? 20 : 16;
+        const safePadding = Math.max(insets.bottom, 8);
+        return basePadding + safePadding;
+      }
+      return Math.max(insets.bottom, 8);
+    }
+    return Math.max(insets.bottom, 8);
+  };
+  
+  // Calculate tab bar height for different scenarios
+  const calculateTabBarHeight = () => {
+    const baseHeight = 60;
+    const bottomPadding = calculateBottomPadding();
+    
+    if (Platform.OS === 'web' && isWebMobile) {
+      // For mobile web, ensure adequate height to prevent cutting off
+      return baseHeight + bottomPadding + (isSamsungGalaxyS20Ultra ? 8 : 0);
+    }
+    
+    return baseHeight + bottomPadding;
+  };
 
   return (
     <Tab.Navigator
@@ -61,18 +101,30 @@ const TabsNavigator = () => {
         // Header configuration
         headerShown: false,
         
-        // Tab bar styling
+        // Tab bar styling with improved mobile web support
         tabBarStyle: {
           backgroundColor: currentTheme.colors.background.primary,
           borderTopColor: accentColor,
           borderTopWidth: 1,
-          height: 60 + insets.bottom,
-          paddingBottom: Math.max(insets.bottom, 8),
+          height: calculateTabBarHeight(),
+          paddingBottom: calculateBottomPadding(),
           paddingTop: 8,
           position: 'absolute',
           left: 0,
           right: 0,
           bottom: 0,
+          // Additional web-specific styling
+          ...(Platform.OS === 'web' && {
+            // Ensure tab bar stays visible on web mobile browsers
+            minHeight: 68,
+            // Use CSS env() for safe area on web when supported
+            paddingBottom: `max(${calculateBottomPadding()}px, env(safe-area-inset-bottom, 8px))`,
+          }),
+          // Samsung Galaxy S20 Ultra specific adjustments
+          ...(isSamsungGalaxyS20Ultra && {
+            minHeight: 76,
+            paddingBottom: calculateBottomPadding() + 4,
+          }),
         },
         
         // Tab bar item styling
@@ -82,12 +134,22 @@ const TabsNavigator = () => {
           fontFamily: currentTheme.typography.fonts.body,
           fontSize: 12,
           fontWeight: '500',
+          // Ensure labels are visible on large screens
+          ...(isSamsungGalaxyS20Ultra && {
+            fontSize: 13,
+            marginBottom: 2,
+          }),
         },
         
         // Tab bar icon configuration
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
           let iconSize = gamingMode ? size + 2 : size;
+          
+          // Adjust icon size for Samsung Galaxy S20 Ultra
+          if (isSamsungGalaxyS20Ultra) {
+            iconSize = iconSize + 2;
+          }
 
           switch (route.name) {
             case 'Camera':
@@ -115,6 +177,7 @@ const TabsNavigator = () => {
                 textShadowColor: focused ? accentColor : 'transparent',
                 textShadowOffset: { width: 0, height: 0 },
                 textShadowRadius: focused ? 8 : 0,
+                marginTop: 2,
               }}
             />
           );

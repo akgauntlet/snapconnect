@@ -26,6 +26,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React from 'react';
 import { SafeAreaView, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { useTabBarHeight } from '../../hooks/useTabBarHeight';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
 
@@ -48,6 +49,7 @@ const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const theme = useThemeStore((state) => state.theme);
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
+  const { tabBarHeight } = useTabBarHeight();
   
   // Auth store
   const { signOut, isLoading, user, profile } = useAuthStore();
@@ -142,7 +144,11 @@ const ProfileScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
       
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        className="flex-1" 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: tabBarHeight + 20 }}
+      >
         {/* Profile Header */}
         <View className="items-center py-8 px-6">
           {/* Avatar */}
@@ -177,7 +183,7 @@ const ProfileScreen: React.FC = () => {
         </View>
         
         {/* Menu Items */}
-        <View className="px-6 pb-20">
+        <View className="px-6">
           {menuItems.map((item) => (
             <TouchableOpacity
               key={item.title}

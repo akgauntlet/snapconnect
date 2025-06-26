@@ -34,21 +34,22 @@ import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Alert,
-  Animated,
-  Dimensions,
-  Image,
-  Modal,
-  Platform,
-  Pressable,
-  SafeAreaView,
-  StatusBar,
-  Text,
-  TouchableOpacity,
-  View
+    Alert,
+    Animated,
+    Dimensions,
+    Image,
+    Modal,
+    Platform,
+    Pressable,
+    SafeAreaView,
+    StatusBar,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import RecipientSelector from '../../components/common/RecipientSelector';
+import { useTabBarHeight } from '../../hooks/useTabBarHeight';
 import { messagingService } from '../../services/firebase/messagingService';
 import { storiesService } from '../../services/firebase/storiesService';
 import { useAuthStore } from '../../stores/authStore';
@@ -77,6 +78,7 @@ const CameraScreen: React.FC = () => {
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
   const { user } = useAuthStore();
   const route = useRoute();
+  const { tabBarHeight } = useTabBarHeight();
   
   // Camera permissions and state
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
@@ -1201,7 +1203,7 @@ const CameraScreen: React.FC = () => {
           className="absolute bottom-0 left-0 right-0 z-10 px-6 bg-black/30"
           style={{
             paddingTop: 32,
-            paddingBottom: Math.max(insets.bottom + 60 + 8, 32), // Tab bar height + bottom safe area + padding
+            paddingBottom: Math.max(tabBarHeight + 8, 32), // Dynamic tab bar height + padding
           }}
         >
           <View className="flex-row justify-between items-center">

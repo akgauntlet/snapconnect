@@ -26,6 +26,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import React, { useCallback, useState } from 'react';
 import { Alert, FlatList, Image, Modal, RefreshControl, SafeAreaView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import StoryViewer from '../../components/common/StoryViewer';
+import { useTabBarHeight } from '../../hooks/useTabBarHeight';
 import { storiesService } from '../../services/firebase/storiesService';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
@@ -84,6 +85,7 @@ const StoriesScreen: React.FC = () => {
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
   const { user } = useAuthStore();
   const navigation = useNavigation();
+  const { tabBarHeight } = useTabBarHeight();
   
   // Component state
   const [friendsStories, setFriendsStories] = useState<StoryUser[]>([]);
@@ -440,7 +442,7 @@ const StoriesScreen: React.FC = () => {
               colors={[accentColor]}
             />
           }
-          contentContainerStyle={{ paddingBottom: 20 }}
+          contentContainerStyle={{ paddingBottom: tabBarHeight + 20 }}
           ListEmptyComponent={
             <View className="flex-1 justify-center items-center py-20">
               <Ionicons name="play-circle-outline" size={64} color={theme.colors.text.tertiary} />
