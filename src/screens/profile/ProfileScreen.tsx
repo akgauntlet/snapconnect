@@ -26,6 +26,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React from 'react';
 import { SafeAreaView, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { CyberButton, GameCard, IconButton } from '../../components/common';
 import { useTabBarHeight } from '../../hooks/useTabBarHeight';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
@@ -136,12 +137,12 @@ const ProfileScreen: React.FC = () => {
       {/* Header */}
       <View className="flex-row justify-between items-center px-6 py-4 border-b border-cyber-gray">
         <Text className="text-white font-orbitron text-xl">Profile</Text>
-        <TouchableOpacity 
-          className="p-2" 
+        <IconButton
+          icon="create-outline"
+          variant="primary"
+          size="medium"
           onPress={() => navigation.navigate('EditProfile')}
-        >
-          <Ionicons name="create-outline" size={24} color={accentColor} />
-        </TouchableOpacity>
+        />
       </View>
       
       <ScrollView 
@@ -168,18 +169,19 @@ const ProfileScreen: React.FC = () => {
           </Text>
         </View>
         
-        {/* Stats Grid */}
-        <View className="flex-row justify-around py-6 mx-6 bg-cyber-dark rounded-lg mb-6">
-          {Object.entries(userData.stats).map(([key, value]) => (
-            <View key={key} className="items-center">
-              <Text className="text-cyber-cyan font-orbitron text-xl font-bold">
-                {value}
-              </Text>
-              <Text className="text-white/70 font-inter text-xs capitalize mt-1">
-                {key}
-              </Text>
-            </View>
-          ))}
+        {/* Gaming Stats Card */}
+        <View className="mx-6 mb-6">
+          <GameCard
+            title="Gaming Statistics"
+            type="stats"
+            rarity="epic"
+            stats={[
+              { label: 'Victories', value: userData.stats.victories, icon: 'trophy' },
+              { label: 'Highlights', value: userData.stats.highlights, icon: 'play-circle' },
+              { label: 'Friends', value: userData.stats.friends, icon: 'people' },
+              { label: 'Achievements', value: userData.stats.achievements, icon: 'medal' },
+            ]}
+          />
         </View>
         
         {/* Menu Items */}
@@ -208,25 +210,16 @@ const ProfileScreen: React.FC = () => {
           ))}
           
           {/* Sign Out Button */}
-          <TouchableOpacity 
+          <CyberButton
+            variant="danger"
+            icon="log-out-outline"
+            fullWidth
+            loading={isLoading}
             onPress={handleSignOut}
-            disabled={isLoading}
-            className={`flex-row items-center justify-center py-4 px-4 mt-4 bg-neon-red/20 rounded-lg border border-neon-red/30 ${
-              isLoading ? 'opacity-50' : ''
-            }`}
-            accessible={true}
-            accessibilityLabel="Sign Out"
-            accessibilityRole="button"
+            className="mt-4"
           >
-            <Ionicons 
-              name={isLoading ? "hourglass-outline" : "log-out-outline"} 
-              size={20} 
-              color={theme.colors.gaming.defeat} 
-            />
-            <Text className="text-gaming-defeat font-inter font-medium ml-2">
-              {isLoading ? 'Signing Out...' : 'Sign Out'}
-            </Text>
-          </TouchableOpacity>
+            Sign Out
+          </CyberButton>
         </View>
       </ScrollView>
     </SafeAreaView>

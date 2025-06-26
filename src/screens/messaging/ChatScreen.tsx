@@ -104,7 +104,7 @@ const ChatScreen: React.FC = () => {
   
   // Get route parameters
   const params = route.params as ChatScreenParams;
-  const { conversationId, friendId, friendName } = params;
+  const { friendId, friendName } = params;
   
   // Component state
   const [messages, setMessages] = useState<Message[]>([]);
@@ -318,7 +318,7 @@ const ChatScreen: React.FC = () => {
       return () => {
         realtimeService.cleanup();
       };
-    }, [user, loadMessages, loadFriendStatus, loadFriendProfile, handleNewMessage, handlePresenceUpdate])
+    }, [user, friendId, loadMessages, loadFriendStatus, loadFriendProfile, handleNewMessage, handlePresenceUpdate])
   );
 
   /**
@@ -338,6 +338,88 @@ const ChatScreen: React.FC = () => {
       keyboardWillHide?.remove();
     };
   }, []);
+
+  /**
+   * Send media message (photo or video)
+   */
+  const sendMediaMessage = useCallback(async (asset: ImagePicker.ImagePickerAsset) => {
+    if (!user || isSending) return;
+    
+    setIsSending(true);
+    
+    const mediaType = asset.type === 'video' ? 'video' : 'photo';
+    
+    // Create optimistic message to show immediately
+    const optimisticMessage: Message = {
+      id: `temp-${Date.now()}`, // Temporary ID
+      senderId: user.uid,
+      recipientId: friendId,
+      text: '',
+      mediaUrl: asset.uri, // Use local URI for preview
+      mediaType: mediaType,
+      timer: 5,
+      createdAt: new Date(),
+      viewed: false,
+      viewedAt: undefined,
+      expiresAt: undefined,
+      status: 'sent'
+    };
+    
+    // Add optimistic message to UI immediately
+    setMessages(prev => [...prev, optimisticMessage]);
+    
+    // Auto-scroll to show the new message
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+    
+    try {
+      // Get file size
+      let fileSize = 0;
+      try {
+        const response = await fetch(asset.uri);
+        const blob = await response.blob();
+        fileSize = blob.size;
+      } catch (sizeError) {
+        console.warn('Could not determine file size:', sizeError);
+      }
+      
+      const mediaData = {
+        uri: asset.uri,
+        type: mediaType,
+        size: fileSize
+      };
+      
+      const messageId = await messagingService.sendMessage(
+        user.uid,
+        friendId,
+        mediaData,
+        5, // 5 second timer
+        '' // No text for media messages
+      );
+      
+      // Update the optimistic message with the real message ID and uploaded URL
+      setMessages(prev => prev.map(msg => 
+        msg.id === optimisticMessage.id 
+          ? { ...msg, id: messageId, status: 'delivered' }
+          : msg
+      ));
+      
+      // Haptic feedback for success
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      
+      console.log('✅ Media message sent successfully:', messageId);
+    } catch (error) {
+      console.error('Send media message failed:', error);
+      
+      // Remove the optimistic message on error
+      setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
+      
+      showAlert('Error', 'Failed to send media. Please try again.');
+    } finally {
+      setIsSending(false);
+    }
+  }, [user, friendId, isSending]);
 
   /**
    * Handle camera/media picker
@@ -491,89 +573,7 @@ const ChatScreen: React.FC = () => {
       console.error('Camera press failed:', error);
       showAlert('Error', 'Something went wrong. Please try again.');
     }
-  }, [user]);
-
-  /**
-   * Send media message (photo or video)
-   */
-  const sendMediaMessage = useCallback(async (asset: ImagePicker.ImagePickerAsset) => {
-    if (!user || isSending) return;
-    
-    setIsSending(true);
-    
-    const mediaType = asset.type === 'video' ? 'video' : 'photo';
-    
-    // Create optimistic message to show immediately
-    const optimisticMessage: Message = {
-      id: `temp-${Date.now()}`, // Temporary ID
-      senderId: user.uid,
-      recipientId: friendId,
-      text: '',
-      mediaUrl: asset.uri, // Use local URI for preview
-      mediaType: mediaType,
-      timer: 5,
-      createdAt: new Date(),
-      viewed: false,
-      viewedAt: undefined,
-      expiresAt: undefined,
-      status: 'sent'
-    };
-    
-    // Add optimistic message to UI immediately
-    setMessages(prev => [...prev, optimisticMessage]);
-    
-    // Auto-scroll to show the new message
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-    
-    try {
-      // Get file size
-      let fileSize = 0;
-      try {
-        const response = await fetch(asset.uri);
-        const blob = await response.blob();
-        fileSize = blob.size;
-      } catch (sizeError) {
-        console.warn('Could not determine file size:', sizeError);
-      }
-      
-      const mediaData = {
-        uri: asset.uri,
-        type: mediaType,
-        size: fileSize
-      };
-      
-      const messageId = await messagingService.sendMessage(
-        user.uid,
-        friendId,
-        mediaData,
-        5, // 5 second timer
-        '' // No text for media messages
-      );
-      
-      // Update the optimistic message with the real message ID and uploaded URL
-      setMessages(prev => prev.map(msg => 
-        msg.id === optimisticMessage.id 
-          ? { ...msg, id: messageId, status: 'delivered' }
-          : msg
-      ));
-      
-      // Haptic feedback for success
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      
-      console.log('✅ Media message sent successfully:', messageId);
-    } catch (error) {
-      console.error('Send media message failed:', error);
-      
-      // Remove the optimistic message on error
-      setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
-      
-      showAlert('Error', 'Failed to send media. Please try again.');
-    } finally {
-      setIsSending(false);
-    }
-  }, [user, friendId, isSending]);
+  }, [user, sendMediaMessage]);
 
   /**
    * Send text message
@@ -822,7 +822,7 @@ const ChatScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
     );
-  }, [user, accentColor, formatMessageTime]);
+  }, [user, accentColor, formatMessageTime, handleMediaPress]);
 
   /**
    * Render empty state

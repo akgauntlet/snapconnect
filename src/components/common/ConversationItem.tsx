@@ -26,7 +26,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { useThemeStore } from '../../stores/themeStore';
 
 /**
  * Interface for conversation data
@@ -68,8 +67,6 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
   onPress,
   onLongPress
 }) => {
-  const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
-
   /**
    * Get user initials for avatar display
    */

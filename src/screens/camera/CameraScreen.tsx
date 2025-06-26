@@ -47,7 +47,6 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import RecipientSelector from '../../components/common/RecipientSelector';
 import { useTabBarHeight } from '../../hooks/useTabBarHeight';
 import { messagingService } from '../../services/firebase/messagingService';
@@ -74,7 +73,6 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
  * - Real-time AR effects with AI enhancement
  */
 const CameraScreen: React.FC = () => {
-  const insets = useSafeAreaInsets();
   const theme = useThemeStore((state) => state.theme);
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
   const { user } = useAuthStore();
@@ -91,7 +89,6 @@ const CameraScreen: React.FC = () => {
   const [flash, setFlash] = useState<FlashMode>('off');
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
-  const [recordingStartTime, setRecordingStartTime] = useState<number>(0);
   
   // Media handling
   const [capturedMedia, setCapturedMedia] = useState<string | null>(null);
@@ -426,8 +423,6 @@ const CameraScreen: React.FC = () => {
         return;
       }
       
-      const startTime = Date.now();
-      setRecordingStartTime(startTime);
       setIsRecording(true);
       setRecordingDuration(0);
       
@@ -451,7 +446,6 @@ const CameraScreen: React.FC = () => {
       console.error('Start recording failed:', error);
       setIsRecording(false);
       setRecordingDuration(0);
-      setRecordingStartTime(0);
       if (recordingInterval.current) {
         clearInterval(recordingInterval.current);
         recordingInterval.current = null;
@@ -602,13 +596,11 @@ const CameraScreen: React.FC = () => {
       
       setIsRecording(false);
       setRecordingDuration(0);
-      setRecordingStartTime(0);
       
     } catch (error) {
       console.error('Stop recording failed:', error);
       setIsRecording(false);
       setRecordingDuration(0);
-      setRecordingStartTime(0);
     }
   };
 

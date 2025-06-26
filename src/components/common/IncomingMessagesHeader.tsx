@@ -87,17 +87,7 @@ const IncomingMessagesHeader: React.FC<IncomingMessagesHeaderProps> = ({
     }
   };
 
-  /**
-   * Get sender initials for avatar
-   */
-  const getSenderInitials = (senderName?: string) => {
-    if (!senderName) return '?';
-    return senderName
-      .split(' ')
-      .map(n => n.charAt(0).toUpperCase())
-      .join('')
-      .slice(0, 2);
-  };
+
 
   /**
    * Format message time - handles Firebase Timestamps and Date objects

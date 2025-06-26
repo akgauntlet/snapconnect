@@ -57,7 +57,7 @@ const SignupScreen: React.FC<SignupScreenProps> = () => {
     signUpWithEmail, 
     checkUsernameAvailability,
     isLoading, 
-    error, 
+    error: authError, 
     clearError 
   } = useAuthStore();
 
@@ -105,8 +105,8 @@ const SignupScreen: React.FC<SignupScreenProps> = () => {
       if (!isAvailable) {
         setUsernameError('Username is already taken');
       }
-    } catch (error) {
-      console.error('Username check failed:', error);
+    } catch (usernameCheckError) {
+      console.error('Username check failed:', usernameCheckError);
       setUsernameError('Unable to check username availability');
     } finally {
       setIsCheckingUsername(false);
@@ -170,7 +170,7 @@ const SignupScreen: React.FC<SignupScreenProps> = () => {
         setIsCheckingUsername(false);
         return;
       }
-    } catch (error) {
+    } catch {
       setIsCheckingUsername(false);
       showErrorAlert('Unable to verify username availability. Please try again.');
       return;
@@ -180,16 +180,16 @@ const SignupScreen: React.FC<SignupScreenProps> = () => {
     try {
       await signUpWithEmail(email, password, displayName, { username });
       // Navigation will be handled by auth state change
-    } catch (error: any) {
+    } catch (signupError: any) {
       // Check if this is the "email already exists" error
-      if (error.message === 'An account already exists with this email address.') {
+      if (signupError.message === 'An account already exists with this email address.') {
         // For email already exists, the error is already set in the store state
         // and will be displayed inline. Don't show modal.
         return;
       }
       
       // For all other errors, show the modal as before
-      showErrorAlert(error.message, 'Sign Up Failed');
+      showErrorAlert(signupError.message, 'Sign Up Failed');
     }
   };
 
@@ -204,7 +204,7 @@ const SignupScreen: React.FC<SignupScreenProps> = () => {
    * Clear error when input changes
    */
   const handleInputChange = () => {
-    if (error) {
+    if (authError) {
       clearError();
     }
   };
@@ -337,9 +337,9 @@ const SignupScreen: React.FC<SignupScreenProps> = () => {
           </View>
 
           {/* Error Display */}
-          {error ? (
+          {authError ? (
             <View className="bg-red-500/20 border border-red-500 rounded-lg p-3 mb-4">
-              <Text className="text-red-400 font-inter text-center">{error}</Text>
+              <Text className="text-red-400 font-inter text-center">{authError}</Text>
             </View>
           ) : null}
 

@@ -21,7 +21,6 @@
 
 import React from 'react';
 import { Text, View } from 'react-native';
-import { useThemeStore } from '../../stores/themeStore';
 
 /**
  * NotificationBadge component props
@@ -57,8 +56,6 @@ const NotificationBadge: React.FC<NotificationBadgeProps> = ({
   children, 
   showZero = false 
 }) => {
-  const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
-  
   // Don't show badge if count is 0 and showZero is false
   if (count === 0 && !showZero) {
     return <>{children}</>;

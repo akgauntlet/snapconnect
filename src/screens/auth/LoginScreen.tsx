@@ -28,10 +28,10 @@ import {
     Platform,
     ScrollView,
     Text,
-    TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
+import { CyberButton, GamingInput } from '../../components/common';
 import { useAuthStore } from '../../stores/authStore';
 import { showErrorAlert } from '../../utils/alertService';
 
@@ -203,40 +203,36 @@ const LoginScreen: React.FC<LoginScreenProps> = () => {
           {/* Email Form */}
           {authMethod === 'email' && (
             <View className="space-y-4 mb-6">
-              <View>
-                <Text className="text-cyber-cyan font-inter mb-2">Email</Text>
-                <TextInput
-                  value={email}
-                  onChangeText={(text) => {
-                    setEmail(text);
-                    handleInputChange();
-                  }}
-                  placeholder="Enter your email"
-                  placeholderTextColor="#6B7280"
-                  className="bg-cyber-dark border border-cyber-gray rounded-lg px-4 py-3 text-white font-inter"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!isLoading}
-                />
-              </View>
+              <GamingInput
+                label="Email"
+                value={email}
+                onChangeText={(text: string) => {
+                  setEmail(text);
+                  handleInputChange();
+                }}
+                placeholder="Enter your email"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                disabled={isLoading}
+                leftIcon="mail-outline"
+                variant="default"
+              />
 
-              <View>
-                <Text className="text-cyber-cyan font-inter mb-2">Password</Text>
-                <TextInput
-                  value={password}
-                  onChangeText={(text) => {
-                    setPassword(text);
-                    handleInputChange();
-                  }}
-                  placeholder="Enter your password"
-                  placeholderTextColor="#6B7280"
-                  className="bg-cyber-dark border border-cyber-gray rounded-lg px-4 py-3 text-white font-inter"
-                  secureTextEntry
-                  autoCapitalize="none"
-                  editable={!isLoading}
-                />
-              </View>
+              <GamingInput
+                label="Password"
+                value={password}
+                onChangeText={(text: string) => {
+                  setPassword(text);
+                  handleInputChange();
+                }}
+                placeholder="Enter your password"
+                secureTextEntry
+                autoCapitalize="none"
+                disabled={isLoading}
+                leftIcon="lock-closed-outline"
+                variant="default"
+              />
 
               <TouchableOpacity
                 onPress={handleForgotPassword}
@@ -253,19 +249,19 @@ const LoginScreen: React.FC<LoginScreenProps> = () => {
           {authMethod === 'phone' && (
             <View className="space-y-4 mb-6">
               <View>
-                <Text className="text-cyber-cyan font-inter mb-2">Phone Number</Text>
-                <TextInput
+                <GamingInput
+                  label="Phone Number"
                   value={phoneNumber}
-                  onChangeText={(text) => {
+                  onChangeText={(text: string) => {
                     setPhoneNumber(text);
                     handleInputChange();
                   }}
                   placeholder="+1 (555) 123-4567"
-                  placeholderTextColor="#6B7280"
-                  className="bg-cyber-dark border border-cyber-gray rounded-lg px-4 py-3 text-white font-inter"
                   keyboardType="phone-pad"
                   autoCapitalize="none"
-                  editable={!isLoading}
+                  disabled={isLoading}
+                  leftIcon="call-outline"
+                  variant="default"
                 />
                 <Text className="text-gray-400 font-inter text-xs mt-1">
                   Enter your phone number with country code
@@ -282,23 +278,17 @@ const LoginScreen: React.FC<LoginScreenProps> = () => {
           )}
 
           {/* Login Button */}
-          <TouchableOpacity
+          <CyberButton
+            variant="primary"
+            size="large"
+            fullWidth
+            loading={isLoading}
             onPress={authMethod === 'email' ? handleEmailLogin : handlePhoneLogin}
-            disabled={isLoading}
-            className={`bg-cyber-cyan py-4 rounded-lg shadow-lg ${
-              isLoading ? 'opacity-50' : ''
-            }`}
-            style={{
-              shadowColor: '#00ffff',
-              shadowOffset: { width: 0, height: 0 },
-              shadowOpacity: 0.3,
-              shadowRadius: 10,
-            }}
+            icon={authMethod === 'email' ? 'mail' : 'call'}
+            className="mb-2"
           >
-            <Text className="text-cyber-black font-bold text-lg font-orbitron text-center">
-              {isLoading ? 'SIGNING IN...' : 'SIGN IN'}
-            </Text>
-          </TouchableOpacity>
+            {authMethod === 'email' ? 'SIGN IN WITH EMAIL' : 'SIGN IN WITH PHONE'}
+          </CyberButton>
 
           {/* Gaming Aesthetic Elements */}
           <View className="items-center my-6">
@@ -309,15 +299,17 @@ const LoginScreen: React.FC<LoginScreenProps> = () => {
           </View>
 
           {/* Sign Up Link */}
-          <View className="flex-row justify-center items-center">
-                         <Text className="text-gray-300 font-inter">
-               Don&apos;t have an account? 
-             </Text>
-            <TouchableOpacity onPress={handleSignUp} className="ml-2">
-              <Text className="text-cyber-cyan font-inter font-medium">
-                Sign Up
-              </Text>
-            </TouchableOpacity>
+          <View className="flex-row justify-center items-center space-x-2">
+            <Text className="text-gray-300 font-inter">
+              Don&apos;t have an account? 
+            </Text>
+            <CyberButton
+              variant="ghost"
+              size="small"
+              onPress={handleSignUp}
+            >
+              Sign Up
+            </CyberButton>
           </View>
         </View>
       </ScrollView>

@@ -633,8 +633,6 @@ class FriendsService {
    */
   async getMutualFriendsCount(userId1, userId2) {
     try {
-      const db = this.getDB();
-      
       // Get friends of both users
       const [user1Friends, user2Friends] = await Promise.all([
         this.getFriendIds(userId1),

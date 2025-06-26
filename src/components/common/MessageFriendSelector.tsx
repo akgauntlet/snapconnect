@@ -165,19 +165,6 @@ const MessageFriendSelector: React.FC<MessageFriendSelectorProps> = ({
   }, [friends, searchQuery]);
 
   /**
-   * Handle friend selection
-   */
-  const handleSelectFriend = useCallback(async (friend: Friend) => {
-    try {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      onSelectFriend(friend.id, friend);
-      handleClose();
-    } catch (error) {
-      console.error('Select friend failed:', error);
-    }
-  }, [onSelectFriend]);
-
-  /**
    * Handle close modal
    */
   const handleClose = useCallback(async () => {
@@ -193,6 +180,19 @@ const MessageFriendSelector: React.FC<MessageFriendSelectorProps> = ({
       console.error('Handle close failed:', error);
     }
   }, [onClose]);
+
+  /**
+   * Handle friend selection
+   */
+  const handleSelectFriend = useCallback(async (friend: Friend) => {
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      onSelectFriend(friend.id, friend);
+      handleClose();
+    } catch (error) {
+      console.error('Select friend failed:', error);
+    }
+  }, [onSelectFriend, handleClose]);
 
   /**
    * Get status color

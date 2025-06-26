@@ -104,7 +104,7 @@ const FriendProfileScreen: React.FC = () => {
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
   const { user } = useAuthStore();
 
-  const { friendId, friend: initialFriend, isRequest = false } = route.params;
+  const { friendId, friend: initialFriend } = route.params;
 
   // Component state
   const [friendProfile, setFriendProfile] = useState<FriendProfile | null>(null);

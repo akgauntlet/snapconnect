@@ -26,7 +26,7 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Modal, RefreshControl, SafeAreaView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 
@@ -42,14 +42,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
 import { showAlert, showDestructiveAlert, showSuccessAlert } from '../../utils/alertService';
 
-/**
- * Route parameters interface
- */
-interface MessagesScreenParams {
-  friendId?: string;
-  friendName?: string;
-  openConversation?: boolean;
-}
+
 
 /**
  * Enhanced messages screen component with real-time media sharing
@@ -71,11 +64,9 @@ const MessagesScreen: React.FC = () => {
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
   const { user } = useAuthStore();
   const { tabBarHeight } = useTabBarHeight();
-  const route = useRoute();
   const navigation = useNavigation();
   
-  // Get route parameters
-  const params = route.params as MessagesScreenParams;
+
   
   // Component state
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -363,10 +354,13 @@ const MessagesScreen: React.FC = () => {
           friendId: friendId,
           friendName: friendDisplayName
         });
-      } else {
-        const { getFirebaseDB } = require('../../config/firebase');
-        const db = getFirebaseDB();
-        const { firebase } = require('../../config/firebase');
+              } else {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const { getFirebaseDB } = require('../../config/firebase');
+          // eslint-disable-next-line @typescript-eslint/no-require-imports  
+          const { firebase } = require('../../config/firebase');
+          
+          const db = getFirebaseDB();
         
         await db.collection('conversations').doc(conversationId).set({
           participants: [user.uid, friendId],

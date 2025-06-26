@@ -70,7 +70,6 @@ const EditProfileScreen: React.FC = () => {
     updateProfile, 
     checkUsernameAvailability,
     isLoading, 
-    user, 
     profile 
   } = useAuthStore();
 
@@ -150,8 +149,8 @@ const EditProfileScreen: React.FC = () => {
       if (!isAvailable) {
         setUsernameError('Username is already taken');
       }
-    } catch (error) {
-      console.error('Username check failed:', error);
+    } catch {
+      console.error('Username check failed');
       setUsernameError('Unable to check username availability');
     } finally {
       setIsCheckingUsername(false);
@@ -212,11 +211,11 @@ const EditProfileScreen: React.FC = () => {
           setIsCheckingUsername(false);
           return;
         }
-      } catch (error) {
-        setIsCheckingUsername(false);
-        showErrorAlert('Unable to verify username availability. Please try again.');
-        return;
-      }
+          } catch {
+      setIsCheckingUsername(false);
+      showErrorAlert('Unable to verify username availability. Please try again.');
+      return;
+    }
       setIsCheckingUsername(false);
     }
 
@@ -241,14 +240,14 @@ const EditProfileScreen: React.FC = () => {
       // Navigate back immediately since we're using optimistic updates
       console.log('🔄 Navigating back to profile...');
       navigation.goBack();
-    } catch (error: any) {
-      console.error('❌ Profile update failed:', error);
+    } catch (updateError: any) {
+      console.error('❌ Profile update failed:', updateError);
       
       // Reset success state if there was an error
       setSaveSuccess(false);
       
       // Show user-friendly error message
-      const errorMessage = error.message || 'Failed to update profile. Please try again.';
+      const errorMessage = updateError.message || 'Failed to update profile. Please try again.';
       console.error('User will see error:', errorMessage);
       
       showErrorAlert(errorMessage, 'Profile Update Failed');

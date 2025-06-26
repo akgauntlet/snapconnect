@@ -66,14 +66,7 @@ interface Friend {
  */
 type FriendsListNavigationProp = NativeStackNavigationProp<any, 'FriendsList'>;
 
-/**
- * Route param type
- */
-type FriendsListRouteProp = {
-  FriendsList: {
-    sourceTab?: 'Camera' | 'Messages' | 'Stories' | 'Profile';
-  };
-};
+
 
 /**
  * Friends list screen component

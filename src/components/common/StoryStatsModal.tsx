@@ -94,7 +94,7 @@ const StoryStatsModal: React.FC<StoryStatsModalProps> = ({
 
   if (!storyData) return null;
 
-  const { story, viewers, viewerNames } = storyData;
+  const { story, viewers } = storyData;
 
   /**
    * Format time since creation

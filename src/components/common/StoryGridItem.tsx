@@ -27,7 +27,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { useThemeStore } from '../../stores/themeStore';
 
 /**
  * Story user interface
@@ -73,8 +72,6 @@ const StoryGridItem: React.FC<StoryGridItemProps> = ({
   storyUser,
   onPress
 }) => {
-  const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
-
   const latestStory = storyUser.stories[0];
   const displayName = storyUser.user.displayName || storyUser.user.username || 'Unknown';
 

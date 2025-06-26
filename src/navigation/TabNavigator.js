@@ -59,7 +59,6 @@ const TabsNavigator = () => {
   
   // Get device dimensions for viewport calculations
   const { width, height } = Dimensions.get('window');
-  const screenHeight = Dimensions.get('screen').height;
   
   // Detect Samsung Galaxy S20 Ultra dimensions (1440x3200 or similar)
   const isSamsungGalaxyS20Ultra = height >= 3000 || width >= 1400;
