@@ -71,9 +71,11 @@ class MessagingService {
       }
       
       // Create message document
+      const conversationId = this.getConversationId(senderId, recipientId);
       const messageData = {
         senderId,
         recipientId,
+        conversationId,
         text: text || '',
         mediaUrl,
         mediaType: mediaData?.type || null,
@@ -90,7 +92,8 @@ class MessagingService {
       const messageId = messageRef.id;
       
       // Update conversation lists for both users
-      await this.addToConversationLists(senderId, recipientId, messageId, now);
+      const messageType = mediaData ? (mediaData.type === 'video' ? 'video' : 'photo') : 'text';
+      await this.addToConversationLists(senderId, recipientId, messageId, now, text, messageType);
       
       // Send push notification
       await this.sendPushNotification(recipientId, senderId, 'new_message');
@@ -310,8 +313,6 @@ class MessagingService {
     }
   }
 
-
-
   /**
    * Delete a message (immediate deletion)
    * @param {string} messageId - Message ID
@@ -364,13 +365,29 @@ class MessagingService {
    * @param {string} recipientId - Recipient ID
    * @param {string} messageId - Message ID
    * @param {Object} timestamp - Server timestamp
+   * @param {string} messageText - Message text content
+   * @param {string} messageType - Message type (text, photo, video)
    * @returns {Promise<void>}
    */
-  async addToConversationLists(senderId, recipientId, messageId, timestamp) {
+  async addToConversationLists(senderId, recipientId, messageId, timestamp, messageText = '', messageType = 'text') {
     try {
       const db = this.getDB();
       const { firebase } = require('../../config/firebase');
       const conversationId = this.getConversationId(senderId, recipientId);
+      
+      // Create appropriate last message preview
+      let lastMessage = '';
+      if (messageType === 'photo') {
+        lastMessage = '📸 Photo';
+      } else if (messageType === 'video') {
+        lastMessage = '🎥 Video';
+      } else if (messageText && messageText.trim()) {
+        // Truncate long text messages for preview
+        lastMessage = messageText.length > 40 ? messageText.substring(0, 40) + '...' : messageText;
+      } else {
+        // For empty messages, don't set lastMessage - let the UI handle it
+        lastMessage = null;
+      }
       
       const conversationData = {
         participants: [senderId, recipientId],
@@ -379,10 +396,15 @@ class MessagingService {
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       };
       
+      // Only set lastMessage if we have a meaningful preview
+      if (lastMessage) {
+        conversationData.lastMessage = lastMessage;
+      }
+      
       // Use set with merge to create or update conversation
       await db.collection('conversations').doc(conversationId).set(conversationData, { merge: true });
       
-      console.log('✅ Conversation lists updated');
+      console.log('✅ Conversation lists updated with message preview:', lastMessage || 'null (will be fetched dynamically)');
     } catch (error) {
       console.error('❌ Add to conversation lists failed:', error);
       throw error;
@@ -523,6 +545,105 @@ class MessagingService {
     } catch (error) {
       console.error('❌ Notify screenshot failed:', error);
     }
+  }
+
+  /**
+   * Get the most recent message for a conversation
+   * @param {string} userId - Current user ID
+   * @param {string} otherUserId - Other user ID
+   * @returns {Promise<Object|null>} Most recent message or null if none found
+   */
+  async getMostRecentMessage(userId, otherUserId) {
+    try {
+      const db = this.getDB();
+      
+      // Query messages in both directions using separate queries
+      // This approach works with Firestore security rules because we're explicitly
+      // filtering by the authenticated user's ID
+      const [sentMessages, receivedMessages] = await Promise.all([
+        // Messages sent by current user to other user
+        db.collection('messages')
+          .where('senderId', '==', userId)
+          .where('recipientId', '==', otherUserId)
+          .orderBy('createdAt', 'desc')
+          .limit(5)
+          .get(),
+        
+        // Messages sent by other user to current user
+        db.collection('messages')
+          .where('senderId', '==', otherUserId)
+          .where('recipientId', '==', userId)
+          .orderBy('createdAt', 'desc')
+          .limit(5)
+          .get()
+      ]);
+      
+      // Combine all messages
+      const allMessages = [];
+      
+      sentMessages.forEach(doc => {
+        const messageData = doc.data();
+        // Only include non-expired messages
+        if (!messageData.expiresAt || messageData.expiresAt.toDate() > new Date()) {
+          allMessages.push({ id: doc.id, ...messageData });
+        }
+      });
+      
+      receivedMessages.forEach(doc => {
+        const messageData = doc.data();
+        // Only include non-expired messages
+        if (!messageData.expiresAt || messageData.expiresAt.toDate() > new Date()) {
+          allMessages.push({ id: doc.id, ...messageData });
+        }
+      });
+      
+      if (allMessages.length === 0) {
+        return null;
+      }
+      
+      // Sort by creation time and return the most recent
+      allMessages.sort((a, b) => {
+        const aTime = a.createdAt?.toDate?.() || new Date(0);
+        const bTime = b.createdAt?.toDate?.() || new Date(0);
+        return bTime.getTime() - aTime.getTime();
+      });
+      
+      return allMessages[0];
+    } catch (error) {
+      console.error('❌ Get most recent message failed:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Format message preview for conversation list
+   * @param {Object} message - Message data
+   * @param {string} currentUserId - Current user ID for sender context
+   * @returns {string} Formatted message preview
+   */
+  formatMessagePreview(message, currentUserId) {
+    if (!message) {
+      return 'Start a conversation';
+    }
+    
+    // Handle different message types
+    if (message.mediaType === 'photo') {
+      const prefix = message.senderId === currentUserId ? 'You sent' : 'Received';
+      return `${prefix} 📸 Photo`;
+    }
+    
+    if (message.mediaType === 'video') {
+      const prefix = message.senderId === currentUserId ? 'You sent' : 'Received';
+      return `${prefix} 🎥 Video`;
+    }
+    
+    if (message.text && message.text.trim()) {
+      const prefix = message.senderId === currentUserId ? 'You: ' : '';
+      const text = message.text.length > 40 ? message.text.substring(0, 40) + '...' : message.text;
+      return `${prefix}${text}`;
+    }
+    
+    return 'New message';
   }
 }
 

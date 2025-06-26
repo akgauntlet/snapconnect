@@ -31,6 +31,7 @@ import { useThemeStore } from '../stores/themeStore';
 
 // Import main screens
 import CameraScreen from '../screens/camera/CameraScreen';
+import ChatScreen from '../screens/messaging/ChatScreen';
 import MessagesScreen from '../screens/messaging/MessagesScreen';
 import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
@@ -269,6 +270,15 @@ const TabNavigator = () => {
       <Stack.Screen 
         name="EditProfile" 
         component={EditProfileScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      
+      {/* Messaging Screens */}
+      <Stack.Screen 
+        name="Chat" 
+        component={ChatScreen}
         options={{
           animation: 'slide_from_right',
         }}

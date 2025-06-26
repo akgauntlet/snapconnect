@@ -14,6 +14,8 @@
  * - @/stores/authStore: Authentication state
  * - @/services/firebase/realtimeService: Real-time messaging
  * - @/components/common/MediaViewer: Media viewer component
+ * - @/components/common/ConversationItem: Conversation list item
+ * - @/components/common/IncomingMessagesHeader: Incoming messages display
  * 
  * @usage
  * Main interface for viewing and managing ephemeral conversations with media sharing.
@@ -24,10 +26,12 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRoute } from '@react-navigation/native';
-import React, { useCallback, useEffect, useState } from 'react';
-import { Modal, RefreshControl, SafeAreaView, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import React, { useCallback, useState } from 'react';
+import { ActivityIndicator, FlatList, Modal, RefreshControl, SafeAreaView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 
+import ConversationItem, { Conversation } from '../../components/common/ConversationItem';
+import IncomingMessagesHeader, { IncomingMessage } from '../../components/common/IncomingMessagesHeader';
 import MediaViewer from '../../components/common/MediaViewer';
 import MessageFriendSelector from '../../components/common/MessageFriendSelector';
 import { useTabBarHeight } from '../../hooks/useTabBarHeight';
@@ -36,38 +40,7 @@ import { messagingService } from '../../services/firebase/messagingService';
 import { realtimeService } from '../../services/firebase/realtimeService';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
-import { showAlert, showConfirmAlert, showDestructiveAlert, showSuccessAlert } from '../../utils/alertService';
-
-/**
- * Interface for conversation data
- */
-interface Conversation {
-  id: string;
-  name: string;
-  lastMessage: string;
-  time: string;
-  isOnline: boolean;
-  participants: string[];
-  lastMessageAt: Date;
-  hasUnreadMedia?: boolean;
-  unreadCount?: number;
-}
-
-/**
- * Interface for incoming message data
- */
-interface IncomingMessage {
-  id: string;
-  senderId: string;
-  recipientId: string;
-  mediaUrl?: string;
-  mediaType?: 'photo' | 'video';
-  text?: string;
-  timer: number;
-  createdAt: Date;
-  viewed: boolean;
-  senderName?: string;
-}
+import { showAlert, showDestructiveAlert, showSuccessAlert } from '../../utils/alertService';
 
 /**
  * Route parameters interface
@@ -99,6 +72,7 @@ const MessagesScreen: React.FC = () => {
   const { user } = useAuthStore();
   const { tabBarHeight } = useTabBarHeight();
   const route = useRoute();
+  const navigation = useNavigation();
   
   // Get route parameters
   const params = route.params as MessagesScreenParams;
@@ -120,16 +94,14 @@ const MessagesScreen: React.FC = () => {
   }, []);
 
   /**
-   * Handle incoming new messages with better notification
+   * Handle incoming new messages with notification
    */
   const handleNewMessages = useCallback((messages: IncomingMessage[]) => {
     console.log('📨 Received new messages:', messages.length);
     
-    // Filter media messages
     const mediaMessages = messages.filter(msg => msg.mediaUrl && msg.mediaType);
     
     if (mediaMessages.length > 0) {
-      // Add sender names (would need to fetch from user profiles)
       const messagesWithSenderNames = mediaMessages.map(msg => ({
         ...msg,
         senderName: 'Someone' // TODO: Fetch actual sender name
@@ -137,7 +109,6 @@ const MessagesScreen: React.FC = () => {
       
       setIncomingMessages(prev => [...messagesWithSenderNames, ...prev]);
       
-      // Show notification for first media message
       const firstMedia = messagesWithSenderNames[0];
       showAlert(
         `📸 New ${firstMedia.mediaType === 'photo' ? 'Photo' : 'Video'} Snap!`,
@@ -151,57 +122,89 @@ const MessagesScreen: React.FC = () => {
   }, [handleViewMedia]);
 
   /**
-   * Handle conversation updates with better formatting
+   * Handle conversation updates with proper formatting
    */
   const handleConversationUpdates = useCallback(async (updatedConversations: any[]) => {
     if (!user) return;
     
-    // Get all other participants for presence checking
     const otherParticipants = updatedConversations.map(conv => 
       conv.participants.find((p: string) => p !== user.uid)
     ).filter(Boolean);
     
-    // Get presence data for all participants
-    const presenceData = await friendsService.getBatchUserPresence(otherParticipants) as Record<string, {
-      status: 'online' | 'offline' | 'away';
-      lastActive: Date;
-      isOnline: boolean;
-    }>;
+    // Get both presence data and user profile data
+    const [presenceData, userProfiles] = await Promise.all([
+      friendsService.getBatchUserPresence(otherParticipants),
+      Promise.all(otherParticipants.map(async (userId) => {
+        try {
+          const profile = await friendsService.getUserProfile(userId);
+          return { userId, profile };
+        } catch (error) {
+          console.error('Failed to fetch user profile for:', userId, error);
+          return { userId, profile: null };
+        }
+      }))
+    ]);
     
-    const formattedConversations: Conversation[] = updatedConversations.map(conv => {
-      const otherParticipant = conv.participants.find((p: string) => p !== user.uid);
-      const presence = presenceData[otherParticipant] || { status: 'offline', lastActive: new Date(), isOnline: false };
-      
-      return {
-        id: conv.id,
-        name: otherParticipant || 'Unknown User', // TODO: Fetch actual display name from user profiles
-        lastMessage: conv.lastMessage || 'New message', // Use actual last message if available
-        time: formatTime(conv.lastMessageAt?.toDate() || new Date()),
-        isOnline: presence.isOnline,
-        participants: conv.participants,
-        lastMessageAt: conv.lastMessageAt?.toDate() || new Date(),
-        hasUnreadMedia: conv.hasUnreadMedia || false,
-        unreadCount: conv.unreadCount || 0
-      };
+    // Create a map of userId to user profile for easy lookup
+    const profilesMap = new Map();
+    userProfiles.forEach(({ userId, profile }) => {
+      profilesMap.set(userId, profile);
     });
     
-    // Sort by last message time
-    formattedConversations.sort((a, b) => b.lastMessageAt.getTime() - a.lastMessageAt.getTime());
+    // Process conversations and fetch missing message previews
+    const formattedConversations: Conversation[] = await Promise.all(
+      updatedConversations.map(async (conv) => {
+        const otherParticipant = conv.participants.find((p: string) => p !== user.uid);
+        const presence = (presenceData as any)[otherParticipant] || { status: 'offline', lastActive: new Date(), isOnline: false };
+        const userProfile = profilesMap.get(otherParticipant);
+        
+        // Use displayName first, then username, then fallback to 'Unknown User'
+        const displayName = userProfile?.displayName || userProfile?.username || 'Unknown User';
+        
+        // Get proper last message preview
+        let lastMessage = conv.lastMessage;
+        
+        // If no lastMessage or it's the generic "New message", fetch the actual most recent message
+        if (!lastMessage || lastMessage === 'New message') {
+          try {
+            const recentMessage = await messagingService.getMostRecentMessage(user.uid, otherParticipant);
+            if (recentMessage) {
+              lastMessage = messagingService.formatMessagePreview(recentMessage, user.uid);
+            } else {
+              lastMessage = 'Start a conversation';
+            }
+          } catch (error) {
+            console.error('Failed to fetch recent message for conversation:', conv.id, error);
+            lastMessage = 'New conversation';
+          }
+        }
+        
+        return {
+          id: conv.id,
+          name: displayName,
+          lastMessage,
+          time: formatTime(conv.lastMessageAt?.toDate() || new Date()),
+          isOnline: presence.isOnline,
+          participants: conv.participants,
+          lastMessageAt: conv.lastMessageAt?.toDate() || new Date(),
+          hasUnreadMedia: conv.hasUnreadMedia || false,
+          unreadCount: conv.unreadCount || 0
+        };
+      })
+    );
     
+    formattedConversations.sort((a, b) => b.lastMessageAt.getTime() - a.lastMessageAt.getTime());
     setConversations(formattedConversations);
   }, [user]);
 
   /**
-   * Handle message listener errors
+   * Handle errors with proper user feedback
    */
   const handleMessageError = useCallback((error: any) => {
     console.error('Message listener error:', error);
     setError('Connection lost. Pull to refresh to reconnect.');
   }, []);
 
-  /**
-   * Handle conversation listener errors
-   */
   const handleConversationError = useCallback((error: any) => {
     console.error('Conversation listener error:', error);
     setError('Failed to load conversations. Pull to refresh to try again.');
@@ -223,66 +226,6 @@ const MessagesScreen: React.FC = () => {
   }, [user, handleConversationUpdates]);
 
   /**
-   * Handle incoming navigation parameters to start a conversation
-   */
-  const handleNavigationParams = useCallback(async () => {
-    if (!user || !params?.friendId || !params?.openConversation) return;
-    
-    try {
-      console.log('🔄 Starting conversation with friend:', params.friendName);
-      
-      // Get or create conversation ID
-      const conversationId = messagingService.getConversationId(user.uid, params.friendId);
-      
-      // Check if conversation already exists
-      const existingConversations = await messagingService.getRecentConversations(user.uid);
-      const existingConversation = existingConversations.find(conv => conv.id === conversationId);
-      
-      if (!existingConversation) {
-        // Create a new conversation
-        const { getFirebaseDB } = require('../../config/firebase');
-        const db = getFirebaseDB();
-        const { firebase } = require('../../config/firebase');
-        
-        await db.collection('conversations').doc(conversationId).set({
-          participants: [user.uid, params.friendId],
-          lastMessageId: null,
-          lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        
-        console.log('✅ Created new conversation:', conversationId);
-      }
-      
-      // Show success message
-      showSuccessAlert(
-        `Ready to chat with ${params.friendName}!`,
-        'Conversation Ready'
-      );
-      
-      // Refresh conversations to show the updated list
-      await loadConversations();
-      
-    } catch (error) {
-      console.error('❌ Failed to start conversation:', error);
-      showAlert(
-        'Failed to Start Conversation',
-        'Please try again later.',
-        [{ text: 'OK', style: 'default' }]
-      );
-    }
-  }, [user, params, loadConversations]);
-
-  /**
-   * Handle navigation parameters when screen receives new params
-   */
-  useEffect(() => {
-    if (params?.openConversation) {
-      handleNavigationParams();
-    }
-  }, [params, handleNavigationParams]);
-
-  /**
    * Initialize real-time listeners when screen is focused
    */
   useFocusEffect(
@@ -294,26 +237,12 @@ const MessagesScreen: React.FC = () => {
           setIsLoading(true);
           setError(null);
           
-          // Start presence management
           await realtimeService.startPresence(user.uid);
           
-          // Listen for new messages
-          realtimeService.listenForMessages(
-            user.uid,
-            handleNewMessages,
-            handleMessageError
-          );
+          realtimeService.listenForMessages(user.uid, handleNewMessages, handleMessageError);
+          realtimeService.listenForConversations(user.uid, handleConversationUpdates, handleConversationError);
           
-          // Listen for conversation updates
-          realtimeService.listenForConversations(
-            user.uid,
-            handleConversationUpdates,
-            handleConversationError
-          );
-          
-          // Load initial conversations
           await loadConversations();
-          
         } catch (error) {
           console.error('Initialize listeners failed:', error);
           setError('Failed to connect to messaging service. Please try again.');
@@ -324,7 +253,6 @@ const MessagesScreen: React.FC = () => {
 
       initializeListeners();
 
-      // Cleanup on screen blur
       return () => {
         realtimeService.cleanup();
       };
@@ -341,17 +269,13 @@ const MessagesScreen: React.FC = () => {
       setIsRefreshing(true);
       setError(null);
       
-      // Restart real-time services
       await realtimeService.cleanup();
       await realtimeService.startPresence(user.uid);
       
-      // Restart listeners
       realtimeService.listenForMessages(user.uid, handleNewMessages, handleMessageError);
       realtimeService.listenForConversations(user.uid, handleConversationUpdates, handleConversationError);
       
-      // Reload conversations
       await loadConversations();
-      
     } catch (error) {
       console.error('Refresh failed:', error);
       setError('Failed to refresh. Please try again.');
@@ -361,7 +285,7 @@ const MessagesScreen: React.FC = () => {
   }, [user, handleNewMessages, handleMessageError, handleConversationUpdates, handleConversationError, loadConversations]);
 
   /**
-   * Handle media view completion
+   * Handle media events
    */
   const handleMediaViewed = useCallback((messageId: string) => {
     if (user) {
@@ -369,30 +293,13 @@ const MessagesScreen: React.FC = () => {
     }
   }, [user]);
 
-  /**
-   * Handle media expiration
-   */
   const handleMediaExpired = useCallback((messageId: string) => {
-    // Remove from incoming messages
     setIncomingMessages(prev => prev.filter(msg => msg.id !== messageId));
-    
-    // Close viewer if this message is currently being viewed
     if (selectedMedia?.id === messageId) {
       setSelectedMedia(null);
     }
   }, [selectedMedia]);
 
-  /**
-   * Handle screenshot detection
-   */
-  const handleScreenshot = useCallback((messageId: string) => {
-    // Screenshot was reported, could show additional feedback here
-    console.log('📷 Screenshot detected for message:', messageId);
-  }, []);
-
-  /**
-   * Close media viewer
-   */
   const closeMediaViewer = useCallback(() => {
     setSelectedMedia(null);
   }, []);
@@ -418,48 +325,45 @@ const MessagesScreen: React.FC = () => {
   };
 
   /**
-   * Handle conversation press
+   * Handle conversation interactions
    */
   const handleConversationPress = useCallback((conversation: Conversation) => {
-    // TODO: Navigate to conversation detail or show conversation history
-    showConfirmAlert(
-      'Conversation',
-      `Open conversation with ${conversation.name}?`,
-      () => {
-        // TODO: Implement conversation detail view
-        showAlert('Coming Soon', 'Conversation details will be implemented next!');
-      }
-    );
-  }, []);
+    // Navigate to chat screen with conversation details
+    (navigation as any).navigate('Chat', {
+      conversationId: conversation.id,
+      friendId: conversation.participants.find(p => p !== user?.uid) || '',
+      friendName: conversation.name
+    });
+  }, [navigation, user]);
 
-  /**
-   * Handle new conversation - now opens friend selector
-   */
   const handleNewConversation = useCallback(() => {
     setShowFriendSelector(true);
   }, []);
 
-  /**
-   * Handle friend selection for new conversation
-   */
   const handleFriendSelected = useCallback(async (friendId: string, friendData: any) => {
     if (!user) return;
     
     try {
-      // Get or create conversation ID using messaging service method
       const conversationId = messagingService.getConversationId(user.uid, friendId);
-      
-      // Check if conversation already exists
       const existingConversations = await messagingService.getRecentConversations(user.uid);
       const existingConversation = existingConversations.find(conv => conv.id === conversationId);
       
+      // Get the friend's display name for messaging
+      const friendDisplayName = friendData.displayName || friendData.username || 'Unknown User';
+      
       if (existingConversation) {
         showSuccessAlert(
-          `Conversation with ${friendData.displayName} is ready!`,
+          `Conversation with ${friendDisplayName} is ready!`,
           'Conversation Found'
         );
+        
+        // Navigate to the existing conversation
+        (navigation as any).navigate('Chat', {
+          conversationId: conversationId,
+          friendId: friendId,
+          friendName: friendDisplayName
+        });
       } else {
-        // Create a new conversation by adding it to the conversations collection
         const { getFirebaseDB } = require('../../config/firebase');
         const db = getFirebaseDB();
         const { firebase } = require('../../config/firebase');
@@ -472,37 +376,29 @@ const MessagesScreen: React.FC = () => {
         });
         
         showSuccessAlert(
-          `Started conversation with ${friendData.displayName}!`,
+          `Started conversation with ${friendDisplayName}!`,
           'Conversation Created'
         );
+        
+        // Navigate to the new conversation
+        (navigation as any).navigate('Chat', {
+          conversationId: conversationId,
+          friendId: friendId,
+          friendName: friendDisplayName
+        });
       }
       
-      // TODO: Navigate to conversation detail screen
-      console.log('Navigate to conversation:', conversationId);
-      
-      // Refresh conversations to show the new one
       await loadConversations();
-      
     } catch (error) {
       console.error('Create conversation failed:', error);
-      showAlert(
-        'Failed to Start Conversation',
-        'Please try again later.',
-        [{ text: 'OK', style: 'default' }]
-      );
+      showAlert('Failed to Start Conversation', 'Please try again later.');
     }
-  }, [user, loadConversations]);
+  }, [user, loadConversations, navigation]);
 
-  /**
-   * Close friend selector
-   */
   const closeFriendSelector = useCallback(() => {
     setShowFriendSelector(false);
   }, []);
 
-  /**
-   * Clear all unread messages
-   */
   const handleClearUnread = useCallback(async () => {
     if (incomingMessages.length === 0) return;
     
@@ -517,179 +413,159 @@ const MessagesScreen: React.FC = () => {
     );
   }, [incomingMessages.length]);
 
+  /**
+   * Render conversation item
+   */
+  const renderConversationItem = ({ item }: { item: Conversation }) => (
+    <ConversationItem
+      conversation={item}
+      onPress={handleConversationPress}
+    />
+  );
+
+  /**
+   * Render empty state
+   */
+  const renderEmptyState = () => (
+    <View className="flex-1 justify-center items-center px-8 py-16">
+      <Ionicons name="chatbubbles-outline" size={64} color="rgba(0, 255, 255, 0.3)" />
+      <Text className="text-white/70 font-orbitron text-xl mt-6 mb-2 text-center">
+        No Conversations Yet
+      </Text>
+      <Text className="text-white/50 font-inter text-base text-center mb-8">
+        Start messaging with friends to see your conversations here
+      </Text>
+      <TouchableOpacity
+        onPress={handleNewConversation}
+        className="bg-cyber-cyan px-8 py-4 rounded-xl flex-row items-center"
+        style={{
+          shadowColor: accentColor,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+          elevation: 8,
+        }}
+      >
+        <Ionicons name="add" size={20} color="#000000" style={{ marginRight: 8 }} />
+        <Text className="text-cyber-black font-inter font-bold text-base">
+          Start Messaging
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  /**
+   * Render loading state
+   */
+  const renderLoadingState = () => (
+    <View className="flex-1 justify-center items-center">
+      <ActivityIndicator size="large" color={accentColor} />
+      <Text className="text-white/60 font-inter text-base mt-4">
+        Loading conversations...
+      </Text>
+    </View>
+  );
+
+  /**
+   * Render error state
+   */
+  const renderErrorState = () => (
+    <View className="flex-1 justify-center items-center px-8">
+      <Ionicons name="warning-outline" size={64} color="#ff0040" />
+      <Text className="text-white/70 font-orbitron text-xl mt-6 mb-2 text-center">
+        Connection Error
+      </Text>
+      <Text className="text-white/50 font-inter text-base text-center mb-8">
+        {error}
+      </Text>
+      <TouchableOpacity
+        onPress={handleRefresh}
+        className="bg-cyber-cyan/20 border border-cyber-cyan/30 px-6 py-3 rounded-lg"
+      >
+        <Text className="text-cyber-cyan font-inter font-semibold">
+          Try Again
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <>
       <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background.primary }}>
         <StatusBar barStyle="light-content" backgroundColor={theme.colors.background.primary} />
         
         {/* Header */}
-        <View className="flex-row justify-between items-center px-6 py-4 border-b border-cyber-gray">
-          <Text className="text-white font-orbitron text-xl">Messages</Text>
+        <View className="flex-row justify-between items-center px-6 py-4 border-b border-cyber-gray/10">
+          <Text className="text-white font-orbitron text-2xl">
+            Messages
+          </Text>
+          
           <View className="flex-row items-center">
-            {/* Unread media indicator */}
             {incomingMessages.length > 0 && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={handleClearUnread}
-                className="bg-red-500 px-3 py-1 rounded-full mr-3"
+                className="mr-4 p-2"
               >
-                <Text className="text-white font-inter text-xs font-bold">
-                  {incomingMessages.length} unread
-                </Text>
+                <Ionicons name="checkmark-done" size={20} color={accentColor} />
               </TouchableOpacity>
             )}
-            <TouchableOpacity onPress={handleNewConversation} className="p-2">
-              <Ionicons name="add-circle-outline" size={24} color={accentColor} />
+            
+            <TouchableOpacity
+              onPress={handleNewConversation}
+              className="bg-cyber-cyan/10 border border-cyber-cyan/20 p-3 rounded-full"
+            >
+              <Ionicons name="add" size={20} color={accentColor} />
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Error banner */}
-        {error && (
-          <View className="bg-red-500/20 border-b border-red-500/30 px-6 py-3">
-            <Text className="text-red-400 font-inter text-sm text-center">{error}</Text>
-          </View>
+        {/* Content */}
+        {isLoading ? (
+          renderLoadingState()
+        ) : error ? (
+          renderErrorState()
+        ) : (
+          <FlatList
+            data={conversations}
+            renderItem={renderConversationItem}
+            keyExtractor={item => item.id}
+            ListHeaderComponent={
+              <IncomingMessagesHeader
+                messages={incomingMessages}
+                onViewMessage={handleViewMedia}
+              />
+            }
+            ListEmptyComponent={renderEmptyState}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={handleRefresh}
+                tintColor={accentColor}
+                colors={[accentColor]}
+              />
+            }
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ 
+              paddingBottom: tabBarHeight + 16,
+              flexGrow: conversations.length === 0 ? 1 : 0
+            }}
+          />
         )}
-
-        {/* Unread Snaps Section */}
-        {incomingMessages.length > 0 && (
-          <View className="px-6 py-4 border-b border-cyber-gray/30 bg-cyber-dark/30">
-            <View className="flex-row justify-between items-center mb-3">
-              <Text className="text-cyber-cyan font-inter font-medium text-sm">
-                📸 Unread Snaps ({incomingMessages.length})
-              </Text>
-              <TouchableOpacity onPress={handleClearUnread}>
-                <Text className="text-cyber-cyan/60 font-inter text-xs">Clear All</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {incomingMessages.map((message) => (
-                <TouchableOpacity
-                  key={message.id}
-                  onPress={() => handleViewMedia(message)}
-                  className="w-16 h-16 bg-cyber-cyan/20 rounded-full justify-center items-center mr-3 border-2 border-cyber-cyan relative"
-                >
-                  <Ionicons 
-                    name={message.mediaType === 'photo' ? 'image' : 'videocam'} 
-                    size={20} 
-                    color={accentColor} 
-                  />
-                  {/* Timer indicator */}
-                  <View className="absolute -top-1 -right-1 bg-white rounded-full px-1">
-                    <Text className="text-cyber-black font-mono text-xs font-bold">
-                      {message.timer}s
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-        
-        {/* Conversations List */}
-        <ScrollView 
-          className="flex-1" 
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: tabBarHeight + 20 }}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={handleRefresh}
-              tintColor={accentColor}
-              colors={[accentColor]}
-            />
-          }
-        >
-          {isLoading ? (
-            <View className="flex-1 justify-center items-center py-20">
-              <Text className="text-white/70 font-inter text-lg">Loading conversations...</Text>
-            </View>
-          ) : conversations.length > 0 ? (
-            conversations.map((conversation) => (
-              <TouchableOpacity
-                key={conversation.id}
-                onPress={() => handleConversationPress(conversation)}
-                className="flex-row items-center px-6 py-4 border-b border-cyber-gray/20 active:bg-cyber-gray/10"
-              >
-                {/* Avatar */}
-                <View className="w-12 h-12 bg-cyber-cyan/20 rounded-full justify-center items-center mr-4 relative">
-                  <Text className="text-cyber-cyan font-inter font-semibold text-sm">
-                    {conversation.name.charAt(0).toUpperCase()}
-                  </Text>
-                  {conversation.isOnline && (
-                    <View className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-cyber-black" />
-                  )}
-                  {conversation.hasUnreadMedia && (
-                    <View className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-cyber-black" />
-                  )}
-                </View>
-                
-                {/* Conversation Info */}
-                <View className="flex-1">
-                  <View className="flex-row justify-between items-center">
-                    <Text className="text-white font-inter font-medium text-base">
-                      {conversation.name}
-                    </Text>
-                    <Text className="text-cyber-cyan font-inter text-xs">
-                      {conversation.time}
-                    </Text>
-                  </View>
-                  <View className="flex-row justify-between items-center mt-1">
-                    <Text className="text-white/70 font-inter text-sm flex-1">
-                      {conversation.lastMessage}
-                    </Text>
-                    {conversation.unreadCount && conversation.unreadCount > 0 && (
-                      <View className="bg-cyber-cyan rounded-full px-2 py-1 ml-2">
-                        <Text className="text-cyber-black font-inter text-xs font-bold">
-                          {conversation.unreadCount}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))
-          ) : (
-            /* Empty State */
-            <View className="flex-1 justify-center items-center py-20">
-              <Ionicons name="chatbubbles-outline" size={64} color={theme.colors.text.tertiary} />
-              <Text className="text-white/70 font-inter text-lg mt-4">
-                Start Sharing Snaps
-              </Text>
-              <Text className="text-white/50 font-inter text-sm mt-2 text-center px-8">
-                Capture and share moments with friends using the camera
-              </Text>
-              <TouchableOpacity
-                onPress={handleNewConversation}
-                className="bg-cyber-cyan/20 px-6 py-3 rounded-lg mt-6"
-              >
-                <Text className="text-cyber-cyan font-inter font-semibold">
-                  Start Messaging
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </ScrollView>
       </SafeAreaView>
 
       {/* Media Viewer Modal */}
       {selectedMedia && (
-        <Modal
-          visible={!!selectedMedia}
-          animationType="fade"
-          presentationStyle="fullScreen"
-          onRequestClose={closeMediaViewer}
-        >
+        <Modal visible={true} animationType="fade" presentationStyle="fullScreen">
           <MediaViewer
             messageId={selectedMedia.id}
-            mediaUrl={selectedMedia.mediaUrl!}
-            mediaType={selectedMedia.mediaType!}
+            mediaUrl={selectedMedia.mediaUrl || ''}
+            mediaType={selectedMedia.mediaType || 'photo'}
             timer={selectedMedia.timer}
             senderId={selectedMedia.senderId}
-            senderName={selectedMedia.senderName || 'Someone'}
+            senderName={selectedMedia.senderName}
             onView={handleMediaViewed}
             onExpire={handleMediaExpired}
             onClose={closeMediaViewer}
-            onScreenshot={handleScreenshot}
           />
         </Modal>
       )}

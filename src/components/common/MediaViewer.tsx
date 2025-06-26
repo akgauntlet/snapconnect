@@ -305,12 +305,12 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
       
       {/* Top Controls */}
       <View className="flex-row justify-between items-center px-6 py-4 absolute top-0 left-0 right-0 z-20">
-        <View className="flex-row items-center">
+        <View className="flex-row items-center flex-1">
           <TouchableOpacity onPress={handleClose} className="p-2 mr-3">
             <Ionicons name="close" size={24} color="white" />
           </TouchableOpacity>
           
-          <View>
+          <View className="flex-1">
             <Text className="text-white font-inter font-medium text-base">
               {senderName || 'Someone'}
             </Text>
@@ -322,8 +322,8 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
 
         {/* Timer display */}
         {isViewing && (
-          <View className="bg-white/20 px-3 py-1 rounded-full">
-            <Text className="text-white font-mono font-bold text-sm">
+          <View className="bg-white/20 px-3 py-1 rounded-full justify-center items-center">
+            <Text className="text-white font-mono font-bold text-sm text-center">
               {timeRemaining}
             </Text>
           </View>
@@ -353,38 +353,41 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
         onPress={startViewing}
         disabled={isViewing || hasViewed}
         onLongPress={handleScreenshotDetected}
+        className="justify-center items-center"
       >
-        <View className="flex-1 justify-center items-center bg-black">
+        <View className="flex-1 justify-center items-center bg-black w-full">
           {!hasViewed ? (
             // Tap to view state
             <Animated.View 
-              className="items-center"
+              className="items-center justify-center flex-1 w-full"
               style={{
                 transform: [{ scale: scaleAnimation }]
               }}
             >
-              <View className="w-24 h-24 border-2 border-white/30 rounded-full justify-center items-center mb-6">
-                <Ionicons 
-                  name={mediaType === 'photo' ? 'image' : 'videocam'} 
-                  size={32} 
-                  color="white" 
-                />
+              <View className="items-center justify-center">
+                <View className="w-24 h-24 border-2 border-white/30 rounded-full justify-center items-center mb-6">
+                  <Ionicons 
+                    name={mediaType === 'photo' ? 'image' : 'videocam'} 
+                    size={32} 
+                    color="white" 
+                  />
+                </View>
+                <Text className="text-white font-inter text-xl mb-2 text-center">
+                  Tap to view
+                </Text>
+                <Text className="text-white/60 font-inter text-base text-center px-8">
+                  {mediaType === 'photo' ? 'Photo' : 'Video'} • {timer}s
+                </Text>
+                <Text className="text-white/40 font-inter text-sm text-center px-8 mt-2">
+                  From {senderName || 'Someone'}
+                </Text>
               </View>
-              <Text className="text-white font-inter text-xl mb-2">
-                Tap to view
-              </Text>
-              <Text className="text-white/60 font-inter text-base text-center px-8">
-                {mediaType === 'photo' ? 'Photo' : 'Video'} • {timer}s
-              </Text>
-              <Text className="text-white/40 font-inter text-sm text-center px-8 mt-2">
-                From {senderName || 'Someone'}
-              </Text>
             </Animated.View>
           ) : loadError ? (
             // Error state
-            <View className="items-center">
+            <View className="items-center justify-center">
               <Ionicons name="warning" size={64} color="#ef4444" />
-              <Text className="text-white font-inter text-xl mt-6 mb-2">
+              <Text className="text-white font-inter text-xl mt-6 mb-2 text-center">
                 Failed to load media
               </Text>
               <Text className="text-white/60 font-inter text-base text-center px-8">
@@ -394,53 +397,57 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
                 onPress={handleClose}
                 className="mt-6 bg-white/20 px-6 py-3 rounded-lg"
               >
-                <Text className="text-white font-inter font-semibold">
+                <Text className="text-white font-inter font-semibold text-center">
                   Close
                 </Text>
               </TouchableOpacity>
             </View>
           ) : (
-            // Media display
+            // Media display - Centered container
             <Animated.View
+              className="flex-1 justify-center items-center"
               style={{
-                flex: 1,
                 width: '100%',
                 opacity: fadeAnimation,
                 transform: [{ scale: scaleAnimation }]
               }}
             >
               {mediaType === 'photo' ? (
-                <Image
-                  source={{ uri: mediaUrl }}
-                  style={{
-                    width: screenWidth,
-                    height: screenHeight,
-                  }}
-                  contentFit="contain"
-                  onLoad={handleImageLoad}
-                  onError={handleImageError}
-                  placeholder={null}
-                  transition={200}
-                />
+                <View className="justify-center items-center" style={{ width: screenWidth, height: screenHeight }}>
+                  <Image
+                    source={{ uri: mediaUrl }}
+                    style={{
+                      width: screenWidth,
+                      height: screenHeight,
+                    }}
+                    contentFit="contain"
+                    onLoad={handleImageLoad}
+                    onError={handleImageError}
+                    placeholder={null}
+                    transition={200}
+                  />
+                </View>
               ) : (
-                <Video
-                  ref={videoRef}
-                  source={{ uri: mediaUrl }}
-                  style={{
-                    width: screenWidth,
-                    height: screenHeight,
-                  }}
-                  resizeMode={ResizeMode.CONTAIN}
-                  shouldPlay={false}
-                  isLooping={false}
-                  onPlaybackStatusUpdate={handleVideoLoad}
-                  onError={handleImageError}
-                />
+                <View className="justify-center items-center" style={{ width: screenWidth, height: screenHeight }}>
+                  <Video
+                    ref={videoRef}
+                    source={{ uri: mediaUrl }}
+                    style={{
+                      width: screenWidth,
+                      height: screenHeight,
+                    }}
+                    resizeMode={ResizeMode.CONTAIN}
+                    shouldPlay={false}
+                    isLooping={false}
+                    onPlaybackStatusUpdate={handleVideoLoad}
+                    onError={handleImageError}
+                  />
+                </View>
               )}
               
               {isLoading && (
                 <View className="absolute inset-0 justify-center items-center bg-black/50">
-                  <Text className="text-white font-inter text-lg">Loading...</Text>
+                  <Text className="text-white font-inter text-lg text-center">Loading...</Text>
                 </View>
               )}
             </Animated.View>
@@ -451,12 +458,12 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
       {/* Bottom hint */}
       {isViewing && (
         <View 
-          className="absolute left-0 right-0 items-center z-20"
+          className="absolute left-0 right-0 items-center justify-center z-20"
           style={{
             bottom: tabBarHeight + 8,
           }}
         >
-          <Text className="text-white/60 font-inter text-sm">
+          <Text className="text-white/60 font-inter text-sm text-center">
             Hold to report • Tap elsewhere to close
           </Text>
         </View>
