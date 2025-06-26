@@ -403,15 +403,31 @@ const FriendsListScreen: React.FC = () => {
           <Text className="text-white font-orbitron text-xl">Friends</Text>
         </View>
         
-        <TouchableOpacity onPress={handleFriendRequests} className="p-2">
+        <TouchableOpacity onPress={handleFriendRequests} className="flex-row items-center bg-cyber-gray/20 px-3 py-2 rounded-lg">
           <NotificationBadge count={incomingCount}>
-            <Ionicons name="mail-outline" size={24} color={accentColor} />
+            <Ionicons name="person-add-outline" size={20} color={accentColor} />
           </NotificationBadge>
+          <Text className="text-white font-inter font-medium text-sm ml-2">
+            Requests
+          </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Search Bar */}
+      {/* Filter Tabs */}
       <View className="px-6 py-4">
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {renderFilterTab('all', 'All', friends.length)}
+          {renderFilterTab('online', 'Online', friends.filter(f => f.status === 'online').length)}
+          {renderFilterTab('recent', 'Recent', friends.filter(f => {
+            if (!f.lastActive) return false;
+            const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            return f.lastActive > dayAgo;
+          }).length)}
+        </ScrollView>
+      </View>
+
+      {/* Search Bar */}
+      <View className="px-6 pb-4">
         <View className="flex-row items-center bg-cyber-gray/20 rounded-lg px-4 py-3">
           <Ionicons name="search" size={20} color="white/50" />
           <TextInput
@@ -431,21 +447,41 @@ const FriendsListScreen: React.FC = () => {
         </View>
       </View>
 
-      {/* Filter Tabs */}
-      <View className="px-6 pb-4">
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {renderFilterTab('all', 'All', friends.length)}
-          {renderFilterTab('online', 'Online', friends.filter(f => f.status === 'online').length)}
-          {renderFilterTab('recent', 'Recent', friends.filter(f => {
-            if (!f.lastActive) return false;
-            const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-            return f.lastActive > dayAgo;
-          }).length)}
-        </ScrollView>
-      </View>
+      {/* No Friends State - moved up for better visibility */}
+      {!isLoading && !error && filteredFriends.length === 0 && (
+        <View className="flex-1 justify-start items-center px-8 pt-16">
+          <Ionicons name="people-outline" size={64} color="rgba(255,255,255,0.3)" />
+          <Text className="text-white/70 font-inter text-lg mt-4 mb-2">
+            {searchQuery ? 'No friends found' : 'No friends yet'}
+          </Text>
+          <Text className="text-white/50 font-inter text-sm text-center mb-8">
+            {searchQuery 
+              ? 'Try a different search term' 
+              : 'Start building your gaming network by adding friends'}
+          </Text>
+          {!searchQuery && (
+            <TouchableOpacity
+              onPress={handleAddFriends}
+              className="bg-cyber-cyan px-8 py-4 rounded-xl flex-row items-center"
+              style={{
+                shadowColor: accentColor,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 8,
+              }}
+            >
+              <Ionicons name="person-add" size={20} color="#000000" style={{ marginRight: 8 }} />
+              <Text className="text-cyber-black font-inter font-bold text-base">
+                Find Friends
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
       {/* Add Friends Banner - shown when user has few friends */}
-      {!isLoading && friends.length > 0 && friends.length <= 3 && (
+      {!isLoading && friends.length > 0 && friends.length <= 3 && filteredFriends.length > 0 && (
         <View className="mx-6 mb-4 p-4 bg-gradient-to-r from-cyber-cyan/10 to-cyber-purple/10 rounded-lg border border-cyber-cyan/20">
           <View className="flex-row items-center">
             <View className="w-10 h-10 bg-cyber-cyan/20 rounded-full justify-center items-center mr-3">
@@ -510,48 +546,7 @@ const FriendsListScreen: React.FC = () => {
             />
           }
         />
-      ) : (
-        <View className="flex-1 justify-center items-center px-8">
-          <Ionicons name="people-outline" size={64} color="rgba(255,255,255,0.3)" />
-          <Text className="text-white/70 font-inter text-lg mt-4 mb-2">
-            {searchQuery ? 'No friends found' : 'No friends yet'}
-          </Text>
-          <Text className="text-white/50 font-inter text-sm text-center mb-8">
-            {searchQuery 
-              ? 'Try a different search term' 
-              : 'Start building your gaming network by adding friends'}
-          </Text>
-          {!searchQuery && (
-            <>
-              <TouchableOpacity
-                onPress={handleAddFriends}
-                className="bg-cyber-cyan px-8 py-4 rounded-xl flex-row items-center mb-4"
-                style={{
-                  shadowColor: accentColor,
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 8,
-                  elevation: 8,
-                }}
-              >
-                <Ionicons name="person-add" size={20} color="#000000" style={{ marginRight: 8 }} />
-                <Text className="text-cyber-black font-inter font-bold text-base">
-                  Find Friends
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleFriendRequests}
-                className="bg-cyber-gray/20 px-6 py-3 rounded-lg flex-row items-center"
-              >
-                <Ionicons name="mail-outline" size={16} color={accentColor} style={{ marginRight: 6 }} />
-                <Text className="text-cyber-cyan font-inter font-medium text-sm">
-                  Friend Requests
-                </Text>
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
-      )}
+      ) : null}
 
       {/* Floating Action Button - Find & Add New Friends */}
       <TouchableOpacity

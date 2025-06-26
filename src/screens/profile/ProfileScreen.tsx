@@ -52,10 +52,20 @@ const ProfileScreen: React.FC = () => {
   // Auth store
   const { signOut, isLoading, user, profile } = useAuthStore();
   
+  // Debug logging for profile data
+  React.useEffect(() => {
+    console.log('🔄 ProfileScreen - Re-render triggered');
+    console.log('👤 ProfileScreen - Current user:', user?.uid);
+    console.log('📄 ProfileScreen - Current profile:', profile);
+    console.log('🏷️ ProfileScreen - Profile username:', profile?.username);
+    console.log('📝 ProfileScreen - Display name:', profile?.displayName);
+    console.log('💬 ProfileScreen - Bio:', profile?.bio);
+  }, [user, profile]);
+  
   // Use actual user data if available, otherwise fallback to mock data
   const userData = {
-    name: profile?.displayName || user?.displayName || 'Gaming Pro',
-    username: profile?.username || '@gamingpro2024',
+    name: profile?.displayName || user?.displayName || (isLoading ? 'Loading...' : 'Gaming Pro'),
+    username: profile?.username ? `@${profile.username}` : (isLoading ? '@loading...' : '@gamingpro2024'),
     bio: profile?.bio || 'Competitive gamer • Content creator • Clan leader',
     stats: {
       victories: profile?.stats?.victories || 247,
@@ -124,7 +134,10 @@ const ProfileScreen: React.FC = () => {
       {/* Header */}
       <View className="flex-row justify-between items-center px-6 py-4 border-b border-cyber-gray">
         <Text className="text-white font-orbitron text-xl">Profile</Text>
-        <TouchableOpacity className="p-2">
+        <TouchableOpacity 
+          className="p-2" 
+          onPress={() => navigation.navigate('EditProfile')}
+        >
           <Ionicons name="create-outline" size={24} color={accentColor} />
         </TouchableOpacity>
       </View>
@@ -144,7 +157,7 @@ const ProfileScreen: React.FC = () => {
           <Text className="text-cyber-cyan font-inter text-sm mb-3">
             {userData.username}
           </Text>
-          <Text className="text-white/70 font-inter text-sm text-center">
+          <Text className="text-white/70 font-inter text-sm text-center" numberOfLines={1}>
             {userData.bio}
           </Text>
         </View>

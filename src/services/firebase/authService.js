@@ -293,11 +293,7 @@ class AuthService {
       const db = this.getDB();
       const { firebase } = require('../../config/firebase');
       
-      // Reserve username if provided
-      if (profileData.username) {
-        await this.reserveUsername(uid, profileData.username);
-        console.log('✅ Username reserved:', profileData.username);
-      }
+      console.log('🔄 Creating user profile for:', uid, 'with data:', profileData);
       
       const profile = {
         uid,
@@ -318,12 +314,20 @@ class AuthService {
         }
       };
       
+      // Create user document first
       const userRef = db.collection('users').doc(uid);
       await userRef.set(profile);
+      console.log('✅ User document created successfully');
+      
+      // Reserve username if provided (now that user document exists)
+      if (profileData.username) {
+        await this.reserveUsernameOnly(uid, profileData.username);
+        console.log('✅ Username reserved:', profileData.username);
+      }
       
       return profile;
     } catch (error) {
-      console.error('Create user profile failed:', error);
+      console.error('❌ Create user profile failed:', error);
       throw error;
     }
   }
@@ -338,6 +342,22 @@ class AuthService {
       const db = this.getDB();
       const userRef = db.collection('users').doc(uid);
       const snapshot = await userRef.get();
+      
+      if (!snapshot.exists) {
+        console.warn('⚠️ User profile not found for UID:', uid);
+        console.log('🔄 Attempting to recover missing profile...');
+        
+        // Try to recover missing profile by checking for reserved username
+        const recoveredProfile = await this.recoverMissingProfile(uid);
+        if (recoveredProfile) {
+          console.log('✅ Profile recovered successfully');
+          return recoveredProfile;
+        }
+        
+        console.warn('⚠️ Could not recover profile, returning null');
+        return null;
+      }
+      
       return snapshot.data();
     } catch (error) {
       console.error('Get user profile failed:', error);
@@ -346,7 +366,68 @@ class AuthService {
   }
 
   /**
-   * Update user profile
+   * Attempt to recover a missing user profile by checking for reserved username
+   * @param {string} uid - User ID
+   * @returns {Promise<Object|null>} Recovered profile or null
+   */
+  async recoverMissingProfile(uid) {
+    try {
+      const db = this.getDB();
+      const { firebase } = require('../../config/firebase');
+      
+      // Search for username reserved by this user
+      const usernamesQuery = db.collection('usernames').where('uid', '==', uid);
+      const usernameSnapshot = await usernamesQuery.get();
+      
+      let username = null;
+      if (!usernameSnapshot.empty) {
+        username = usernameSnapshot.docs[0].id;
+        console.log('🔍 Found reserved username:', username);
+      }
+      
+      // Get current Firebase Auth user to recover basic info
+      const auth = this.getAuth();
+      const currentUser = auth.currentUser;
+      
+      if (currentUser && currentUser.uid === uid) {
+        console.log('🔄 Recovering profile from Firebase Auth user...');
+        
+        const recoveredProfile = {
+          uid,
+          username,
+          displayName: currentUser.displayName || null,
+          email: currentUser.email || null,
+          phoneNumber: currentUser.phoneNumber || null,
+          profilePhoto: currentUser.photoURL || null,
+          authMethod: currentUser.email ? 'email' : 'phone',
+          gamingPlatform: null,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          lastActive: firebase.firestore.FieldValue.serverTimestamp(),
+          status: 'active',
+          preferences: {
+            theme: 'cyber',
+            notifications: true,
+            privacy: 'friends'
+          }
+        };
+        
+        // Create the missing profile document
+        const userRef = db.collection('users').doc(uid);
+        await userRef.set(recoveredProfile);
+        console.log('✅ Missing profile document created');
+        
+        return recoveredProfile;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('❌ Profile recovery failed:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Update user profile with improved error handling
    * @param {string} uid - User ID
    * @param {Object} updates - Profile updates
    * @returns {Promise<Object>} Updated profile
@@ -356,18 +437,116 @@ class AuthService {
       const db = this.getDB();
       const { firebase } = require('../../config/firebase');
       
+      console.log('🔄 AuthService: Updating user profile for:', uid, 'with updates:', updates);
+      
+      // Handle username changes with improved error handling
+      if (updates.username) {
+        console.log('🔄 AuthService: Processing username change...');
+        
+        try {
+          const currentProfile = await this.getUserProfile(uid);
+          const currentUsername = currentProfile?.username;
+          
+          // If username is changing, update username reservation
+          if (currentUsername !== updates.username) {
+            console.log('🔄 AuthService: Username changing from:', currentUsername, 'to:', updates.username);
+            
+            // Check if new username is available before making any changes
+            const isAvailable = await this.isUsernameAvailable(updates.username);
+            if (!isAvailable) {
+              throw new Error('Username is already taken');
+            }
+            
+            // Remove old username reservation if it exists
+            if (currentUsername) {
+              try {
+                const oldUsernameRef = db.collection('usernames').doc(currentUsername.toLowerCase());
+                await oldUsernameRef.delete();
+                console.log('✅ AuthService: Old username reservation removed:', currentUsername);
+              } catch (error) {
+                console.warn('⚠️ AuthService: Failed to remove old username reservation (non-critical):', error);
+                // Don't throw here - this is not critical to the update process
+              }
+            }
+            
+            // Reserve new username
+            try {
+              await this.reserveUsernameOnly(uid, updates.username);
+              console.log('✅ AuthService: New username reserved:', updates.username);
+            } catch (error) {
+              console.error('❌ AuthService: Failed to reserve new username:', error);
+              
+              // If username reservation fails, try to restore old username if it existed
+              if (currentUsername) {
+                try {
+                  await this.reserveUsernameOnly(uid, currentUsername);
+                  console.log('🔄 AuthService: Restored old username reservation');
+                } catch (restoreError) {
+                  console.error('❌ AuthService: Failed to restore old username:', restoreError);
+                }
+              }
+              
+              throw new Error('Username reservation failed. The username might already be taken.');
+            }
+          } else {
+            console.log('✅ AuthService: Username unchanged, skipping reservation');
+          }
+        } catch (error) {
+          console.error('❌ AuthService: Username processing failed:', error);
+          throw error; // Re-throw to stop the update process
+        }
+      }
+      
+      // Update the user document
+      console.log('🔄 AuthService: Updating user document...');
+      
       const updateData = {
         ...updates,
         lastActive: firebase.firestore.FieldValue.serverTimestamp()
       };
       
-      const userRef = db.collection('users').doc(uid);
-      await userRef.update(updateData);
+      try {
+        const userRef = db.collection('users').doc(uid);
+        await userRef.update(updateData);
+        console.log('✅ AuthService: User profile document updated');
+      } catch (error) {
+        console.error('❌ AuthService: Failed to update user document:', error);
+        throw new Error('Failed to update profile in database');
+      }
       
-      return await this.getUserProfile(uid);
+      // Get the updated profile
+      console.log('🔄 AuthService: Fetching updated profile...');
+      
+      try {
+        const updatedProfile = await this.getUserProfile(uid);
+        console.log('✅ AuthService: Profile update completed successfully');
+        
+        return updatedProfile;
+      } catch (error) {
+        console.error('❌ AuthService: Failed to fetch updated profile:', error);
+        // Even if we can't fetch the updated profile, the update succeeded
+        // Return the original profile with our updates applied
+        console.log('⚠️ AuthService: Returning constructed profile due to fetch error');
+        return {
+          uid,
+          ...updates,
+          lastActive: new Date()
+        };
+      }
+      
     } catch (error) {
-      console.error('Update user profile failed:', error);
-      throw error;
+      console.error('❌ AuthService: Update user profile failed:', error);
+      
+      // Provide more specific error messages
+      if (error.message === 'Username is already taken') {
+        throw new Error('Username is already taken. Please choose a different username.');
+      } else if (error.message.includes('Username reservation failed')) {
+        throw new Error('Unable to reserve username. Please try again.');
+      } else if (error.message.includes('Failed to update profile in database')) {
+        throw new Error('Failed to save profile changes. Please check your internet connection and try again.');
+      } else {
+        throw new Error(`Profile update failed: ${error.message}`);
+      }
     }
   }
 
@@ -405,6 +584,24 @@ class AuthService {
       await userRef.update({ username });
     } catch (error) {
       console.error('Username reservation failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Reserve username in usernames collection only (used during profile creation)
+   * @param {string} uid - User ID
+   * @param {string} username - Username to reserve
+   * @returns {Promise<void>}
+   */
+  async reserveUsernameOnly(uid, username) {
+    try {
+      const db = this.getDB();
+      const usernameRef = db.collection('usernames').doc(username.toLowerCase());
+      await usernameRef.set({ uid });
+      console.log('✅ Username reserved in usernames collection:', username);
+    } catch (error) {
+      console.error('❌ Username reservation failed:', error);
       throw error;
     }
   }

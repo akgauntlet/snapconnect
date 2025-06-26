@@ -251,35 +251,83 @@ export const useAuthStore = create(
       },
 
       /**
-       * Update user profile
+       * Update user profile with optimistic updates to prevent restarts
        * @param {Object} updates - Profile updates
        * @returns {Promise<void>}
        */
       updateProfile: async (updates) => {
-        const { user } = get();
+        const { user, profile } = get();
         
         if (!user) {
           throw new Error('No authenticated user');
         }
         
+        console.log('🔄 AuthStore: Starting optimistic profile update');
+        
+        // Store original profile for rollback
+        const originalProfile = profile;
+        
         set({ isLoading: true, error: null });
         
         try {
-          const updatedProfile = await authService.updateUserProfile(user.uid, updates);
+          // Create clean update data to avoid persistence issues
+          const cleanUpdates = {
+            displayName: updates.displayName?.trim(),
+            username: updates.username?.trim(),
+            bio: updates.bio?.trim(),
+          };
+          
+          // Remove undefined values
+          Object.keys(cleanUpdates).forEach(key => {
+            if (cleanUpdates[key] === undefined) {
+              delete cleanUpdates[key];
+            }
+          });
+          
+          // Update profile locally first (optimistic update)
+          const optimisticProfile = {
+            ...profile,
+            ...cleanUpdates,
+            lastActive: new Date().toISOString(), // Use string to avoid Date serialization issues
+          };
           
           set({
-            profile: updatedProfile,
+            profile: optimisticProfile,
             isLoading: false,
             error: null,
           });
           
-          console.log('Profile updated successfully');
+          console.log('✅ AuthStore: Profile updated optimistically');
+          
+          // Update server in background
+          authService.updateUserProfile(user.uid, cleanUpdates)
+            .then((serverProfile) => {
+              console.log('✅ AuthStore: Server update completed');
+              // Update with server response only if it differs significantly
+              if (serverProfile && serverProfile.uid) {
+                set({ profile: serverProfile });
+                console.log('🔄 AuthStore: Profile synced with server');
+              }
+            })
+            .catch((error) => {
+              console.error('❌ AuthStore: Server update failed:', error);
+              // Revert to original profile on server error
+              set({ 
+                profile: originalProfile,
+                error: `Failed to save changes: ${error.message}` 
+              });
+            });
+            
         } catch (error) {
+          console.error('❌ AuthStore: Optimistic update failed:', error);
+          
+          // Restore original state
           set({
+            profile: originalProfile,
             isLoading: false,
             error: error.message,
           });
-          console.error('Profile update failed:', error.message);
+          
           throw error;
         }
       },
@@ -445,9 +493,16 @@ export const useAuthStore = create(
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         preferences: state.preferences,
-        // Don't persist sensitive authentication data
+        // Only persist user preferences, not auth state
       }),
-
+      // Add error handling for persistence operations
+      onRehydrateStorage: () => (state, error) => {
+        if (error) {
+          console.warn('⚠️ Failed to rehydrate auth store:', error);
+        } else {
+          console.log('✅ Auth store rehydrated successfully');
+        }
+      },
     }
   )
 );

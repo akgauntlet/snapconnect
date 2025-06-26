@@ -451,7 +451,7 @@ const FriendProfileScreen: React.FC = () => {
 
           {/* Bio */}
           {friendProfile.bio && (
-            <Text className="text-white/70 font-inter text-center text-base mb-6 px-4">
+            <Text className="text-white/70 font-inter text-center text-base mb-6 px-4" numberOfLines={1}>
               {friendProfile.bio}
             </Text>
           )}
