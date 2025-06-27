@@ -50,7 +50,26 @@ const Stack = createNativeStackNavigator();
  * - Supports dynamic routing based on AI recommendations
  */
 const AppNavigator = () => {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, profile } = useAuthStore();
+
+  /**
+   * Determine which navigator to show based on auth and onboarding status
+   * @returns {string} Navigation state
+   */
+  const getNavigationState = () => {
+    if (!isAuthenticated) {
+      return "auth";
+    }
+    
+    // Check if user has completed onboarding (including gaming interests)
+    if (profile && !profile.onboardingComplete) {
+      return "auth"; // Keep in auth flow to complete onboarding
+    }
+    
+    return "main";
+  };
+
+  const navigationState = getNavigationState();
 
   return (
     <Stack.Navigator
@@ -60,8 +79,8 @@ const AppNavigator = () => {
         animation: "slide_from_right", // Smooth gaming-style transitions
       }}
     >
-      {isAuthenticated ? (
-        // Main app navigation for authenticated users
+      {navigationState === "main" ? (
+        // Main app navigation for fully onboarded users
         <Stack.Screen
           name="MainApp"
           component={TabNavigator}
@@ -70,7 +89,7 @@ const AppNavigator = () => {
           }}
         />
       ) : (
-        // Authentication flow for unauthenticated users
+        // Authentication/onboarding flow
         <Stack.Screen
           name="Auth"
           component={AuthNavigator}

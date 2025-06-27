@@ -316,6 +316,8 @@ class AuthService {
         profilePhoto: profileData.profilePhoto || null,
         authMethod: profileData.authMethod,
         gamingPlatform: profileData.gamingPlatform || null,
+        gamingInterests: profileData.gamingInterests || [],
+        onboardingComplete: false,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         lastActive: firebase.firestore.FieldValue.serverTimestamp(),
         status: "active",
@@ -333,6 +335,10 @@ class AuthService {
       // Reserve username if provided (now that user document exists)
       if (profileData.username) {
         await this.reserveUsernameOnly(uid, profileData.username);
+        // Update the user document with the username after successful reservation
+        await userRef.update({ username: profileData.username });
+        // Update the returned profile to include the username
+        profile.username = profileData.username;
       }
 
       return profile;
@@ -452,54 +458,72 @@ class AuthService {
           if (currentUsername !== updates.username) {
 
             // Check if new username is available before making any changes
-            const isAvailable = await this.isUsernameAvailable(
+            const isUsernameAvailableForCurrentUser = await this.isUsernameAvailable(
               updates.username,
             );
-            if (!isAvailable) {
-              throw new Error("Username is already taken");
-            }
-
-            // Remove old username reservation if it exists
-            if (currentUsername) {
-              try {
-                const oldUsernameRef = db
-                  .collection("usernames")
-                  .doc(currentUsername.toLowerCase());
-                await oldUsernameRef.delete();
-
-              } catch (error) {
-                console.warn(
-                  "⚠️ AuthService: Failed to remove old username reservation (non-critical):",
-                  error,
-                );
-                // Don't throw here - this is not critical to the update process
+            
+            let isOwnedByCurrentUser = false;
+            
+            // If username is not available, check if it's owned by the current user
+            if (!isUsernameAvailableForCurrentUser) {
+              const db = this.getDB();
+              const usernameRef = db
+                .collection("usernames")
+                .doc(updates.username.toLowerCase());
+              const usernameSnapshot = await usernameRef.get();
+              
+              // If the username exists but isn't owned by current user, it's taken
+              if (usernameSnapshot.exists && usernameSnapshot.data().uid !== uid) {
+                throw new Error("Username is already taken");
               }
+              // If it's owned by current user, we can proceed with the update
+              isOwnedByCurrentUser = usernameSnapshot.exists && usernameSnapshot.data().uid === uid;
             }
 
-            // Reserve new username
-            try {
-              await this.reserveUsernameOnly(uid, updates.username);
-            } catch (error) {
-              console.error(
-                "❌ AuthService: Failed to reserve new username:",
-                error,
-              );
-
-              // If username reservation fails, try to restore old username if it existed
+            // Only handle username reservations if we need to change them
+            if (!isOwnedByCurrentUser) {
+              // Remove old username reservation if it exists
               if (currentUsername) {
                 try {
-                  await this.reserveUsernameOnly(uid, currentUsername);
-                } catch (restoreError) {
-                  console.error(
-                    "❌ AuthService: Failed to restore old username:",
-                    restoreError,
+                  const oldUsernameRef = db
+                    .collection("usernames")
+                    .doc(currentUsername.toLowerCase());
+                  await oldUsernameRef.delete();
+
+                } catch (error) {
+                  console.warn(
+                    "⚠️ AuthService: Failed to remove old username reservation (non-critical):",
+                    error,
                   );
+                  // Don't throw here - this is not critical to the update process
                 }
               }
 
-              throw new Error(
-                "Username reservation failed. The username might already be taken.",
-              );
+              // Reserve new username
+              try {
+                await this.reserveUsernameOnly(uid, updates.username);
+              } catch (error) {
+                console.error(
+                  "❌ AuthService: Failed to reserve new username:",
+                  error,
+                );
+
+                // If username reservation fails, try to restore old username if it existed
+                if (currentUsername) {
+                  try {
+                    await this.reserveUsernameOnly(uid, currentUsername);
+                  } catch (restoreError) {
+                    console.error(
+                      "❌ AuthService: Failed to restore old username:",
+                      restoreError,
+                    );
+                  }
+                }
+
+                throw new Error(
+                  "Username reservation failed. The username might already be taken.",
+                );
+              }
             }
           }
         } catch (error) {

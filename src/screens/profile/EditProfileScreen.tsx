@@ -37,6 +37,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { GamingGenreSelector } from "../../components/common";
 import { useAuthStore } from "../../stores/authStore";
 import { useThemeStore } from "../../stores/themeStore";
 import { showDestructiveAlert, showErrorAlert } from "../../utils/alertService";
@@ -73,6 +74,7 @@ const EditProfileScreen: React.FC = () => {
   const [displayName, setDisplayName] = useState(profile?.displayName || "");
   const [username, setUsername] = useState(profile?.username || "");
   const [bio, setBio] = useState(profile?.bio || "");
+  const [gamingInterests, setGamingInterests] = useState<string[]>(profile?.gamingInterests || []);
   const [originalUsername] = useState(profile?.username || "");
 
   // Validation state
@@ -80,6 +82,7 @@ const EditProfileScreen: React.FC = () => {
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [showGamingInterests, setShowGamingInterests] = useState(false);
 
   // Timeout ref for debouncing username checks
   const usernameTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -92,22 +95,32 @@ const EditProfileScreen: React.FC = () => {
       displayName: profile?.displayName || "",
       username: profile?.username || "",
       bio: profile?.bio || "",
+      gamingInterests: profile?.gamingInterests || [],
     };
 
     const currentData = {
       displayName,
       username,
       bio,
+      gamingInterests,
     };
 
     const changes = Object.keys(originalData).some(
-      (key) =>
-        originalData[key as keyof typeof originalData] !==
-        currentData[key as keyof typeof currentData],
+      (key) => {
+        const originalValue = originalData[key as keyof typeof originalData];
+        const currentValue = currentData[key as keyof typeof currentData];
+        
+        // Special handling for arrays
+        if (Array.isArray(originalValue) && Array.isArray(currentValue)) {
+          return JSON.stringify(originalValue.sort()) !== JSON.stringify(currentValue.sort());
+        }
+        
+        return originalValue !== currentValue;
+      }
     );
 
     setHasChanges(changes);
-  }, [displayName, username, bio, profile]);
+  }, [displayName, username, bio, gamingInterests, profile]);
 
   /**
    * Validate username format
@@ -230,6 +243,7 @@ const EditProfileScreen: React.FC = () => {
         displayName: displayName.trim(),
         username: username.trim(),
         bio: bio.trim(),
+        gamingInterests: gamingInterests,
       };
 
       
@@ -454,6 +468,42 @@ const EditProfileScreen: React.FC = () => {
               <Text className="text-white/40 font-inter text-xs mt-1">
                 {bio.length}/150 characters
               </Text>
+            </View>
+
+            {/* Gaming Interests */}
+            <View className="mb-6">
+              <TouchableOpacity
+                onPress={() => setShowGamingInterests(!showGamingInterests)}
+                className="flex-row justify-between items-center mb-3"
+              >
+                <Text className="text-cyber-cyan font-inter font-medium">
+                  Gaming Interests
+                </Text>
+                <View className="flex-row items-center">
+                  <Text className="text-white/60 font-inter text-sm mr-2">
+                    {gamingInterests.length} selected
+                  </Text>
+                  <Ionicons
+                    name={showGamingInterests ? "chevron-up" : "chevron-down"}
+                    size={20}
+                    color="#00ffff"
+                  />
+                </View>
+              </TouchableOpacity>
+
+              {showGamingInterests && (
+                <View className="bg-cyber-dark border border-cyber-gray rounded-lg p-4">
+                  <GamingGenreSelector
+                    selectedGenres={gamingInterests}
+                    onGenresChange={setGamingInterests}
+                    maxSelections={8}
+                    showPresets={false}
+                    showCategories={true}
+                    compact={true}
+                    disabled={isLoading}
+                  />
+                </View>
+              )}
             </View>
           </View>
 

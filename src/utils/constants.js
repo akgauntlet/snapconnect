@@ -207,6 +207,227 @@ export const ACHIEVEMENT_TIERS = {
   },
 };
 
+// Gaming Genres for user interests
+export const GAMING_GENRES = {
+  ACTION: {
+    id: "action",
+    name: "Action",
+    description: "Fast-paced games with combat and challenges",
+    color: "#ff4444",
+    icon: "flash",
+  },
+  ADVENTURE: {
+    id: "adventure",
+    name: "Adventure",
+    description: "Story-driven exploration games",
+    color: "#44ff44",
+    icon: "map",
+  },
+  RPG: {
+    id: "rpg",
+    name: "RPG",
+    description: "Role-playing games with character progression",
+    color: "#4444ff",
+    icon: "shield",
+  },
+  MMORPG: {
+    id: "mmorpg",
+    name: "MMORPG",
+    description: "Massive multiplayer online role-playing games",
+    color: "#ff44ff",
+    icon: "people",
+  },
+  FPS: {
+    id: "fps",
+    name: "FPS",
+    description: "First-person shooter games",
+    color: "#ff8800",
+    icon: "locate",
+  },
+  STRATEGY: {
+    id: "strategy",
+    name: "Strategy",
+    description: "Tactical and strategic thinking games",
+    color: "#8800ff",
+    icon: "extension-puzzle",
+  },
+  SIMULATION: {
+    id: "simulation",
+    name: "Simulation",
+    description: "Real-world activity simulation games",
+    color: "#00ff88",
+    icon: "construct",
+  },
+  RACING: {
+    id: "racing",
+    name: "Racing",
+    description: "High-speed vehicle racing games",
+    color: "#ffff00",
+    icon: "car-sport",
+  },
+  SPORTS: {
+    id: "sports",
+    name: "Sports",
+    description: "Athletic and sports simulation games",
+    color: "#ff6600",
+    icon: "football",
+  },
+  FIGHTING: {
+    id: "fighting",
+    name: "Fighting",
+    description: "Combat-focused competitive games",
+    color: "#cc0000",
+    icon: "hand-right",
+  },
+  PUZZLE: {
+    id: "puzzle",
+    name: "Puzzle",
+    description: "Brain teasers and logical challenges",
+    color: "#00ccff",
+    icon: "grid",
+  },
+  PLATFORMER: {
+    id: "platformer",
+    name: "Platformer",
+    description: "Jump and run adventure games",
+    color: "#cc8800",
+    icon: "trending-up",
+  },
+  HORROR: {
+    id: "horror",
+    name: "Horror",
+    description: "Scary and suspenseful games",
+    color: "#330033",
+    icon: "skull",
+  },
+  BATTLE_ROYALE: {
+    id: "battle_royale",
+    name: "Battle Royale",
+    description: "Last-player-standing competitive games",
+    color: "#ff0088",
+    icon: "trophy",
+  },
+  MOBA: {
+    id: "moba",
+    name: "MOBA",
+    description: "Multiplayer online battle arena games",
+    color: "#8800cc",
+    icon: "git-network",
+  },
+  SANDBOX: {
+    id: "sandbox",
+    name: "Sandbox",
+    description: "Open-world creative building games",
+    color: "#88cc00",
+    icon: "cube",
+  },
+  SURVIVAL: {
+    id: "survival",
+    name: "Survival",
+    description: "Resource management and survival games",
+    color: "#666600",
+    icon: "leaf",
+  },
+  ROGUELIKE: {
+    id: "roguelike",
+    name: "Roguelike",
+    description: "Procedurally generated dungeon crawlers",
+    color: "#cc6600",
+    icon: "refresh",
+  },
+  CARD_GAMES: {
+    id: "card_games",
+    name: "Card Games",
+    description: "Digital card and deck-building games",
+    color: "#0066cc",
+    icon: "card",
+  },
+  INDIE: {
+    id: "indie",
+    name: "Indie",
+    description: "Independent developer games",
+    color: "#cc00cc",
+    icon: "diamond",
+  },
+  CASUAL: {
+    id: "casual",
+    name: "Casual",
+    description: "Easy-to-play relaxing games",
+    color: "#00cc66",
+    icon: "happy",
+  },
+  RETRO: {
+    id: "retro",
+    name: "Retro",
+    description: "Classic and vintage-style games",
+    color: "#cc6666",
+    icon: "game-controller",
+  },
+  VR: {
+    id: "vr",
+    name: "VR",
+    description: "Virtual reality immersive games",
+    color: "#6600ff",
+    icon: "eye",
+  },
+  MOBILE: {
+    id: "mobile",
+    name: "Mobile",
+    description: "Mobile and touch-screen games",
+    color: "#ff6666",
+    icon: "phone-portrait",
+  },
+};
+
+// Gaming Genre Categories for better organization
+export const GAMING_GENRE_CATEGORIES = {
+  CORE: ["action", "adventure", "rpg", "strategy", "simulation"],
+  COMPETITIVE: ["fps", "fighting", "battle_royale", "moba", "sports"],
+  CREATIVE: ["sandbox", "simulation", "puzzle", "indie"],
+  SOCIAL: ["mmorpg", "moba", "card_games", "casual"],
+  SPECIALTY: ["horror", "roguelike", "vr", "retro", "mobile"],
+};
+
+// Gaming Interest Presets for quick selection
+export const GAMING_INTEREST_PRESETS = {
+  CASUAL_GAMER: {
+    id: "casual_gamer",
+    name: "Casual Gamer",
+    description: "Relaxed gaming sessions",
+    genres: ["casual", "puzzle", "mobile", "simulation"],
+  },
+  COMPETITIVE_PLAYER: {
+    id: "competitive_player",
+    name: "Competitive Player",
+    description: "Loves competition and esports",
+    genres: ["fps", "moba", "battle_royale", "fighting"],
+  },
+  STORY_LOVER: {
+    id: "story_lover",
+    name: "Story Lover",
+    description: "Enjoys narrative-driven games",
+    genres: ["rpg", "adventure", "indie", "horror"],
+  },
+  SOCIAL_GAMER: {
+    id: "social_gamer",
+    name: "Social Gamer",
+    description: "Prefers multiplayer experiences",
+    genres: ["mmorpg", "moba", "sports", "card_games"],
+  },
+  CREATIVE_BUILDER: {
+    id: "creative_builder",
+    name: "Creative Builder",
+    description: "Loves creating and building",
+    genres: ["sandbox", "simulation", "strategy", "indie"],
+  },
+  HARDCORE_GAMER: {
+    id: "hardcore_gamer",
+    name: "Hardcore Gamer",
+    description: "Enjoys challenging experiences",
+    genres: ["roguelike", "survival", "strategy", "horror"],
+  },
+};
+
 // Regex Patterns
 export const REGEX_PATTERNS = {
   EMAIL: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
@@ -288,6 +509,9 @@ export const CONSTANTS = {
   REGEX_PATTERNS,
   AI_CONFIG,
   UX_CONFIG,
+  GAMING_GENRES,
+  GAMING_GENRE_CATEGORIES,
+  GAMING_INTEREST_PRESETS,
 };
 
 export default CONSTANTS;

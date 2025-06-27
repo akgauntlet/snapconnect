@@ -62,6 +62,7 @@ export interface User {
 
 export interface GamingProfile {
   platforms: GamingPlatformConnection[];
+  interests: string[]; // Array of gaming genre IDs that the user is interested in
   currentGame?: CurrentGame;
   achievements: Achievement[];
   stats: GamingStats;

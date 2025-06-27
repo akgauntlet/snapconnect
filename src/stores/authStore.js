@@ -285,6 +285,9 @@ export const useAuthStore = create(
             displayName: updates.displayName?.trim(),
             username: updates.username?.trim(),
             bio: updates.bio?.trim(),
+            gamingInterests: updates.gamingInterests,
+            onboardingComplete: updates.onboardingComplete,
+            profileCompletedAt: updates.profileCompletedAt,
           };
 
           // Remove undefined values

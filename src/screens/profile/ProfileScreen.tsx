@@ -143,6 +143,8 @@ const ProfileScreen: React.FC = () => {
     }
   };
 
+
+
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: theme.colors.background.primary }}

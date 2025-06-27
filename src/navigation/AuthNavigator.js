@@ -23,6 +23,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import React from "react";
 
 // Import authentication screens
+import GamingInterestsScreen from "../screens/auth/GamingInterestsScreen";
 import LoginScreen from "../screens/auth/LoginScreen";
 import PhoneVerificationScreen from "../screens/auth/PhoneVerificationScreen";
 import SignupScreen from "../screens/auth/SignupScreen";
@@ -89,6 +90,14 @@ const AuthNavigator = () => {
         options={{
           animation: "slide_from_right",
           gestureEnabled: false, // Prevent accidental back navigation during verification
+        }}
+      />
+
+      <Stack.Screen
+        name="GamingInterests"
+        component={GamingInterestsScreen}
+        options={{
+          animation: "slide_from_right",
         }}
       />
 

@@ -232,7 +232,10 @@ const SignupScreen: React.FC<SignupScreenProps> = () => {
 
     try {
       await signUpWithEmail(email, password, displayName, { username });
-      // Navigation will be handled by auth state change
+      // Navigate to gaming interests screen for profile completion
+      navigation.navigate("GamingInterests", { 
+        signupData: { email, displayName, username } 
+      });
     } catch {
       // Error is already set in store state and will be displayed inline
       // No need to show modal for any signup errors

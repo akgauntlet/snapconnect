@@ -17,34 +17,36 @@
 // Base Components
 export { CyberButton } from "./CyberButton";
 export type {
-  CyberButtonProps,
-  CyberButtonSize,
-  CyberButtonVariant,
+    CyberButtonProps,
+    CyberButtonSize,
+    CyberButtonVariant
 } from "./CyberButton";
 
 export { GameCard } from "./GameCard";
 export type {
-  GameCardProps,
-  GameCardRarity,
-  GameCardStatus,
-  GameCardType,
+    GameCardProps,
+    GameCardRarity,
+    GameCardStatus,
+    GameCardType
 } from "./GameCard";
 
 export { GamingInput } from "./GamingInput";
 export type { GamingInputProps, GamingInputVariant } from "./GamingInput";
 
+export { default as GamingGenreSelector } from "./GamingGenreSelector";
+
 export { LoadingSpinner } from "./LoadingSpinner";
 export type {
-  LoadingSpinnerProps,
-  LoadingSpinnerSize,
-  LoadingSpinnerVariant,
+    LoadingSpinnerProps,
+    LoadingSpinnerSize,
+    LoadingSpinnerVariant
 } from "./LoadingSpinner";
 
 export { IconButton } from "./IconButton";
 export type {
-  IconButtonProps,
-  IconButtonSize,
-  IconButtonVariant,
+    IconButtonProps,
+    IconButtonSize,
+    IconButtonVariant
 } from "./IconButton";
 
 // Utility Components (existing)
