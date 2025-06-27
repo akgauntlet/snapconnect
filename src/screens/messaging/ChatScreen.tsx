@@ -26,9 +26,9 @@
 
 import { Ionicons } from "@expo/vector-icons";
 import {
-    useFocusEffect,
-    useNavigation,
-    useRoute,
+  useFocusEffect,
+  useNavigation,
+  useRoute,
 } from "@react-navigation/native";
 import { ResizeMode, Video } from "expo-av";
 import * as Haptics from "expo-haptics";
@@ -36,19 +36,20 @@ import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
-    SafeAreaView,
-    StatusBar,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  StatusBar,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
+import { ConversationStarters } from "../../components/common";
 import MediaViewer from "../../components/common/MediaViewer";
 import { friendsService } from "../../services/firebase/friendsService";
 import { messagingService } from "../../services/firebase/messagingService";
@@ -129,6 +130,10 @@ const ChatScreen: React.FC = () => {
     senderId: string;
     senderName: string;
   } | null>(null);
+  
+  // Gaming preferences for conversation starters
+  const [userGenres, setUserGenres] = useState<string[]>([]);
+  const [friendGenres, setFriendGenres] = useState<string[]>([]);
 
   // Refs
   const flatListRef = useRef<FlatList>(null);
@@ -240,7 +245,7 @@ const ChatScreen: React.FC = () => {
   }, [friendId]);
 
   /**
-   * Load friend profile data including display name
+   * Load friend profile data including display name and gaming genres
    */
   const loadFriendProfile = useCallback(async () => {
     try {
@@ -251,6 +256,12 @@ const ChatScreen: React.FC = () => {
         // Use displayName first, then username, then fallback
         const displayName = formatConversationUserName(friendProfile);
         setFriendDisplayName(displayName);
+        
+        // Extract gaming genre preferences for conversation starters
+        const genres = friendProfile.gamingInterests || [];
+        setFriendGenres(genres);
+        
+        console.log('Loaded friend gaming genres:', { friendId, genres });
       }
     } catch (error) {
       console.error("Load friend profile failed:", error);
@@ -258,6 +269,26 @@ const ChatScreen: React.FC = () => {
       setFriendDisplayName(friendName || formatConversationUserName(null));
     }
   }, [friendId, friendName]);
+
+  /**
+   * Load current user's gaming genres
+   */
+  const loadUserGenres = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      const userProfile = (await friendsService.getUserProfile(user.uid)) as any;
+      if (userProfile) {
+        // Extract gaming genre preferences for conversation starters
+        const genres = userProfile.gamingInterests || [];
+        setUserGenres(genres);
+        
+        console.log('Loaded user gaming genres:', { userId: user.uid, genres });
+      }
+    } catch (error) {
+      console.error("Load user genres failed:", error);
+    }
+  }, [user]);
 
   /**
    * Handle new message from real-time listener
@@ -329,6 +360,7 @@ const ChatScreen: React.FC = () => {
           loadMessages(),
           loadFriendStatus(),
           loadFriendProfile(),
+          loadUserGenres(),
         ]);
 
         // Set up real-time listeners
@@ -355,6 +387,7 @@ const ChatScreen: React.FC = () => {
       loadMessages,
       loadFriendStatus,
       loadFriendProfile,
+      loadUserGenres,
       handleNewMessage,
       handlePresenceUpdate,
     ]),
@@ -680,7 +713,7 @@ const ChatScreen: React.FC = () => {
       const messageId = await messagingService.sendMessage(
         user.uid,
         friendId,
-        {}, // No media
+        null, // No media
         5, // 5 second timer
         messageText,
       );
@@ -776,6 +809,81 @@ const ChatScreen: React.FC = () => {
   }, []);
 
   /**
+   * Handle conversation starter selection
+   * Sends the selected starter as a text message
+   */
+  const handleStarterSelect = useCallback(async (starter: string) => {
+    if (!user || isSending) return;
+
+    console.log('Conversation starter selected:', starter);
+
+    // Set the starter text in the input and send it
+    setInputText(starter);
+
+    // Create optimistic message to show immediately
+    const optimisticMessage: Message = {
+      id: `temp-${Date.now()}`, // Temporary ID
+      senderId: user.uid,
+      recipientId: friendId,
+      text: starter,
+      mediaUrl: undefined,
+      mediaType: undefined,
+      timer: 5,
+      createdAt: new Date(),
+      viewed: false,
+      viewedAt: undefined,
+      expiresAt: undefined,
+      status: "sent",
+    };
+
+    // Add optimistic message to UI immediately
+    setMessages((prev) => [...prev, optimisticMessage]);
+
+    // Auto-scroll to show the new message
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+
+    setIsSending(true);
+
+    try {
+      const messageId = await messagingService.sendMessage(
+        user.uid,
+        friendId,
+        null, // No media
+        5, // 5 second timer
+        starter,
+      );
+
+      // Update the optimistic message with the real message ID
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === optimisticMessage.id
+            ? { ...msg, id: messageId, status: "delivered" }
+            : msg,
+        ),
+      );
+
+      // Clear the input text
+      setInputText("");
+
+      console.log('Conversation starter sent successfully:', { messageId, starter });
+
+    } catch (error) {
+      console.error("Send conversation starter failed:", error);
+
+      // Remove the optimistic message on error
+      setMessages((prev) =>
+        prev.filter((msg) => msg.id !== optimisticMessage.id),
+      );
+
+      showAlert("Error", "Failed to send message. Please try again.");
+    } finally {
+      setIsSending(false);
+    }
+  }, [user, friendId, isSending]);
+
+  /**
    * Render individual message bubble
    */
   const renderMessage = useCallback(
@@ -844,25 +952,7 @@ const ChatScreen: React.FC = () => {
                       />
                     </View>
                   </TouchableOpacity>
-                ) : (
-                  <View className="flex-row items-center">
-                    <Ionicons
-                      name={
-                        message.mediaType === "video" ? "videocam" : "camera"
-                      }
-                      size={16}
-                      color={isFromMe ? accentColor : "#ffffff"}
-                    />
-                    <Text
-                      className={`ml-2 font-inter text-sm ${
-                        isFromMe ? "text-cyber-cyan" : "text-white"
-                      }`}
-                    >
-                      {message.mediaType === "video" ? "Video" : "Photo"}
-                      {message.timer && ` • ${message.timer}s`}
-                    </Text>
-                  </View>
-                )}
+                ) : null}
               </View>
             )}
 
@@ -922,18 +1012,44 @@ const ChatScreen: React.FC = () => {
    * Render empty state
    */
   const renderEmptyState = () => (
-    <View className="flex-1 justify-center items-center px-8">
-      <Ionicons
-        name="chatbubbles-outline"
-        size={64}
-        color="rgba(0, 255, 255, 0.3)"
-      />
-      <Text className="text-white/70 font-orbitron text-xl mt-6 mb-2 text-center">
-        Start the Conversation
-      </Text>
-      <Text className="text-white/50 font-inter text-base text-center">
-        Send a message or snap to {friendDisplayName}
-      </Text>
+    <View className="flex-1 px-4">
+      {/* Show conversation starters if we have gaming preferences */}
+      {(userGenres.length > 0 || friendGenres.length > 0) ? (
+        <ConversationStarters
+          user1Genres={userGenres}
+          user2Genres={friendGenres}
+          onStarterSelect={handleStarterSelect}
+          disabled={isSending}
+        />
+      ) : (
+        // Fallback to original empty state if no gaming preferences
+        <View className="flex-1 justify-center items-center px-8">
+          <Ionicons
+            name="chatbubbles-outline"
+            size={64}
+            color="rgba(0, 255, 255, 0.3)"
+          />
+          <Text className="text-white/70 font-orbitron text-xl mt-6 mb-2 text-center">
+            Start the Conversation
+          </Text>
+          <Text className="text-white/50 font-inter text-base text-center">
+            Send a message or snap to {friendDisplayName}
+          </Text>
+          
+          {/* Gaming interests suggestion */}
+          <View className="mt-8 p-4 bg-cyber-dark/20 border border-cyber-cyan/20 rounded-lg">
+            <View className="flex-row items-center justify-center mb-2">
+              <Ionicons name="game-controller" size={16} color="#00ffff" />
+              <Text className="text-cyber-cyan font-inter text-sm ml-2">
+                Gaming Tip
+              </Text>
+            </View>
+            <Text className="text-white/60 font-inter text-sm text-center">
+              Add your gaming interests in your profile to get AI-powered conversation starters!
+            </Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 

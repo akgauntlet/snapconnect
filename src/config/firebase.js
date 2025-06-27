@@ -23,7 +23,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import firebase from "firebase/compat/app";
 import "firebase/compat/auth";
 import "firebase/compat/firestore";
+import "firebase/compat/functions";
 import "firebase/compat/storage";
+
+// Import v9 modular SDK for Functions (more reliable)
+import { getApp } from "firebase/app";
+import { getFunctions, httpsCallable } from "firebase/functions";
 
 /**
  * Validate that all required Firebase environment variables are set
@@ -113,6 +118,9 @@ export const initializeFirebaseServices = async () => {
 
       // Initialize Firebase app
       firebase.initializeApp(config);
+
+      // DO NOT initialize Functions at startup - they should be lazy-loaded
+      console.log("✅ Firebase app initialized (Functions will be initialized when needed)");
     }
 
     // Configure Auth persistence for React Native
@@ -137,6 +145,9 @@ export const initializeFirebaseServices = async () => {
       );
       // Continue without explicit persistence configuration
     }
+
+    console.log("✅ Firebase core services initialized successfully");
+
   } catch (error) {
     console.error("❌ Firebase services initialization failed:", error);
     throw error;
@@ -180,6 +191,70 @@ export const getFirebaseStorage = () => {
     );
   }
   return firebase.storage();
+};
+
+/**
+ * Get Firebase Functions instance using v9 modular SDK (more reliable than compat)
+ * This is lazy-loaded and will only initialize when first called
+ * @returns {object} Firebase Functions instance
+ */
+export const getFirebaseFunctions = () => {
+  if (!firebase.apps.length) {
+    throw new Error(
+      "Firebase not initialized. Call initializeFirebaseServices() first.",
+    );
+  }
+  
+  try {
+    // Use v9 modular SDK for Functions
+    const app = getApp(); // Get the default Firebase app
+    const functions = getFunctions(app);
+    
+    // For development, optionally connect to emulator
+    const environment = getCurrentEnvironment();
+    if (environment === "development") {
+      console.log("🔧 Firebase Functions initialized for development");
+      // Uncomment the next line if you want to use the Functions emulator
+      // connectFunctionsEmulator(functions, "localhost", 5001);
+    }
+    
+    return functions;
+  } catch (error) {
+    console.warn("⚠️ Firebase Functions not available:", error.message);
+    throw new Error(`Firebase Functions not available: ${error.message}`);
+  }
+};
+
+/**
+ * Helper function to create a callable function using v9 modular SDK
+ * This includes error handling for when Functions aren't available
+ * @param {string} functionName - Name of the Cloud Function
+ * @returns {Function} Callable function
+ */
+export const createCallableFunction = (functionName) => {
+  try {
+    const functions = getFirebaseFunctions();
+    return httpsCallable(functions, functionName);
+  } catch (error) {
+    console.warn("⚠️ Failed to create callable function:", error.message);
+    // Return a mock function that throws a helpful error
+    return async () => {
+      throw new Error(`Firebase Functions not available. The function '${functionName}' cannot be called. Please ensure Firebase Functions are deployed and configured.`);
+    };
+  }
+};
+
+/**
+ * Check if Firebase Functions are available
+ * @returns {boolean} True if Functions are available
+ */
+export const areFirebaseFunctionsAvailable = () => {
+  try {
+    getFirebaseFunctions();
+    return true;
+  } catch (error) {
+    return false;
+  }
 };
 
 /**

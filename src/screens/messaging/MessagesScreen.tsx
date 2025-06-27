@@ -56,8 +56,7 @@ import { useAuthStore } from "../../stores/authStore";
 import { useThemeStore } from "../../stores/themeStore";
 import {
     showAlert,
-    showDestructiveAlert,
-    showSuccessAlert,
+    showDestructiveAlert
 } from "../../utils/alertService";
 import { useOptimizedFlatList } from "../../utils/scrollOptimization";
 import { formatConversationUserName } from "../../utils/userHelpers";
@@ -457,11 +456,6 @@ const MessagesScreen: React.FC = () => {
         const friendDisplayName = formatConversationUserName(friendData);
 
         if (existingConversation) {
-          showSuccessAlert(
-            `Conversation with ${friendDisplayName} is ready!`,
-            "Conversation Found",
-          );
-
           // Navigate to the existing conversation
           (navigation as any).navigate("Chat", {
             conversationId: conversationId,
@@ -485,11 +479,6 @@ const MessagesScreen: React.FC = () => {
               lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
               updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
             });
-
-          showSuccessAlert(
-            `Started conversation with ${friendDisplayName}!`,
-            "Conversation Created",
-          );
 
           // Navigate to the new conversation
           (navigation as any).navigate("Chat", {

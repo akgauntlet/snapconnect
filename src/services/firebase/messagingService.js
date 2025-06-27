@@ -53,7 +53,7 @@ class MessagingService {
    * Send an ephemeral message
    * @param {string} senderId - Sender user ID
    * @param {string} recipientId - Recipient user ID
-   * @param {Object} mediaData - Media file data (uri, type, size)
+   * @param {Object | null} mediaData - Media file data (uri, type, size)
    * @param {number} timer - Timer in seconds (1, 3, 5, 10)
    * @param {string} text - Optional text message
    * @returns {Promise<string>} Message ID
@@ -66,7 +66,7 @@ class MessagingService {
 
       // Upload media if provided
       let mediaUrl = null;
-      if (mediaData) {
+      if (mediaData && mediaData.uri) {
         mediaUrl = await this.uploadMedia(mediaData, senderId);
       }
 
