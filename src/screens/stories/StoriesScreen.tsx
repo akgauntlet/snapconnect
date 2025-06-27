@@ -28,18 +28,18 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import React, { useCallback, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  RefreshControl,
-  SafeAreaView,
-  StatusBar,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    RefreshControl,
+    SafeAreaView,
+    StatusBar,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 import StoryGridItem, {
-  StoryUser,
+    StoryUser,
 } from "../../components/common/StoryGridItem";
 import StoryRingItem, { MyStory } from "../../components/common/StoryRingItem";
 import StoryStatsModal from "../../components/common/StoryStatsModal";
@@ -436,14 +436,14 @@ const StoriesScreen: React.FC = () => {
         ) : (
           <View className="flex-1">
             {/* Story Ring (Horizontal scroll) */}
-            <View className="py-4">
+            <View className="pt-6 pb-4">
               <FlatList
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 data={ringData}
                 renderItem={renderStoryRingItem}
                 keyExtractor={(item, index) => `story-ring-${index}`}
-                contentContainerStyle={{ paddingHorizontal: 24, gap: 8 }}
+                contentContainerStyle={{ paddingHorizontal: 24, gap: 8, paddingVertical: 4 }}
               />
             </View>
 
@@ -479,13 +479,22 @@ const StoriesScreen: React.FC = () => {
 
       {/* Story Viewer Modal */}
       {showStoryViewer && storyViewerData.length > 0 && (
-        <StoryViewer
-          storyUsers={storyViewerData}
-          initialUserIndex={initialUserIndex}
-          initialStoryIndex={initialStoryIndex}
-          onClose={closeStoryViewer}
-          onStoryViewed={handleStoryViewed}
-        />
+        <View style={{ 
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 10000
+        }}>
+          <StoryViewer
+            storyUsers={storyViewerData}
+            initialUserIndex={initialUserIndex}
+            initialStoryIndex={initialStoryIndex}
+            onClose={closeStoryViewer}
+            onStoryViewed={handleStoryViewed}
+          />
+        </View>
       )}
 
       {/* Story Stats Modal */}

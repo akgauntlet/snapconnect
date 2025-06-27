@@ -34,7 +34,6 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Pressable,
-  SafeAreaView,
   StatusBar,
   Text,
   TouchableOpacity,
@@ -394,37 +393,46 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#000" }}>
-      <StatusBar barStyle="light-content" backgroundColor="#000" />
+    <View style={{ 
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "#000",
+      zIndex: 9999
+    }}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
 
-      {/* Progress Bars */}
-      <View className="absolute top-0 left-0 right-0 z-30 pt-12 px-4">
-        <View className="flex-row space-x-1">
-          {currentUser.stories.map((_, index) => (
-            <View
-              key={index}
-              className="flex-1 h-1 bg-white/30 rounded-full overflow-hidden"
-            >
-              {index < currentStoryIndex ? (
-                <View className="w-full h-full bg-white" />
-              ) : index === currentStoryIndex ? (
-                <Animated.View
-                  className="h-full bg-white"
-                  style={{
-                    width: progressAnimation.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ["0%", "100%"],
-                    }),
-                  }}
-                />
-              ) : null}
-            </View>
-          ))}
+      {/* Progress Circles */}
+      <View className="absolute top-0 left-0 right-0 z-30 pt-16 px-4" style={{ marginTop: StatusBar.currentHeight || 0 }}>
+        <View className="flex-row justify-center items-center" key={`progress-${currentUserIndex}-${currentStoryIndex}`}>
+          {currentUser.stories.map((_, index) => {
+            const isCurrent = index === currentStoryIndex;
+            
+            return (
+              <View 
+                key={`dot-${currentUserIndex}-${index}-${currentStoryIndex}`} 
+                className="relative"
+                style={{ marginLeft: index > 0 ? 8 : 0 }}
+              >
+                {isCurrent ? (
+                  // Current story - filled circle with outline
+                  <View className="w-3 h-3 border-2 border-white/60 rounded-full justify-center items-center">
+                    <View className="w-1.5 h-1.5 bg-white rounded-full" />
+                  </View>
+                ) : (
+                  // All other stories - unfilled circle
+                  <View className="w-2 h-2 border border-white/30 rounded-full" />
+                )}
+              </View>
+            );
+          })}
         </View>
       </View>
 
       {/* Header */}
-      <View className="absolute top-16 left-0 right-0 z-20 px-4 py-2">
+      <View className="absolute top-16 left-0 right-0 z-20 px-4 py-2" style={{ marginTop: (StatusBar.currentHeight || 0) + 8 }}>
         <View className="flex-row items-center">
           <View className="w-8 h-8 bg-cyber-cyan/20 rounded-full justify-center items-center mr-3">
             <Text className="text-white font-inter font-bold text-xs">
@@ -475,21 +483,23 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
 
           {/* Media Content */}
           {currentStory.mediaType === "photo" ? (
-            <Image
-              source={{ uri: currentStory.mediaUrl }}
-              style={{ flex: 1 }}
-              contentFit="contain"
-              onLoad={() => setIsLoading(false)}
-              transition={200}
-            />
+            <View className="flex-1 justify-center items-center">
+              <Image
+                source={{ uri: currentStory.mediaUrl }}
+                style={{ flex: 1, width: '100%' }}
+                contentFit="contain"
+                onLoad={() => setIsLoading(false)}
+                transition={200}
+              />
+            </View>
           ) : (
-            <View className="flex-1">
+            <View className="flex-1 justify-center items-center">
               {!videoError ? (
                 <>
                   <Video
                     ref={videoRef}
                     source={{ uri: currentStory.mediaUrl }}
-                    style={{ flex: 1 }}
+                    style={{ flex: 1, width: '100%' }}
                     resizeMode={ResizeMode.CONTAIN}
                     shouldPlay={!isPaused}
                     isLooping={false}
@@ -498,15 +508,15 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
                     useNativeControls={false}
                   />
                   
-                                      {/* Video Loading Overlay */}
-                    {isLoading && (
-                      <View className="absolute inset-0 justify-center items-center bg-black/70">
-                        <View className="bg-cyber-cyan/10 border border-cyber-cyan/20 p-6 rounded-xl items-center">
-                          <Ionicons name="videocam" size={32} color="#00ffff" style={{ marginBottom: 12 }} />
-                          <Text className="text-white font-inter text-lg">Loading video...</Text>
-                        </View>
+                  {/* Video Loading Overlay */}
+                  {isLoading && (
+                    <View className="absolute inset-0 justify-center items-center bg-black/70">
+                      <View className="bg-cyber-cyan/10 border border-cyber-cyan/20 p-6 rounded-xl items-center">
+                        <Ionicons name="videocam" size={32} color="#00ffff" style={{ marginBottom: 12 }} />
+                        <Text className="text-white font-inter text-lg">Loading video...</Text>
                       </View>
-                    )}
+                    </View>
+                  )}
                 </>
               ) : (
                 <View className="flex-1 justify-center items-center bg-black">
@@ -553,7 +563,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
           )}
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
