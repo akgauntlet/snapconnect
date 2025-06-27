@@ -26,17 +26,25 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React from "react";
 import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  Text,
-  TouchableOpacity,
-  View,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
-import { CyberButton, GameCard, IconButton } from "../../components/common";
+import { CyberButton, GameCard } from "../../components/common";
+import { useFriendCount } from "../../hooks/useFriendCount";
 import { useTabBarHeight } from "../../hooks/useTabBarHeight";
 import { useAuthStore } from "../../stores/authStore";
 import { useThemeStore } from "../../stores/themeStore";
+import {
+    getProfileCompletionPercentage,
+    getUserBio,
+    getUserDisplayName,
+    getUserStats,
+    getUserUsername
+} from "../../utils/userHelpers";
 
 /**
  * Profile screen component
@@ -62,6 +70,9 @@ const ProfileScreen: React.FC = () => {
   // Auth store
   const { signOut, isLoading, user, profile } = useAuthStore();
 
+  // Fetch real friend count
+  const { friendCount, isLoading: isFriendCountLoading } = useFriendCount(user?.uid);
+
   // Debug logging for profile data
   React.useEffect(() => {
     console.log("🔄 ProfileScreen - Re-render triggered");
@@ -70,26 +81,20 @@ const ProfileScreen: React.FC = () => {
     console.log("🏷️ ProfileScreen - Profile username:", profile?.username);
     console.log("📝 ProfileScreen - Display name:", profile?.displayName);
     console.log("💬 ProfileScreen - Bio:", profile?.bio);
-  }, [user, profile]);
+    console.log("👥 ProfileScreen - Friend count:", friendCount);
+  }, [user, profile, friendCount]);
 
-  // Use actual user data if available, otherwise fallback to mock data
+  // Use helper functions for consistent user data with proper fallbacks
+  const baseStats = getUserStats(profile);
   const userData = {
-    name:
-      profile?.displayName ||
-      user?.displayName ||
-      (isLoading ? "Loading..." : "Gaming Pro"),
-    username: profile?.username
-      ? `@${profile.username}`
-      : isLoading
-        ? "@loading..."
-        : "@gamingpro2024",
-    bio: profile?.bio || "Competitive gamer • Content creator • Clan leader",
+    name: getUserDisplayName(user, profile, isLoading),
+    username: getUserUsername(profile, isLoading),
+    bio: getUserBio(profile),
     stats: {
-      victories: profile?.stats?.victories || 247,
-      highlights: profile?.stats?.highlights || 89,
-      friends: profile?.stats?.friends || 156,
-      achievements: profile?.stats?.achievements || 42,
+      ...baseStats,
+      friends: isFriendCountLoading ? "..." : friendCount, // Show loading indicator while fetching
     },
+    completionPercentage: getProfileCompletionPercentage(profile),
   };
 
   /**
@@ -162,14 +167,14 @@ const ProfileScreen: React.FC = () => {
       />
 
       {/* Header */}
-      <View className="flex-row justify-between items-center px-6 py-4 border-b border-cyber-gray">
-        <Text className="text-white font-orbitron text-xl">Profile</Text>
-        <IconButton
-          icon="create-outline"
-          variant="primary"
-          size="medium"
+      <View className="flex-row justify-between items-center px-6 py-4 border-b border-cyber-gray/10">
+        <Text className="text-white font-orbitron text-2xl">Profile</Text>
+        <TouchableOpacity
           onPress={() => navigation.navigate("EditProfile")}
-        />
+          className="bg-cyber-cyan/10 border border-cyber-cyan/20 p-3 rounded-full"
+        >
+          <Ionicons name="create-outline" size={20} color={accentColor} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView

@@ -236,6 +236,42 @@ export const AI_CONFIG = {
   },
 };
 
+// User Experience Configuration
+export const UX_CONFIG = {
+  // Database query limits (user-configurable)
+  DEFAULT_MESSAGE_LIMIT: 50,
+  DEFAULT_CONVERSATION_LIMIT: 20,
+  DEFAULT_FRIEND_LIMIT: 100,
+  DEFAULT_SEARCH_LIMIT: 20,
+  
+  // Batch processing sizes
+  DEFAULT_BATCH_SIZE: 10,
+  MAX_BATCH_SIZE: 30,
+  
+  // User fallback values
+  DEFAULT_DISPLAY_NAME: "SnapConnect User",
+  DEFAULT_USERNAME_PREFIX: "@user",
+  DEFAULT_BIO: "Welcome to SnapConnect!",
+  UNKNOWN_USER_LABEL: "Unknown User",
+  
+  // Profile defaults
+  DEFAULT_PROFILE_STATS: {
+    victories: 0,
+    highlights: 0,
+    friends: 0,
+    achievements: 0,
+  },
+  
+  // Loading states
+  LOADING_TEXT: "Loading...",
+  LOADING_USERNAME: "@loading...",
+  
+  // Timer defaults
+  DEFAULT_STORY_DURATION: 5000, // 5 seconds
+  DEFAULT_SNAP_TIMER: 5, // 5 seconds
+  STORY_EXPIRY_HOURS: 24,
+};
+
 // Export all constants as a single object for convenience
 export const CONSTANTS = {
   APP_CONFIG,
@@ -251,6 +287,7 @@ export const CONSTANTS = {
   ACHIEVEMENT_TIERS,
   REGEX_PATTERNS,
   AI_CONFIG,
+  UX_CONFIG,
 };
 
 export default CONSTANTS;

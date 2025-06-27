@@ -29,22 +29,22 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import React, { useCallback, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Modal,
-  RefreshControl,
-  SafeAreaView,
-  StatusBar,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Modal,
+    RefreshControl,
+    SafeAreaView,
+    StatusBar,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 import ConversationItem, {
-  Conversation,
+    Conversation,
 } from "../../components/common/ConversationItem";
 import IncomingMessagesHeader, {
-  IncomingMessage,
+    IncomingMessage,
 } from "../../components/common/IncomingMessagesHeader";
 import MediaViewer from "../../components/common/MediaViewer";
 import MessageFriendSelector from "../../components/common/MessageFriendSelector";
@@ -55,10 +55,11 @@ import { realtimeService } from "../../services/firebase/realtimeService";
 import { useAuthStore } from "../../stores/authStore";
 import { useThemeStore } from "../../stores/themeStore";
 import {
-  showAlert,
-  showDestructiveAlert,
-  showSuccessAlert,
+    showAlert,
+    showDestructiveAlert,
+    showSuccessAlert,
 } from "../../utils/alertService";
+import { formatConversationUserName } from "../../utils/userHelpers";
 
 /**
  * Enhanced messages screen component with real-time media sharing
@@ -106,7 +107,7 @@ const MessagesScreen: React.FC = () => {
    * Handle incoming new messages with notification
    */
   const handleNewMessages = useCallback(
-    (messages: IncomingMessage[]) => {
+    async (messages: IncomingMessage[]) => {
       console.log("📨 Received new messages:", messages.length);
 
       const mediaMessages = messages.filter(
@@ -114,10 +115,27 @@ const MessagesScreen: React.FC = () => {
       );
 
       if (mediaMessages.length > 0) {
-        const messagesWithSenderNames = mediaMessages.map((msg) => ({
-          ...msg,
-          senderName: "Someone", // TODO: Fetch actual sender name
-        }));
+        // Fetch sender names for all media messages
+        const messagesWithSenderNames = await Promise.all(
+          mediaMessages.map(async (msg) => {
+            try {
+              const senderProfile = await friendsService.getUserProfile(msg.senderId) as any;
+              const senderName = senderProfile?.displayName || 
+                                senderProfile?.username || 
+                                "Someone";
+              return {
+                ...msg,
+                senderName,
+              };
+            } catch (error) {
+              console.error("Failed to fetch sender profile for:", msg.senderId, error);
+              return {
+                ...msg,
+                senderName: "Someone",
+              };
+            }
+          }),
+        );
 
         setIncomingMessages((prev) => [...messagesWithSenderNames, ...prev]);
 
@@ -182,8 +200,7 @@ const MessagesScreen: React.FC = () => {
           const userProfile = profilesMap.get(otherParticipant);
 
           // Use displayName first, then username, then fallback to 'Unknown User'
-          const displayName =
-            userProfile?.displayName || userProfile?.username || "Unknown User";
+          const displayName = formatConversationUserName(userProfile);
 
           // Get proper last message preview
           let lastMessage = conv.lastMessage;
@@ -435,8 +452,7 @@ const MessagesScreen: React.FC = () => {
         );
 
         // Get the friend's display name for messaging
-        const friendDisplayName =
-          friendData.displayName || friendData.username || "Unknown User";
+        const friendDisplayName = formatConversationUserName(friendData);
 
         if (existingConversation) {
           showSuccessAlert(

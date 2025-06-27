@@ -26,9 +26,9 @@
 
 import { Ionicons } from "@expo/vector-icons";
 import {
-  useFocusEffect,
-  useNavigation,
-  useRoute,
+    useFocusEffect,
+    useNavigation,
+    useRoute,
 } from "@react-navigation/native";
 import { ResizeMode, Video } from "expo-av";
 import * as Haptics from "expo-haptics";
@@ -36,17 +36,17 @@ import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  StatusBar,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
+    StatusBar,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 import MediaViewer from "../../components/common/MediaViewer";
@@ -56,6 +56,7 @@ import { realtimeService } from "../../services/firebase/realtimeService";
 import { useAuthStore } from "../../stores/authStore";
 import { useThemeStore } from "../../stores/themeStore";
 import { showAlert } from "../../utils/alertService";
+import { formatConversationUserName, getLoadingText } from "../../utils/userHelpers";
 
 /**
  * Route parameters interface
@@ -118,7 +119,7 @@ const ChatScreen: React.FC = () => {
   const [friendOnlineStatus, setFriendOnlineStatus] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [friendDisplayName, setFriendDisplayName] = useState(
-    friendName || "Loading...",
+    friendName || getLoadingText(),
   );
   const [selectedMedia, setSelectedMedia] = useState<{
     messageId: string;
@@ -248,17 +249,13 @@ const ChatScreen: React.FC = () => {
       )) as any;
       if (friendProfile) {
         // Use displayName first, then username, then fallback
-        const displayName =
-          friendProfile.displayName ||
-          friendProfile.username ||
-          friendName ||
-          "Unknown User";
+        const displayName = formatConversationUserName(friendProfile);
         setFriendDisplayName(displayName);
       }
     } catch (error) {
       console.error("Load friend profile failed:", error);
       // Keep the original friendName if profile loading fails
-      setFriendDisplayName(friendName || "Unknown User");
+      setFriendDisplayName(friendName || formatConversationUserName(null));
     }
   }, [friendId, friendName]);
 

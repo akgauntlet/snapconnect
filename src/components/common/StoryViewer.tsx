@@ -27,6 +27,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import { ResizeMode, Video } from "expo-av";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -98,6 +99,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
   const [currentStoryIndex, setCurrentStoryIndex] = useState(initialStoryIndex);
   const [isLoading, setIsLoading] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
+  const [videoError, setVideoError] = useState(false);
 
   // Story timing
   const [storyDuration] = useState(5000); // 5 seconds per story
@@ -105,6 +107,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
   // Refs
   const progressInterval = useRef<NodeJS.Timeout | null>(null);
   const progressAnimation = useRef(new Animated.Value(0)).current;
+  const videoRef = useRef<Video>(null);
 
   // Current story data
   const currentUser = storyUsers[currentUserIndex];
@@ -179,23 +182,42 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
   }, [isPaused, storyDuration, progressAnimation, handleNextStory]);
 
   /**
-   * Pause story progress
+   * Pause story progress and video
    */
-  const pauseProgress = useCallback(() => {
+  const pauseProgress = useCallback(async () => {
     setIsPaused(true);
     progressAnimation.stopAnimation();
     if (progressInterval.current) {
       clearInterval(progressInterval.current);
     }
-  }, [progressAnimation]);
+    
+    // Pause video if it's playing
+    if (currentStory?.mediaType === "video" && videoRef.current) {
+      try {
+        await videoRef.current.pauseAsync();
+      } catch (error) {
+        console.error("Pause video failed:", error);
+      }
+    }
+  }, [progressAnimation, currentStory]);
 
   /**
-   * Resume story progress
+   * Resume story progress and video
    */
-  const resumeProgress = useCallback(() => {
+  const resumeProgress = useCallback(async () => {
     setIsPaused(false);
+    
+    // Resume video if it was paused
+    if (currentStory?.mediaType === "video" && videoRef.current) {
+      try {
+        await videoRef.current.playAsync();
+      } catch (error) {
+        console.error("Resume video failed:", error);
+      }
+    }
+    
     startProgress();
-  }, [startProgress]);
+  }, [startProgress, currentStory]);
 
   /**
    * Handle previous story
@@ -239,21 +261,86 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
   useEffect(() => {
     if (currentStory) {
       setIsLoading(true);
+      setVideoError(false);
       markStoryAsViewed();
 
-      // Simulate loading time
-      setTimeout(() => {
-        setIsLoading(false);
-        startProgress();
-      }, 500);
+      // For videos, start playback immediately
+      if (currentStory.mediaType === "video") {
+        // Start progress after a short delay to allow video to load
+        setTimeout(() => {
+          setIsLoading(false);
+          startProgress();
+        }, 800);
+      } else {
+        // For photos, simulate loading time
+        setTimeout(() => {
+          setIsLoading(false);
+          startProgress();
+        }, 500);
+      }
     }
 
     return () => {
+      // Cleanup when story changes
       if (progressInterval.current) {
         clearInterval(progressInterval.current);
       }
+      
+      // Stop video playback when changing stories
+      if (videoRef.current) {
+        videoRef.current.pauseAsync().catch(() => {
+          // Ignore pause errors during cleanup
+        });
+      }
     };
   }, [currentStory, markStoryAsViewed, startProgress]);
+
+  /**
+   * Cleanup on component unmount
+   */
+  useEffect(() => {
+    return () => {
+      // Final cleanup on unmount
+      if (progressInterval.current) {
+        clearInterval(progressInterval.current);
+      }
+      
+      if (videoRef.current) {
+        videoRef.current.unloadAsync().catch(() => {
+          // Ignore unload errors during cleanup
+        });
+      }
+    };
+  }, []);
+
+  /**
+   * Handle video playback status
+   */
+  const handleVideoStatusUpdate = useCallback((status: any) => {
+    if (status.isLoaded) {
+      setIsLoading(false);
+      setVideoError(false);
+      
+      // Auto-play when loaded
+      if (!status.isPlaying && !isPaused && !status.didJustFinish) {
+        videoRef.current?.playAsync();
+      }
+      
+      // Handle video end - advance to next story
+      if (status.didJustFinish) {
+        handleNextStory();
+      }
+    }
+  }, [isPaused, handleNextStory]);
+
+  /**
+   * Handle video load error
+   */
+  const handleVideoError = useCallback((error: any) => {
+    console.error("Video load error:", error);
+    setVideoError(true);
+    setIsLoading(false);
+  }, []);
 
   /**
    * Handle tap on left/right sides
@@ -396,12 +483,42 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
               transition={200}
             />
           ) : (
-            // TODO: Implement video player
-            <View className="flex-1 justify-center items-center bg-black">
-              <Ionicons name="play-circle" size={64} color="white" />
-              <Text className="text-white font-inter text-lg mt-4">
-                Video Story
-              </Text>
+            <View className="flex-1">
+              {!videoError ? (
+                <>
+                  <Video
+                    ref={videoRef}
+                    source={{ uri: currentStory.mediaUrl }}
+                    style={{ flex: 1 }}
+                    resizeMode={ResizeMode.CONTAIN}
+                    shouldPlay={!isPaused}
+                    isLooping={false}
+                    onPlaybackStatusUpdate={handleVideoStatusUpdate}
+                    onError={handleVideoError}
+                    useNativeControls={false}
+                  />
+                  
+                                      {/* Video Loading Overlay */}
+                    {isLoading && (
+                      <View className="absolute inset-0 justify-center items-center bg-black/70">
+                        <View className="bg-cyber-cyan/10 border border-cyber-cyan/20 p-6 rounded-xl items-center">
+                          <Ionicons name="videocam" size={32} color="#00ffff" style={{ marginBottom: 12 }} />
+                          <Text className="text-white font-inter text-lg">Loading video...</Text>
+                        </View>
+                      </View>
+                    )}
+                </>
+              ) : (
+                <View className="flex-1 justify-center items-center bg-black">
+                  <Ionicons name="warning-outline" size={64} color="#ef4444" />
+                  <Text className="text-white font-inter text-lg mt-4">
+                    Failed to load video
+                  </Text>
+                  <Text className="text-white/60 font-inter text-sm mt-2 text-center px-8">
+                    This video story could not be played
+                  </Text>
+                </View>
+              )}
             </View>
           )}
 
@@ -419,8 +536,8 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
             </View>
           )}
 
-          {/* Loading Overlay */}
-          {isLoading && (
+          {/* Loading Overlay for Photos */}
+          {isLoading && currentStory.mediaType === "photo" && (
             <View className="absolute inset-0 justify-center items-center bg-black/50">
               <Text className="text-white font-inter">Loading...</Text>
             </View>
