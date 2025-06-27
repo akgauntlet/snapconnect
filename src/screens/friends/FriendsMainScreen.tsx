@@ -1,7 +1,7 @@
 /**
- * @file FriendsListScreen.tsx
- * @description Friends list screen showing all user's friends with management options.
- * Allows viewing friend profiles, removing friends, and navigating to add friends.
+ * @file FriendsMainScreen.tsx
+ * @description Main friends screen for the Friends tab in bottom navigation.
+ * Shows all user's friends with management options, friend requests, and add friends functionality.
  *
  * @author SnapConnect Team
  * @created 2024-01-24
@@ -15,7 +15,7 @@
  * - @/stores/themeStore: Theme management
  *
  * @usage
- * Main friends management interface accessible from Profile screen.
+ * Main friends management interface accessible from bottom tab navigation.
  *
  * @ai_context
  * AI-powered friend suggestions and social graph analysis.
@@ -26,7 +26,6 @@ import { Ionicons } from "@expo/vector-icons";
 import {
     useFocusEffect,
     useNavigation,
-    useRoute,
 } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useCallback, useEffect, useState } from "react";
@@ -72,12 +71,12 @@ interface Friend {
 /**
  * Navigation prop type
  */
-type FriendsListNavigationProp = NativeStackNavigationProp<any, "FriendsList">;
+type FriendsMainNavigationProp = NativeStackNavigationProp<any, "Friends">;
 
 /**
- * Friends list screen component
+ * Friends main screen component for tab navigation
  *
- * @returns {React.ReactElement} Rendered friends list interface
+ * @returns {React.ReactElement} Rendered friends main interface
  *
  * @performance
  * - Virtualized list for large friend counts
@@ -89,16 +88,12 @@ type FriendsListNavigationProp = NativeStackNavigationProp<any, "FriendsList">;
  * - Activity-based friend categorization
  * - Intelligent search and discovery
  */
-const FriendsListScreen: React.FC = () => {
-  const navigation = useNavigation<FriendsListNavigationProp>();
-  const route = useRoute<any>();
+const FriendsMainScreen: React.FC = () => {
+  const navigation = useNavigation<FriendsMainNavigationProp>();
   const theme = useThemeStore((state) => state.theme);
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
   const { user } = useAuthStore();
   const { tabBarHeight } = useTabBarHeight();
-
-  // Get source tab from route params
-  const sourceTab = route.params?.sourceTab || "Profile"; // Default to Profile if not specified
 
   // Friend requests hook for badge count
   const { incomingCount, refreshRequests } = useFriendRequests();
@@ -245,25 +240,15 @@ const FriendsListScreen: React.FC = () => {
    * Navigate to add friends screen
    */
   const handleAddFriends = useCallback(() => {
-    navigation.navigate("AddFriends", { sourceTab });
-  }, [navigation, sourceTab]);
+    navigation.navigate("AddFriends", { sourceTab: "Friends" });
+  }, [navigation]);
 
   /**
    * Navigate to friend requests screen
    */
   const handleFriendRequests = useCallback(() => {
-    navigation.navigate("FriendRequests", { sourceTab });
-  }, [navigation, sourceTab]);
-
-  /**
-   * Handle back navigation to source tab
-   */
-  const handleBackNavigation = useCallback(() => {
-    // Navigate back to the MainTabs with the specific tab
-    navigation.navigate("MainTabs", {
-      screen: sourceTab,
-    });
-  }, [navigation, sourceTab]);
+    navigation.navigate("FriendRequests", { sourceTab: "Friends" });
+  }, [navigation]);
 
   /**
    * View friend profile
@@ -433,6 +418,66 @@ const FriendsListScreen: React.FC = () => {
     </TouchableOpacity>
   );
 
+  /**
+   * Render empty state
+   */
+  const renderEmptyState = () => (
+    <View className="flex-1 justify-center items-center px-6 py-12">
+      <View className="w-20 h-20 bg-cyber-cyan/20 rounded-full justify-center items-center mb-6">
+        <Ionicons name="people-outline" size={40} color={accentColor} />
+      </View>
+      <Text className="text-white font-orbitron text-xl mb-2">
+        No Friends Yet
+      </Text>
+      <Text className="text-white/60 font-inter text-center mb-6">
+        Start building your gaming network by adding friends to connect and share your highlights.
+      </Text>
+      <TouchableOpacity
+        onPress={handleAddFriends}
+        className="bg-cyber-cyan px-6 py-3 rounded-lg"
+      >
+        <Text className="text-cyber-black font-inter font-semibold">
+          Add Friends
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  /**
+   * Render error state
+   */
+  const renderErrorState = () => (
+    <View className="flex-1 justify-center items-center px-6 py-12">
+      <View className="w-20 h-20 bg-red-500/20 rounded-full justify-center items-center mb-6">
+        <Ionicons name="alert-circle-outline" size={40} color="#ef4444" />
+      </View>
+      <Text className="text-white font-orbitron text-xl mb-2">
+        Something went wrong
+      </Text>
+      <Text className="text-white/60 font-inter text-center mb-6">
+        {error}
+      </Text>
+      <TouchableOpacity
+        onPress={loadFriends}
+        className="bg-cyber-cyan px-6 py-3 rounded-lg"
+      >
+        <Text className="text-cyber-black font-inter font-semibold">
+          Try Again
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  /**
+   * Render loading state
+   */
+  const renderLoadingState = () => (
+    <View className="flex-1 justify-center items-center">
+      <ActivityIndicator size="large" color={accentColor} />
+      <Text className="text-white/60 font-inter mt-4">Loading friends...</Text>
+    </View>
+  );
+
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: theme.colors.background.primary }}
@@ -445,190 +490,108 @@ const FriendsListScreen: React.FC = () => {
       {/* Header */}
       <View className="flex-row justify-between items-center px-6 py-4 border-b border-cyber-gray/20">
         <View className="flex-row items-center">
-          <TouchableOpacity onPress={handleBackNavigation} className="p-2 mr-2">
-            <Ionicons name="arrow-back" size={24} color="white" />
-          </TouchableOpacity>
-          <Text className="text-white font-orbitron text-xl">Friends</Text>
+          <Text className="text-white font-orbitron text-2xl">Friends</Text>
         </View>
 
         <TouchableOpacity
-          onPress={handleFriendRequests}
-          className="flex-row items-center bg-cyber-gray/20 px-3 py-2 rounded-lg"
+          onPress={handleAddFriends}
+          className="bg-cyber-cyan/10 border border-cyber-cyan/20 p-3 rounded-full"
         >
-          <NotificationBadge count={incomingCount}>
-            <Ionicons name="mail-outline" size={20} color={accentColor} />
-          </NotificationBadge>
-          <Text className="text-white font-inter font-medium text-sm ml-2">
-            Requests
-          </Text>
+          <Ionicons name="person-add-outline" size={20} color={accentColor} />
         </TouchableOpacity>
       </View>
 
-      {/* Filter Tabs */}
-      <View className="px-6 py-4">
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {renderFilterTab("all", "All", friends.length)}
-          {renderFilterTab(
-            "online",
-            "Online",
-            friends.filter((f) => f.status === "online").length,
-          )}
-          {renderFilterTab(
-            "recent",
-            "Recent",
-            friends.filter((f) => {
-              if (!f.lastActive) return false;
-              const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-              return f.lastActive > dayAgo;
-            }).length,
-          )}
-        </ScrollView>
-      </View>
+      {/* Main Content */}
+      {isLoading ? (
+        renderLoadingState()
+      ) : error ? (
+        renderErrorState()
+      ) : friends.length === 0 ? (
+        renderEmptyState()
+      ) : (
+        <>
+          {/* Filter Tabs */}
+          <View className="px-6 py-4">
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {renderFilterTab("all", "All", friends.length)}
+              {renderFilterTab(
+                "online",
+                "Online",
+                friends.filter((f) => f.status === "online").length,
+              )}
+              {renderFilterTab(
+                "recent",
+                "Recent",
+                friends.filter((f) => {
+                  if (!f.lastActive) return false;
+                  const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+                  return f.lastActive > dayAgo;
+                }).length,
+              )}
+            </ScrollView>
+          </View>
 
-      {/* Search Bar */}
-      <View className="px-6 pb-4">
-        <View className="flex-row items-center bg-cyber-gray/20 rounded-lg px-4 py-3">
-          <Ionicons name="search" size={20} color="white/50" />
-          <TextInput
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search friends..."
-            placeholderTextColor="rgba(255,255,255,0.5)"
-            className="flex-1 text-white font-inter ml-3"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery("")}>
-              <Ionicons
-                name="close-circle"
-                size={20}
-                color="rgba(255,255,255,0.5)"
+          {/* Search Bar */}
+          <View className="px-6 pb-4">
+            <View className="flex-row items-center bg-cyber-gray/20 rounded-lg px-4 py-3">
+              <Ionicons name="search" size={20} color="rgba(255,255,255,0.5)" />
+              <TextInput
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Search friends..."
+                placeholderTextColor="rgba(255,255,255,0.5)"
+                className="flex-1 text-white font-inter ml-3"
+                autoCapitalize="none"
+                autoCorrect={false}
               />
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
-      {/* No Friends State - moved up for better visibility */}
-      {!isLoading && !error && filteredFriends.length === 0 && (
-        <View className="flex-1 justify-start items-center px-8 pt-16">
-          <Ionicons
-            name="people-outline"
-            size={64}
-            color="rgba(255,255,255,0.3)"
-          />
-          <Text className="text-white/70 font-inter text-lg mt-4 mb-2">
-            {searchQuery ? "No friends found" : "No friends yet"}
-          </Text>
-          <Text className="text-white/50 font-inter text-sm text-center mb-8">
-            {searchQuery
-              ? "Try a different search term"
-              : "Start building your gaming network by adding friends"}
-          </Text>
-          {!searchQuery && (
-            <TouchableOpacity
-              onPress={handleAddFriends}
-              className="bg-cyber-cyan px-8 py-4 rounded-xl flex-row items-center"
-              style={{
-                shadowColor: accentColor,
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.3,
-                shadowRadius: 8,
-                elevation: 8,
-              }}
-            >
-              <Ionicons
-                name="person-add"
-                size={20}
-                color="#000000"
-                style={{ marginRight: 8 }}
-              />
-              <Text className="text-cyber-black font-inter font-bold text-base">
-                Find Friends
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
-
-      {/* Add Friends Banner - shown when user has few friends */}
-      {!isLoading &&
-        friends.length > 0 &&
-        friends.length <= 3 &&
-        filteredFriends.length > 0 && (
-          <View className="mx-6 mb-4 p-4 bg-gradient-to-r from-cyber-cyan/10 to-cyber-purple/10 rounded-lg border border-cyber-cyan/20">
-            <View className="flex-row items-center">
-              <View className="w-10 h-10 bg-cyber-cyan/20 rounded-full justify-center items-center mr-3">
-                <Ionicons name="people" size={20} color={accentColor} />
-              </View>
-              <View className="flex-1">
-                <Text className="text-white font-inter font-medium text-sm">
-                  Grow Your Network
-                </Text>
-                <Text className="text-white/60 font-inter text-xs mt-1">
-                  Find friends to share stories and gaming moments
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={handleAddFriends}
-                className="bg-cyber-cyan px-4 py-2 rounded-lg"
-              >
-                <Text className="text-cyber-black font-inter font-semibold text-sm">
-                  Find Friends
-                </Text>
-              </TouchableOpacity>
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery("")}>
+                  <Ionicons
+                    name="close-circle"
+                    size={20}
+                    color="rgba(255,255,255,0.5)"
+                  />
+                </TouchableOpacity>
+              )}
             </View>
           </View>
-        )}
 
-      {/* Friends List */}
-      {isLoading ? (
-        <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color={accentColor} />
-          <Text className="text-white/60 font-inter text-base mt-4">
-            Loading friends...
-          </Text>
-        </View>
-      ) : error ? (
-        <View className="flex-1 justify-center items-center px-8">
-          <Ionicons name="alert-circle-outline" size={64} color="#ef4444" />
-          <Text className="text-white/70 font-inter text-lg mt-4 mb-2 text-center">
-            {error}
-          </Text>
-          <TouchableOpacity
-            onPress={loadFriends}
-            className="bg-cyber-cyan/20 px-6 py-3 rounded-lg mt-4"
-          >
-            <Text className="text-cyber-cyan font-inter font-semibold">
-              Try Again
-            </Text>
-          </TouchableOpacity>
-        </View>
-      ) : filteredFriends.length > 0 ? (
-        <FlatList
-          data={filteredFriends}
-          renderItem={renderFriendItem}
-          keyExtractor={(item) => item.id}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: tabBarHeight + 20 }}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={handleRefresh}
-              tintColor={accentColor}
-              colors={[accentColor]}
-            />
-          }
-        />
-      ) : null}
+          {/* Friends List */}
+          <FlatList
+            data={filteredFriends}
+            renderItem={renderFriendItem}
+            keyExtractor={(item) => item.id}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: tabBarHeight + 20 }}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={handleRefresh}
+                tintColor={accentColor}
+                colors={[accentColor]}
+              />
+            }
+            ListEmptyComponent={
+              searchQuery || selectedFilter !== "all" ? (
+                <View className="items-center py-12">
+                  <Text className="text-white/60 font-inter">
+                    {searchQuery
+                      ? `No friends found matching "${searchQuery}"`
+                      : `No ${selectedFilter} friends`}
+                  </Text>
+                </View>
+              ) : null
+            }
+          />
+        </>
+      )}
 
-      {/* Floating Action Button - Find & Add New Friends */}
+      {/* Floating Requests Button */}
       <TouchableOpacity
-        onPress={handleAddFriends}
-        className="absolute right-6 w-14 h-14 bg-cyber-cyan rounded-full justify-center items-center shadow-lg"
+        onPress={handleFriendRequests}
+        className="absolute bottom-6 right-6 w-14 h-14 bg-cyber-cyan rounded-full justify-center items-center shadow-lg"
         style={{
-          bottom: tabBarHeight + 8,
+          marginBottom: tabBarHeight,
           shadowColor: accentColor,
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.3,
@@ -636,10 +599,12 @@ const FriendsListScreen: React.FC = () => {
           elevation: 8,
         }}
       >
-        <Ionicons name="person-add" size={24} color="#000000" />
+        <NotificationBadge count={incomingCount}>
+          <Ionicons name="mail" size={24} color="#000000" />
+        </NotificationBadge>
       </TouchableOpacity>
     </SafeAreaView>
   );
 };
 
-export default FriendsListScreen;
+export default FriendsMainScreen; 

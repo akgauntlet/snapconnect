@@ -33,7 +33,7 @@ All core social features have been enhanced and fully integrated into the app's 
 - **Location**: `src/screens/friends/`
 - **Purpose**: Complete friend management with discovery, requests, and profiles
 - **Features**:
-  - **FriendsListScreen**: View and manage all friends
+  - **FriendsMainScreen**: View and manage all friends
   - **AddFriendsScreen**: Search and discover new friends
   - **FriendRequestsScreen**: Handle incoming/outgoing requests
   - **FriendProfileScreen**: View detailed friend profiles
@@ -51,10 +51,10 @@ All core social features have been enhanced and fully integrated into the app's 
   ├── Camera
   ├── Messages
   ├── Stories
+  ├── Friends (FriendsMainScreen)
   └── Profile
 
   Friend Management Screens (Stack)
-  ├── FriendsList
   ├── AddFriends
   ├── FriendRequests
   └── FriendProfile
@@ -64,7 +64,7 @@ All core social features have been enhanced and fully integrated into the app's 
 
 - **File**: `src/screens/profile/ProfileScreen.tsx`
 - **Enhancement**: Added navigation to Friends management
-- **Access**: Tap "Friends" menu item → navigates to FriendsListScreen
+- **Access**: Tap "Friends" tab → navigates to FriendsMainScreen
 
 ## 📱 **User Flow Integration**
 
@@ -82,7 +82,7 @@ All core social features have been enhanced and fully integrated into the app's 
 
 ```
 1. Profile Screen → Tap "Friends"
-2. FriendsListScreen → View all friends
+2. FriendsMainScreen → View all friends
    ├── Search and filter friends
    ├── Remove friends
    └── Navigate to friend profiles
@@ -157,7 +157,7 @@ All core social features have been enhanced and fully integrated into the app's 
 | -------------------- | ----------- | ------------------ |
 | MediaViewer          | ✅ Complete | Camera, Messages   |
 | RecipientSelector    | ✅ Complete | Camera, Friends    |
-| FriendsListScreen    | ✅ Complete | Profile Navigation |
+| FriendsMainScreen    | ✅ Complete | Friends Tab Navigation |
 | AddFriendsScreen     | ✅ Complete | Search & Discovery |
 | FriendRequestsScreen | ✅ Complete | Request Management |
 | FriendProfileScreen  | ✅ Complete | Profile Viewing    |

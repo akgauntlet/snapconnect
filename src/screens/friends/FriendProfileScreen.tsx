@@ -28,22 +28,22 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Image,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { friendsService } from "../../services/firebase/friendsService";
 import { useAuthStore } from "../../stores/authStore";
 import { useThemeStore } from "../../stores/themeStore";
 import {
-  showDestructiveAlert,
-  showErrorAlert,
-  showSuccessAlert,
+    showDestructiveAlert,
+    showErrorAlert,
+    showSuccessAlert,
 } from "../../utils/alertService";
 
 /**
@@ -393,16 +393,18 @@ const FriendProfileScreen: React.FC = () => {
    * Send message to friend
    */
   const sendMessage = useCallback(() => {
-    // Navigate to Messages tab with friend information
-    navigation.navigate("MainTabs", {
-      screen: "Messages",
-      params: {
-        friendId,
-        friendName: friendProfile?.displayName,
-        openConversation: true,
-      },
+    if (!user || !friendProfile) return;
+
+    // Create conversation ID using the messaging service pattern
+    const conversationId = `${[user.uid, friendId].sort().join("_")}`;
+    
+    // Navigate directly to Chat screen with the friend's information
+    navigation.navigate("Chat", {
+      conversationId: conversationId,
+      friendId: friendId,
+      friendName: friendProfile.displayName,
     });
-  }, [navigation, friendId, friendProfile]);
+  }, [navigation, friendId, friendProfile, user]);
 
   /**
    * Accept friend request

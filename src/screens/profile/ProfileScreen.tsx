@@ -92,7 +92,7 @@ const ProfileScreen: React.FC = () => {
     bio: getUserBio(profile),
     stats: {
       ...baseStats,
-      friends: isFriendCountLoading ? "..." : friendCount, // Show loading indicator while fetching
+      // Friends count removed since it's now in its own tab
     },
     completionPercentage: getProfileCompletionPercentage(profile),
   };
@@ -102,9 +102,6 @@ const ProfileScreen: React.FC = () => {
    */
   const handleMenuItemPress = (title: string) => {
     switch (title) {
-      case "Friends":
-        navigation.navigate("FriendsList", { sourceTab: "Profile" });
-        break;
       case "Settings":
         // TODO: Navigate to settings
         console.log("Navigate to Settings");
@@ -137,7 +134,6 @@ const ProfileScreen: React.FC = () => {
       title: "Achievements",
       subtitle: "Gaming milestones",
     },
-    { icon: "people-outline", title: "Friends", subtitle: "Gaming network" },
     { icon: "shield-outline", title: "Privacy", subtitle: "Account security" },
     { icon: "help-circle-outline", title: "Help", subtitle: "Support center" },
   ];
@@ -221,11 +217,7 @@ const ProfileScreen: React.FC = () => {
                 value: userData.stats.highlights,
                 icon: "play-circle",
               },
-              {
-                label: "Friends",
-                value: userData.stats.friends,
-                icon: "people",
-              },
+
               {
                 label: "Achievements",
                 value: userData.stats.achievements,

@@ -12,14 +12,14 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useCallback, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  RefreshControl,
-  SafeAreaView,
-  StatusBar,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    RefreshControl,
+    SafeAreaView,
+    StatusBar,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { useFriendRequests } from "../../hooks/useFriendRequests";
 import { useTabBarHeight } from "../../hooks/useTabBarHeight";
@@ -27,9 +27,9 @@ import { friendsService } from "../../services/firebase/friendsService";
 import { useAuthStore } from "../../stores/authStore";
 import { useThemeStore } from "../../stores/themeStore";
 import {
-  showConfirmAlert,
-  showErrorAlert,
-  showSuccessAlert,
+    showConfirmAlert,
+    showErrorAlert,
+    showSuccessAlert,
 } from "../../utils/alertService";
 
 interface FriendRequest {
@@ -257,7 +257,7 @@ const FriendRequestsScreen: React.FC = () => {
       <View className="flex-row justify-between items-center px-6 py-4 border-b border-cyber-gray/20">
         <View className="flex-row items-center">
           <TouchableOpacity
-            onPress={() => navigation.navigate("FriendsList", { sourceTab })}
+            onPress={() => navigation.navigate("MainTabs", { screen: sourceTab })}
             className="p-2 mr-2"
           >
             <Ionicons name="arrow-back" size={24} color="white" />

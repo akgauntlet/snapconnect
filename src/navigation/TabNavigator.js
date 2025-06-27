@@ -41,7 +41,7 @@ import StoriesScreen from "../screens/stories/StoriesScreen";
 import AddFriendsScreen from "../screens/friends/AddFriendsScreen";
 import FriendProfileScreen from "../screens/friends/FriendProfileScreen";
 import FriendRequestsScreen from "../screens/friends/FriendRequestsScreen";
-import FriendsListScreen from "../screens/friends/FriendsListScreen";
+import FriendsMainScreen from "../screens/friends/FriendsMainScreen";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -161,6 +161,9 @@ const TabsNavigator = () => {
             case "Stories":
               iconName = focused ? "play-circle" : "play-circle-outline";
               break;
+            case "Friends":
+              iconName = focused ? "people" : "people-outline";
+              break;
             case "Profile":
               iconName = focused ? "person" : "person-outline";
               break;
@@ -217,6 +220,15 @@ const TabsNavigator = () => {
         component={StoriesScreen}
         options={{
           tabBarLabel: "Stories",
+        }}
+      />
+
+      {/* Friends Tab */}
+      <Tab.Screen
+        name="Friends"
+        component={FriendsMainScreen}
+        options={{
+          tabBarLabel: "Friends",
         }}
       />
 
@@ -284,14 +296,6 @@ const TabNavigator = () => {
       />
 
       {/* Friend Management Screens */}
-      <Stack.Screen
-        name="FriendsList"
-        component={FriendsListScreen}
-        options={{
-          animation: "slide_from_right",
-        }}
-      />
-
       <Stack.Screen
         name="AddFriends"
         component={AddFriendsScreen}

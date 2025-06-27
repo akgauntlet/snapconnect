@@ -27,14 +27,14 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  SafeAreaView,
-  StatusBar,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    SafeAreaView,
+    StatusBar,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import NotificationBadge from "../../components/common/NotificationBadge";
 import { useFriendRequests } from "../../hooks/useFriendRequests";
@@ -476,7 +476,7 @@ const AddFriendsScreen: React.FC = () => {
       <View className="flex-row justify-between items-center px-6 py-4 border-b border-cyber-gray/20">
         <View className="flex-row items-center">
           <TouchableOpacity
-            onPress={() => navigation.navigate("FriendsList", { sourceTab })}
+            onPress={() => navigation.navigate("MainTabs", { screen: sourceTab })}
             className="p-2 mr-2"
           >
             <Ionicons name="arrow-back" size={24} color="white" />

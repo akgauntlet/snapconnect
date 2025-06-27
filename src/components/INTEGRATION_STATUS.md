@@ -67,7 +67,7 @@
 ### **Medium Priority**
 
 3. **Friends Management** - Ideal for GameCard (friend profiles)
-   - `src/screens/friends/FriendsListScreen.tsx`
+   - `src/screens/friends/FriendsMainScreen.tsx`
    - `src/screens/friends/AddFriendsScreen.tsx`
    - `src/screens/friends/FriendProfileScreen.tsx`
 
@@ -326,7 +326,7 @@ These components are complete and actively used in the application:
 - [x] **ChatScreen** - Individual conversations
 - [x] **StoriesScreen** - Story feed
 - [x] **ProfileScreen** - User profiles
-- [x] **FriendsListScreen** - Friend management
+- [x] **FriendsMainScreen** - Friend management
 
 ### Camera Features
 - [x] Photo capture with AR filters
