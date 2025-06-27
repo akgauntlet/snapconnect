@@ -134,10 +134,8 @@ const GamingOverlay: React.FC<GamingOverlayProps> = ({
           style={{
             color: theme.colors.accent.cyan,
             fontFamily: theme.typography.fonts.mono,
-            textShadowColor: theme.colors.accent.cyan,
-            textShadowOffset: { width: 0, height: 0 },
-            textShadowRadius: 3,
-          }}
+            textShadow: `0px 0px 3px ${theme.colors.accent.cyan}`,
+          } as any}
         >
           {data.gameMode || 'GAMING MODE'}
         </Text>
@@ -321,10 +319,8 @@ const GamingOverlay: React.FC<GamingOverlayProps> = ({
           style={{
             color: theme.colors.accent.orange,
             fontFamily: theme.typography.fonts.display,
-            textShadowColor: theme.colors.accent.orange,
-            textShadowOffset: { width: 0, height: 0 },
-            textShadowRadius: 5,
-          }}
+            textShadow: `0px 0px 5px ${theme.colors.accent.orange}`,
+          } as any}
         >
           🏆
         </Text>

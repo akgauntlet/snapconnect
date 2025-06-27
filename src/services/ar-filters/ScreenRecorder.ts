@@ -52,7 +52,6 @@ export class ScreenRecorder {
       throw new Error('Recording already in progress');
     }
 
-    console.log('Starting screen recording with options:', options);
     this.isRecording = true;
     this.recordingStartTime = Date.now();
   }
@@ -69,8 +68,6 @@ export class ScreenRecorder {
     this.isRecording = false;
     this.recordingStartTime = 0;
 
-    console.log('Screen recording stopped');
-    
     // Return a stub result
     return {
       uri: 'stub://recording-result',
@@ -84,7 +81,6 @@ export class ScreenRecorder {
    * Save recording to device storage (stub implementation)
    */
   async saveToLibrary(recordingResult: RecordingResult): Promise<string> {
-    console.log('Saving recording to library:', recordingResult);
     return recordingResult.uri;
   }
 
@@ -108,7 +104,6 @@ export class ScreenRecorder {
 
     this.isRecording = false;
     this.recordingStartTime = 0;
-    console.log('Screen recording cancelled');
   }
 }
 

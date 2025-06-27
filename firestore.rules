@@ -104,6 +104,12 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
+    // User stats - users can read their own stats and other users' stats for friend profiles
+    match /userStats/{userId} {
+      allow read: if request.auth != null; // Allow reading for friend profiles and stats display
+      allow write: if request.auth != null && request.auth.uid == userId; // Only owner can write
+    }
+    
     // Public gaming leaderboards - readable by all authenticated users
     match /leaderboards/{document=**} {
       allow read: if request.auth != null;

@@ -33,8 +33,10 @@ import { useThemeStore } from "../stores/themeStore";
 import CameraScreen from "../screens/camera/CameraScreen";
 import ChatScreen from "../screens/messaging/ChatScreen";
 import MessagesScreen from "../screens/messaging/MessagesScreen";
+import AchievementsScreen from "../screens/profile/AchievementsScreen";
 import EditProfileScreen from "../screens/profile/EditProfileScreen";
 import ProfileScreen from "../screens/profile/ProfileScreen";
+import SettingsScreen from "../screens/profile/SettingsScreen";
 import StoriesScreen from "../screens/stories/StoriesScreen";
 
 // Import friend management screens
@@ -73,13 +75,13 @@ const TabsNavigator = () => {
       if (isWebMobile) {
         // Mobile web browsers often have varying viewport heights
         // Use a combination of safe area insets and viewport-relative padding
-        const basePadding = isSamsungGalaxyS20Ultra ? 20 : 16;
-        const safePadding = Math.max(insets.bottom, 8);
+        const basePadding = isSamsungGalaxyS20Ultra ? 12 : 8; // Reduced from 20:16
+        const safePadding = Math.max(insets.bottom, 4); // Reduced from 8
         return basePadding + safePadding;
       }
-      return Math.max(insets.bottom, 8);
+      return Math.max(insets.bottom, 4); // Reduced from 8
     }
-    return Math.max(insets.bottom, 8);
+    return Math.max(insets.bottom, 4); // Reduced from 8
   };
 
   // Calculate tab bar height for different scenarios
@@ -89,7 +91,7 @@ const TabsNavigator = () => {
 
     if (Platform.OS === "web" && isWebMobile) {
       // For mobile web, ensure adequate height to prevent cutting off
-      return baseHeight + bottomPadding + (isSamsungGalaxyS20Ultra ? 8 : 0);
+      return baseHeight + bottomPadding + (isSamsungGalaxyS20Ultra ? 4 : 0); // Reduced from 8
     }
 
     return baseHeight + bottomPadding;
@@ -101,29 +103,41 @@ const TabsNavigator = () => {
         // Header configuration
         headerShown: false,
 
-        // Tab bar styling with improved mobile web support
+        // Tab bar styling with enhanced cyber gaming aesthetic
         tabBarStyle: {
-          backgroundColor: currentTheme.colors.background.primary,
-          borderTopColor: accentColor,
-          borderTopWidth: 1,
+          backgroundColor: currentTheme.colors.background.secondary,
+          borderTopColor: `${accentColor}80`, // 50% opacity for subtle accent
+          borderTopWidth: 2,
           height: calculateTabBarHeight(),
           paddingBottom: calculateBottomPadding(),
-          paddingTop: 8,
+          paddingTop: 6,
           position: "absolute",
           left: 0,
           right: 0,
           bottom: 0,
+          // Cyber gaming enhancements
+          shadowColor: accentColor,
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.2,
+          shadowRadius: 8,
+          elevation: 10,
+          // Subtle gradient overlay for depth
+          backgroundImage: Platform.OS === "web" ? 
+            `linear-gradient(180deg, ${currentTheme.colors.background.secondary}00 0%, ${currentTheme.colors.background.secondary} 20%, ${currentTheme.colors.background.primary} 100%)` : 
+            undefined,
           // Additional web-specific styling
           ...(Platform.OS === "web" && {
-            // Ensure tab bar stays visible on web mobile browsers
-            minHeight: 68,
-            // Use proper number value instead of CSS env() template literal
+            minHeight: 60,
             paddingBottom: calculateBottomPadding(),
+            // Enhanced web blur effect
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            borderTop: `2px solid ${accentColor}40`,
           }),
           // Samsung Galaxy S20 Ultra specific adjustments
           ...(isSamsungGalaxyS20Ultra && {
-            minHeight: 76,
-            paddingBottom: calculateBottomPadding() + 4,
+            minHeight: 68,
+            paddingBottom: calculateBottomPadding() + 2,
           }),
         },
 
@@ -177,9 +191,7 @@ const TabsNavigator = () => {
               size={iconSize}
               color={color}
               style={{
-                textShadowColor: focused ? accentColor : "transparent",
-                textShadowOffset: { width: 0, height: 0 },
-                textShadowRadius: focused ? 8 : 0,
+                textShadow: focused ? `0px 0px 8px ${accentColor}` : 'none',
                 marginTop: 2,
               }}
             />
@@ -281,6 +293,22 @@ const TabNavigator = () => {
       <Stack.Screen
         name="EditProfile"
         component={EditProfileScreen}
+        options={{
+          animation: "slide_from_right",
+        }}
+      />
+
+      <Stack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{
+          animation: "slide_from_right",
+        }}
+      />
+
+      <Stack.Screen
+        name="Achievements"
+        component={AchievementsScreen}
         options={{
           animation: "slide_from_right",
         }}

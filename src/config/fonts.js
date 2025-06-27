@@ -54,7 +54,6 @@ export const fonts = {
 export const loadFonts = async () => {
   try {
     await Font.loadAsync(fonts);
-    console.log("Custom fonts loaded successfully");
   } catch (error) {
     console.warn("Failed to load custom fonts:", error);
     // App should continue with system fonts

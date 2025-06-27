@@ -52,6 +52,7 @@ import {
     showErrorAlert,
     showSuccessAlert,
 } from "../../utils/alertService";
+import { useOptimizedFlatList } from "../../utils/scrollOptimization";
 
 /**
  * Friend interface for display
@@ -66,6 +67,26 @@ interface Friend {
   createdAt?: Date;
   status: "online" | "offline" | "away";
   mutualFriends?: number;
+}
+
+/**
+ * Serializable friend interface for navigation parameters
+ * Date objects are converted to ISO strings to prevent serialization warnings
+ */
+interface SerializableFriend {
+  id: string;
+  displayName: string;
+  username: string;
+  profilePhoto?: string;
+  bio?: string;
+  lastActive?: string; // ISO string instead of Date
+  isOnline?: boolean;
+  createdAt?: string; // ISO string instead of Date
+  status: "online" | "offline" | "away";
+  mutualFriends?: number;
+  gamingPlatform?: string;
+  favoriteGames?: string[];
+  achievements?: string[];
 }
 
 /**
@@ -94,6 +115,7 @@ const FriendsMainScreen: React.FC = () => {
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
   const { user } = useAuthStore();
   const { tabBarHeight } = useTabBarHeight();
+  const optimizedFriendsListProps = useOptimizedFlatList('friends');
 
   // Friend requests hook for badge count
   const { incomingCount, refreshRequests } = useFriendRequests();
@@ -255,7 +277,17 @@ const FriendsMainScreen: React.FC = () => {
    */
   const handleViewProfile = useCallback(
     (friend: Friend) => {
-      navigation.navigate("FriendProfile", { friendId: friend.id, friend });
+      // Create a serializable version of the friend object
+      const serializableFriend: SerializableFriend = {
+        ...friend,
+        lastActive: friend.lastActive ? friend.lastActive.toISOString() : undefined,
+        createdAt: friend.createdAt ? friend.createdAt.toISOString() : undefined,
+      };
+      
+      navigation.navigate("FriendProfile", { 
+        friendId: friend.id, 
+        friend: serializableFriend 
+      });
     },
     [navigation],
   );
@@ -582,6 +614,7 @@ const FriendsMainScreen: React.FC = () => {
                 </View>
               ) : null
             }
+            {...optimizedFriendsListProps}
           />
         </>
       )}
@@ -592,12 +625,9 @@ const FriendsMainScreen: React.FC = () => {
         className="absolute bottom-6 right-6 w-14 h-14 bg-cyber-cyan rounded-full justify-center items-center shadow-lg"
         style={{
           marginBottom: tabBarHeight,
-          shadowColor: accentColor,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 8,
+          boxShadow: `0px 4px 8px rgba(0, 255, 255, 0.3)`,
           elevation: 8,
-        }}
+        } as any}
       >
         <NotificationBadge count={incomingCount}>
           <Ionicons name="mail" size={24} color="#000000" />

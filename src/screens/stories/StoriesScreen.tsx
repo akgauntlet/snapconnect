@@ -49,6 +49,7 @@ import { storiesService } from "../../services/firebase/storiesService";
 import { useAuthStore } from "../../stores/authStore";
 import { useThemeStore } from "../../stores/themeStore";
 import { showErrorAlert, showSuccessAlert } from "../../utils/alertService";
+import { useOptimizedFlatList } from "../../utils/scrollOptimization";
 
 /**
  * Story stats data interface
@@ -80,6 +81,7 @@ const StoriesScreen: React.FC = () => {
   const { user } = useAuthStore();
   const navigation = useNavigation();
   const { tabBarHeight } = useTabBarHeight();
+  const optimizedStoryListProps = useOptimizedFlatList('story');
 
   // Component state
   const [friendsStories, setFriendsStories] = useState<StoryUser[]>([]);
@@ -118,10 +120,7 @@ const StoriesScreen: React.FC = () => {
       setFriendsStories(friendsStoriesData);
       setMyStories(userStoriesData);
 
-      console.log("✅ Stories loaded:", {
-        friendsStories: friendsStoriesData.length,
-        myStories: userStoriesData.length,
-      });
+
     } catch (error) {
       console.error("❌ Load stories failed:", error);
       setError("Failed to load stories. Please try again.");
@@ -381,12 +380,9 @@ const StoriesScreen: React.FC = () => {
         onPress={handleCreateStory}
         className="bg-cyber-cyan px-8 py-4 rounded-xl flex-row items-center"
         style={{
-          shadowColor: accentColor,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 8,
+          boxShadow: `0px 4px 8px rgba(0, 255, 255, 0.3)`,
           elevation: 8,
-        }}
+        } as any}
       >
         <Ionicons
           name="camera"
@@ -436,7 +432,7 @@ const StoriesScreen: React.FC = () => {
         ) : (
           <View className="flex-1">
             {/* Story Ring (Horizontal scroll) */}
-            <View className="pt-6 pb-4">
+            <View className="pt-3 pb-4">
               <FlatList
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -444,6 +440,7 @@ const StoriesScreen: React.FC = () => {
                 renderItem={renderStoryRingItem}
                 keyExtractor={(item, index) => `story-ring-${index}`}
                 contentContainerStyle={{ paddingHorizontal: 24, gap: 8, paddingVertical: 4 }}
+                {...optimizedStoryListProps}
               />
             </View>
 
@@ -471,6 +468,7 @@ const StoriesScreen: React.FC = () => {
                   flexGrow: friendsStories.length === 0 ? 1 : 0,
                 }}
                 ListEmptyComponent={renderEmptyState}
+                {...optimizedStoryListProps}
               />
             </View>
           </View>

@@ -272,12 +272,9 @@ export const CyberButton: React.FC<CyberButtonProps> = ({
         ${className}
       `}
       style={{
-        shadowColor: variant === "ghost" ? "transparent" : "#00ffff",
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: isDisabled ? 0 : 0.3,
-        shadowRadius: 8,
+        boxShadow: (variant === "ghost" || isDisabled) ? 'none' : '0px 0px 8px rgba(0, 255, 255, 0.3)',
         elevation: isDisabled ? 0 : 8,
-      }}
+      } as any}
     >
       {renderContent()}
     </TouchableOpacity>

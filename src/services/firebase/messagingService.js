@@ -109,7 +109,7 @@ class MessagingService {
       // Send push notification
       await this.sendPushNotification(recipientId, senderId, "new_message");
 
-      console.log("✅ Message sent successfully:", messageId);
+
       return messageId;
     } catch (error) {
       console.error("❌ Send message failed:", error);
@@ -167,7 +167,7 @@ class MessagingService {
         await this.notifyMessageViewed(messageData.senderId, messageId);
       }
 
-      console.log("✅ Message viewed successfully:", messageId);
+
       return {
         id: messageId,
         ...messageData,
@@ -252,13 +252,7 @@ class MessagingService {
    */
   async uploadMedia(mediaData, userId) {
     try {
-      console.log("🔄 Starting media upload process...");
-      console.log("📱 Media data:", {
-        uri: mediaData.uri,
-        type: mediaData.type,
-        size: mediaData.size,
-      });
-      console.log("👤 User ID:", userId);
+
 
       // Check authentication first
       const auth = this.getAuth();
@@ -268,20 +262,20 @@ class MessagingService {
         throw new Error("User not authenticated. Please log in first.");
       }
 
-      console.log("✅ User authenticated:", currentUser.uid);
+
 
       const storage = this.getStorage();
       const timestamp = Date.now();
       const fileExtension = mediaData.type === "video" ? "mp4" : "jpg";
       const fileName = `messages/${userId}/${timestamp}_${Math.random().toString(36).substr(2, 9)}.${fileExtension}`;
 
-      console.log("📁 Storage path:", fileName);
+
 
       const storageRef = storage.ref().child(fileName);
-      console.log("📂 Storage ref created:", storageRef.fullPath);
+
 
       // Create file blob using fetch API (React Native compatible)
-      console.log("🔄 Fetching file from URI...");
+
       const response = await fetch(mediaData.uri);
 
       if (!response.ok) {
@@ -291,11 +285,7 @@ class MessagingService {
       }
 
       const blob = await response.blob();
-      console.log("📦 Blob created successfully:", {
-        size: blob.size,
-        type: blob.type,
-        sizeFormatted: `${(blob.size / 1024 / 1024).toFixed(2)} MB`,
-      });
+
 
       // Validate blob
       if (blob.size === 0) {
@@ -303,7 +293,7 @@ class MessagingService {
       }
 
       // Upload the blob
-      console.log("📤 Starting Firebase Storage upload...");
+
       const uploadTask = await storageRef.put(blob, {
         contentType: mediaData.type === "video" ? "video/mp4" : "image/jpeg",
         customMetadata: {
@@ -313,20 +303,11 @@ class MessagingService {
         },
       });
 
-      console.log("✅ Upload completed, getting download URL...");
       const downloadUrl = await uploadTask.ref.getDownloadURL();
-
-      console.log("✅ Media uploaded successfully:", downloadUrl);
       return downloadUrl;
     } catch (error) {
       console.error("❌ Upload media failed:", error);
-      console.error("❌ Error details:", {
-        message: error.message,
-        code: error.code,
-        serverResponse: error.serverResponse,
-        customData: error.customData,
-        stack: error.stack,
-      });
+
 
       // Re-throw with more context
       throw new Error(`Media upload failed: ${error.message}`);
@@ -354,7 +335,7 @@ class MessagingService {
 
         // Delete the message document
         await messageRef.delete();
-        console.log("✅ Message deleted successfully:", messageId);
+
       }
     } catch (error) {
       console.error("❌ Delete message failed:", error);
@@ -372,7 +353,7 @@ class MessagingService {
       const storage = this.getStorage();
       const fileRef = storage.refFromURL(mediaUrl);
       await fileRef.delete();
-      console.log("✅ Media file deleted successfully");
+
     } catch (error) {
       console.error("❌ Delete media file failed:", error);
       // Don't throw - file might already be deleted
@@ -437,10 +418,7 @@ class MessagingService {
         .doc(conversationId)
         .set(conversationData, { merge: true });
 
-      console.log(
-        "✅ Conversation lists updated with message preview:",
-        lastMessage || "null (will be fetched dynamically)",
-      );
+
     } catch (error) {
       console.error("❌ Add to conversation lists failed:", error);
       throw error;
@@ -467,12 +445,9 @@ class MessagingService {
     setTimeout(async () => {
       try {
         await this.deleteMessage(messageId);
-        console.log("✅ Scheduled message deletion completed:", messageId);
+
       } catch (error) {
-        console.error(
-          `❌ Scheduled deletion failed for message ${messageId}:`,
-          error,
-        );
+
       }
     }, delayMs);
   }
@@ -487,9 +462,7 @@ class MessagingService {
   async sendPushNotification(recipientId, senderId, type) {
     try {
       // TODO: Implement actual push notification using Firebase Cloud Messaging
-      console.log(
-        `📱 Push notification: ${type} from ${senderId} to ${recipientId}`,
-      );
+
     } catch (error) {
       console.error("❌ Send push notification failed:", error);
     }
@@ -515,7 +488,7 @@ class MessagingService {
       };
 
       await db.collection("notifications").add(notificationData);
-      console.log("✅ Message viewed notification sent");
+
     } catch (error) {
       console.error("❌ Notify message viewed failed:", error);
     }
@@ -548,7 +521,7 @@ class MessagingService {
         // Notify sender
         await this.notifyScreenshot(messageData.senderId, viewerId, messageId);
 
-        console.log("✅ Screenshot reported successfully");
+
       }
     } catch (error) {
       console.error("❌ Report screenshot failed:", error);
@@ -582,7 +555,7 @@ class MessagingService {
       // Also send push notification
       await this.sendPushNotification(senderId, viewerId, "screenshot_taken");
 
-      console.log("✅ Screenshot notification sent");
+
     } catch (error) {
       console.error("❌ Notify screenshot failed:", error);
     }

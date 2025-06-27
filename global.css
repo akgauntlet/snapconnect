@@ -1,3 +1,43 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/**
+ * React Native Web VirtualizedList passive scroll optimization
+ * Prevents the warning: "Added non-passive event listener to a scroll-blocking 'wheel' event"
+ */
+* {
+  touch-action: manipulation;
+}
+
+/* Optimize scrolling performance for VirtualizedList components */
+[data-testid="VirtualizedList"],
+[data-testid="flatlist"],
+.VirtualizedList,
+.FlatList {
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure smooth scrolling for all scrollable elements */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 255, 0.3);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 255, 255, 0.5);
+}
+
+/* Prevent scroll chaining issues */
+body {
+  overscroll-behavior: none;
+}

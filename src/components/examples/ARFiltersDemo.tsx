@@ -59,7 +59,7 @@ const ARFiltersDemo: React.FC = () => {
     setShowFilterSelector(false);
     
     if (filter) {
-      console.log(`Applied ${filter} filter`);
+  
       // In real implementation, would apply filter to image
     }
   };
@@ -69,7 +69,7 @@ const ARFiltersDemo: React.FC = () => {
    */
   const handleStickerSelect = (sticker: any) => {
     setShowGamingStickers(false);
-    console.log('Selected sticker:', sticker.name);
+
   };
 
   /**
@@ -88,10 +88,10 @@ const ARFiltersDemo: React.FC = () => {
   const toggleRecording = async () => {
     if (isRecording) {
       setIsRecording(false);
-      console.log('Screen recording stopped');
+
     } else {
       setIsRecording(true);
-      console.log('Screen recording started');
+
       // Auto-stop after 5 seconds for demo
       setTimeout(() => setIsRecording(false), 5000);
     }

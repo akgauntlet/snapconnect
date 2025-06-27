@@ -93,7 +93,7 @@ export const useAuthStore = create(
             error: null,
           });
 
-          console.log("User signed in successfully:", user.email);
+
         } catch (error) {
           set({
             isLoading: false,
@@ -136,7 +136,7 @@ export const useAuthStore = create(
             error: null,
           });
 
-          console.log("User signed up successfully:", email);
+
         } catch (error) {
           set({
             isLoading: false,
@@ -169,7 +169,7 @@ export const useAuthStore = create(
             error: null,
           });
 
-          console.log("Phone verification sent:", phoneNumber);
+
           return verificationId;
         } catch (error) {
           set({
@@ -213,7 +213,7 @@ export const useAuthStore = create(
             phoneVerification: null,
           });
 
-          console.log("Phone verification successful:", user.phoneNumber);
+
           return { isNewUser };
         } catch (error) {
           set({
@@ -234,7 +234,7 @@ export const useAuthStore = create(
 
         try {
           // Clean up real-time services first to prevent permission errors
-          console.log("🔄 Cleaning up real-time services...");
+
           await realtimeService.cleanup();
 
           // Sign out from Firebase Auth
@@ -249,7 +249,7 @@ export const useAuthStore = create(
             phoneVerification: null,
           });
 
-          console.log("✅ User signed out successfully");
+
         } catch (error) {
           set({
             isLoading: false,
@@ -272,7 +272,7 @@ export const useAuthStore = create(
           throw new Error("No authenticated user");
         }
 
-        console.log("🔄 AuthStore: Starting optimistic profile update");
+
 
         // Store original profile for rollback
         const originalProfile = profile;
@@ -307,21 +307,19 @@ export const useAuthStore = create(
             error: null,
           });
 
-          console.log("✅ AuthStore: Profile updated optimistically");
+
 
           // Update server in background
           authService
             .updateUserProfile(user.uid, cleanUpdates)
             .then((serverProfile) => {
-              console.log("✅ AuthStore: Server update completed");
               // Update with server response only if it differs significantly
               if (serverProfile && serverProfile.uid) {
                 set({ profile: serverProfile });
-                console.log("🔄 AuthStore: Profile synced with server");
               }
             })
             .catch((error) => {
-              console.error("❌ AuthStore: Server update failed:", error);
+
               // Revert to original profile on server error
               set({
                 profile: originalProfile,
@@ -329,7 +327,7 @@ export const useAuthStore = create(
               });
             });
         } catch (error) {
-          console.error("❌ AuthStore: Optimistic update failed:", error);
+
 
           // Restore original state
           set({
@@ -382,7 +380,7 @@ export const useAuthStore = create(
             error: null,
           });
 
-          console.log("Username reserved successfully:", username);
+
         } catch (error) {
           set({
             isLoading: false,
@@ -430,14 +428,11 @@ export const useAuthStore = create(
        */
       initializeAuth: () => {
         try {
-          console.log("🔄 Initializing auth state listener...");
+
 
           const unsubscribe = authService.onAuthStateChanged(
             async (firebaseUser) => {
-              console.log(
-                "🔄 Auth state changed:",
-                firebaseUser ? "User signed in" : "User signed out",
-              );
+
 
               if (firebaseUser) {
                 try {
@@ -453,7 +448,7 @@ export const useAuthStore = create(
                     isLoading: false,
                   });
 
-                  console.log("✅ User profile loaded successfully");
+
                 } catch (error) {
                   console.error("⚠️ Failed to load user profile:", error);
                   set({
@@ -465,17 +460,12 @@ export const useAuthStore = create(
                 }
               } else {
                 // User signed out - clean up real-time services
-                console.log(
-                  "🔄 User signed out, cleaning up real-time services...",
-                );
+
                 try {
                   await realtimeService.cleanup();
-                  console.log("✅ Real-time services cleaned up");
+
                 } catch (error) {
-                  console.error(
-                    "⚠️ Failed to cleanup real-time services:",
-                    error,
-                  );
+
                 }
 
                 set({
@@ -488,7 +478,7 @@ export const useAuthStore = create(
             },
           );
 
-          console.log("✅ Auth state listener initialized successfully");
+
           return unsubscribe;
         } catch (error) {
           console.error(
@@ -507,7 +497,7 @@ export const useAuthStore = create(
 
           // Return a no-op unsubscribe function
           return () => {
-            console.log("No-op auth unsubscribe called");
+
           };
         }
       },
@@ -523,8 +513,6 @@ export const useAuthStore = create(
       onRehydrateStorage: () => (state, error) => {
         if (error) {
           console.warn("⚠️ Failed to rehydrate auth store:", error);
-        } else {
-          console.log("✅ Auth store rehydrated successfully");
         }
       },
     },

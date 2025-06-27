@@ -59,6 +59,7 @@ import {
     showDestructiveAlert,
     showSuccessAlert,
 } from "../../utils/alertService";
+import { useOptimizedFlatList } from "../../utils/scrollOptimization";
 import { formatConversationUserName } from "../../utils/userHelpers";
 
 /**
@@ -82,6 +83,7 @@ const MessagesScreen: React.FC = () => {
   const { user } = useAuthStore();
   const { tabBarHeight } = useTabBarHeight();
   const navigation = useNavigation();
+  const optimizedFlatListProps = useOptimizedFlatList('conversation');
 
   // Component state
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -108,7 +110,7 @@ const MessagesScreen: React.FC = () => {
    */
   const handleNewMessages = useCallback(
     async (messages: IncomingMessage[]) => {
-      console.log("📨 Received new messages:", messages.length);
+
 
       const mediaMessages = messages.filter(
         (msg) => msg.mediaUrl && msg.mediaType,
@@ -551,12 +553,9 @@ const MessagesScreen: React.FC = () => {
         onPress={handleNewConversation}
         className="bg-cyber-cyan px-8 py-4 rounded-xl flex-row items-center"
         style={{
-          shadowColor: accentColor,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 8,
+          boxShadow: `0px 4px 8px rgba(0, 255, 255, 0.3)`,
           elevation: 8,
-        }}
+        } as any}
       >
         <Ionicons
           name="add"
@@ -669,6 +668,7 @@ const MessagesScreen: React.FC = () => {
               paddingBottom: tabBarHeight + 16,
               flexGrow: conversations.length === 0 ? 1 : 0,
             }}
+            {...optimizedFlatListProps}
           />
         )}
       </SafeAreaView>

@@ -39,8 +39,7 @@ function FilterPreview({ filter }: FilterPreviewProps): React.ReactElement | nul
 
   return (
     <View 
-      style={[StyleSheet.absoluteFill, { backgroundColor: overlayColor, justifyContent: 'center', alignItems: 'center' }]}
-      pointerEvents="none" // Allows touches to pass through to the camera controls
+      style={[StyleSheet.absoluteFill, { backgroundColor: overlayColor, justifyContent: 'center', alignItems: 'center', pointerEvents: 'none' }]}
     >
       {/* For filters that are UI overlays, we can render them here */}
       {filter === 'fps-overlay' && <Text style={styles.overlayText}>60 FPS</Text>}
@@ -61,9 +60,8 @@ const styles = StyleSheet.create({
         color: 'lime',
         fontSize: 24,
         fontFamily: 'Orbitron-Bold',
-        textShadowColor: 'black',
-        textShadowRadius: 5,
-    },
+        textShadow: '0px 0px 5px black',
+    } as any,
     healthBarContainer: {
         position: 'absolute',
         top: 140, // Positioned lower to avoid top controls

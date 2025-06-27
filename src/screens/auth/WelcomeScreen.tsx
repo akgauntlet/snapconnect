@@ -100,11 +100,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = () => {
                 onPress={handleSignIn}
                 className="bg-cyber-cyan px-8 py-4 rounded-lg shadow-lg"
                 style={{
-                  shadowColor: "#00ffff",
-                  shadowOffset: { width: 0, height: 0 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 10,
-                }}
+                  boxShadow: '0px 0px 10px rgba(0, 255, 255, 0.3)',
+                } as any}
                 accessible={true}
                 accessibilityLabel="Sign In"
                 accessibilityRole="button"

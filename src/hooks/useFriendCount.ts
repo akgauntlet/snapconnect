@@ -45,11 +45,9 @@ export function useFriendCount(userId: string | null | undefined) {
       setIsLoading(true);
       setError(null);
 
-      console.log('🔄 Fetching friend count for user:', userId);
       const friendIds = await friendsService.getFriendIds(userId);
       const count = friendIds.length;
       
-      console.log('✅ Friend count fetched:', count);
       setFriendCount(count);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch friend count';

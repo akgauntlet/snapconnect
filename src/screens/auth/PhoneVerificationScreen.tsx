@@ -255,11 +255,8 @@ const PhoneVerificationScreen: React.FC<PhoneVerificationScreenProps> = () => {
             isLoading || code.some((digit) => digit === "") ? "opacity-50" : ""
           }`}
           style={{
-            shadowColor: "#00ffff",
-            shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 0.3,
-            shadowRadius: 10,
-          }}
+            boxShadow: '0px 0px 10px rgba(0, 255, 255, 0.3)',
+          } as any}
         >
           <Text className="text-cyber-black font-bold text-lg font-orbitron text-center">
             {isLoading ? "VERIFYING..." : "VERIFY CODE"}

@@ -22,11 +22,11 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import { SafeAreaView, ScrollView, Text, View } from "react-native";
 import {
-  CyberButton,
-  GameCard,
-  GamingInput,
-  IconButton,
-  LoadingSpinner,
+    CyberButton,
+    GameCard,
+    GamingInput,
+    IconButton,
+    LoadingSpinner,
 } from "../../components/common";
 
 /**
@@ -52,14 +52,14 @@ const FriendProfileExample: React.FC = () => {
    * Handle adding friend
    */
   const handleAddFriend = () => {
-    console.log("Adding friend...");
+    
   };
 
   /**
    * Handle viewing achievements
    */
   const handleViewAchievements = () => {
-    console.log("Viewing achievements...");
+    
   };
 
   return (
@@ -70,14 +70,14 @@ const FriendProfileExample: React.FC = () => {
           icon="arrow-back"
           variant="ghost"
           size="medium"
-          onPress={() => console.log("Go back")}
+          onPress={() => {}}
         />
         <Text className="text-white font-orbitron text-xl">Friend Profile</Text>
         <IconButton
           icon="ellipsis-vertical"
           variant="ghost"
           size="medium"
-          onPress={() => console.log("More options")}
+          onPress={() => {}}
         />
       </View>
 
@@ -182,7 +182,7 @@ const FriendProfileExample: React.FC = () => {
               icon="gift"
               variant="legendary"
               size="large"
-              onPress={() => console.log("Send gift")}
+              onPress={() => {}}
             />
           </View>
         </View>
@@ -202,7 +202,7 @@ const FriendProfileExample: React.FC = () => {
             variant="secondary"
             icon="game-controller"
             fullWidth
-            onPress={() => console.log("Invite to game")}
+            onPress={() => {}}
           >
             Invite to Game
           </CyberButton>
@@ -211,7 +211,7 @@ const FriendProfileExample: React.FC = () => {
             variant="warning"
             icon="flag"
             fullWidth
-            onPress={() => console.log("Report user")}
+            onPress={() => {}}
           >
             Report User
           </CyberButton>

@@ -71,12 +71,7 @@ class AuthService {
    */
   async signInWithEmail(email, password) {
     try {
-      console.log("🔄 Starting email signin process for:", email);
-      console.log("📞 Calling authService.signInWithEmail...");
-      console.log("🔄 Getting Firebase Auth instance...");
-
       const auth = this.getAuth();
-      console.log("🔄 Signing in with email and password...");
 
       const userCredential = await auth.signInWithEmailAndPassword(
         email,
@@ -84,12 +79,12 @@ class AuthService {
       );
       const user = userCredential.user;
 
-      console.log("✅ Firebase Auth signin successful");
+
 
       // Get user profile from database
       const profile = await this.getUserProfile(user.uid);
 
-      console.log("✅ User profile loaded successfully");
+
 
       return {
         user: this.formatUserData(user),
@@ -111,9 +106,7 @@ class AuthService {
    */
   async signUpWithEmail(email, password, displayName, additionalData = {}) {
     try {
-      console.log("🔄 Starting email signup process for:", email);
-      console.log("📞 Calling authService.signUpWithEmail...");
-      console.log("🔄 Getting Firebase Auth instance...");
+      
 
       // Verify storage is working before proceeding
       const storageWorking = await this.verifyStorage();
@@ -124,7 +117,7 @@ class AuthService {
       }
 
       const auth = this.getAuth();
-      console.log("🔄 Creating user with email and password...");
+
 
       const userCredential = await auth.createUserWithEmailAndPassword(
         email,
@@ -132,11 +125,11 @@ class AuthService {
       );
       const user = userCredential.user;
 
-      console.log("✅ Firebase Auth user created successfully");
+      
 
       // Update Firebase Auth profile
       await user.updateProfile({ displayName });
-      console.log("✅ Firebase Auth profile updated");
+      
 
       // Create user profile in database (includes username reservation)
       const profile = await this.createUserProfile(user.uid, {
@@ -146,7 +139,7 @@ class AuthService {
         ...additionalData,
       });
 
-      console.log("✅ User profile created in database");
+      
 
       return {
         user: this.formatUserData(user),
@@ -185,10 +178,6 @@ class AuthService {
       }
 
       throw this.handleAuthError(error);
-    } finally {
-      console.log(
-        "✅ Signup process completed (storage issues may exist but auth should work)",
-      );
     }
   }
 
@@ -202,7 +191,7 @@ class AuthService {
     try {
       // For now, we'll simulate phone auth since reCAPTCHA setup is complex in Expo
       // In production, you'd set up reCAPTCHA verification
-      console.log("Phone authentication simulated for:", phoneNumber);
+
 
       // Return a mock confirmation object
       const mockVerificationId = `mock_${Date.now()}`;
@@ -298,7 +287,7 @@ class AuthService {
     try {
       const auth = this.getAuth();
       await auth.signOut();
-      console.log("✅ User signed out successfully");
+
     } catch (error) {
       console.error("Sign out failed:", error);
       throw this.handleAuthError(error);
@@ -316,12 +305,7 @@ class AuthService {
       const db = this.getDB();
       const { firebase } = require("../../config/firebase");
 
-      console.log(
-        "🔄 Creating user profile for:",
-        uid,
-        "with data:",
-        profileData,
-      );
+
 
       const profile = {
         uid,
@@ -345,12 +329,10 @@ class AuthService {
       // Create user document first
       const userRef = db.collection("users").doc(uid);
       await userRef.set(profile);
-      console.log("✅ User document created successfully");
 
       // Reserve username if provided (now that user document exists)
       if (profileData.username) {
         await this.reserveUsernameOnly(uid, profileData.username);
-        console.log("✅ Username reserved:", profileData.username);
       }
 
       return profile;
@@ -373,12 +355,9 @@ class AuthService {
 
       if (!snapshot.exists) {
         console.warn("⚠️ User profile not found for UID:", uid);
-        console.log("🔄 Attempting to recover missing profile...");
-
         // Try to recover missing profile by checking for reserved username
         const recoveredProfile = await this.recoverMissingProfile(uid);
         if (recoveredProfile) {
-          console.log("✅ Profile recovered successfully");
           return recoveredProfile;
         }
 
@@ -410,7 +389,6 @@ class AuthService {
       let username = null;
       if (!usernameSnapshot.empty) {
         username = usernameSnapshot.docs[0].id;
-        console.log("🔍 Found reserved username:", username);
       }
 
       // Get current Firebase Auth user to recover basic info
@@ -418,7 +396,6 @@ class AuthService {
       const currentUser = auth.currentUser;
 
       if (currentUser && currentUser.uid === uid) {
-        console.log("🔄 Recovering profile from Firebase Auth user...");
 
         const recoveredProfile = {
           uid,
@@ -442,7 +419,6 @@ class AuthService {
         // Create the missing profile document
         const userRef = db.collection("users").doc(uid);
         await userRef.set(recoveredProfile);
-        console.log("✅ Missing profile document created");
 
         return recoveredProfile;
       }
@@ -465,16 +441,8 @@ class AuthService {
       const db = this.getDB();
       const { firebase } = require("../../config/firebase");
 
-      console.log(
-        "🔄 AuthService: Updating user profile for:",
-        uid,
-        "with updates:",
-        updates,
-      );
-
       // Handle username changes with improved error handling
       if (updates.username) {
-        console.log("🔄 AuthService: Processing username change...");
 
         try {
           const currentProfile = await this.getUserProfile(uid);
@@ -482,12 +450,6 @@ class AuthService {
 
           // If username is changing, update username reservation
           if (currentUsername !== updates.username) {
-            console.log(
-              "🔄 AuthService: Username changing from:",
-              currentUsername,
-              "to:",
-              updates.username,
-            );
 
             // Check if new username is available before making any changes
             const isAvailable = await this.isUsernameAvailable(
@@ -504,10 +466,7 @@ class AuthService {
                   .collection("usernames")
                   .doc(currentUsername.toLowerCase());
                 await oldUsernameRef.delete();
-                console.log(
-                  "✅ AuthService: Old username reservation removed:",
-                  currentUsername,
-                );
+
               } catch (error) {
                 console.warn(
                   "⚠️ AuthService: Failed to remove old username reservation (non-critical):",
@@ -520,10 +479,6 @@ class AuthService {
             // Reserve new username
             try {
               await this.reserveUsernameOnly(uid, updates.username);
-              console.log(
-                "✅ AuthService: New username reserved:",
-                updates.username,
-              );
             } catch (error) {
               console.error(
                 "❌ AuthService: Failed to reserve new username:",
@@ -534,9 +489,6 @@ class AuthService {
               if (currentUsername) {
                 try {
                   await this.reserveUsernameOnly(uid, currentUsername);
-                  console.log(
-                    "🔄 AuthService: Restored old username reservation",
-                  );
                 } catch (restoreError) {
                   console.error(
                     "❌ AuthService: Failed to restore old username:",
@@ -549,10 +501,6 @@ class AuthService {
                 "Username reservation failed. The username might already be taken.",
               );
             }
-          } else {
-            console.log(
-              "✅ AuthService: Username unchanged, skipping reservation",
-            );
           }
         } catch (error) {
           console.error("❌ AuthService: Username processing failed:", error);
@@ -561,7 +509,6 @@ class AuthService {
       }
 
       // Update the user document
-      console.log("🔄 AuthService: Updating user document...");
 
       const updateData = {
         ...updates,
@@ -571,18 +518,14 @@ class AuthService {
       try {
         const userRef = db.collection("users").doc(uid);
         await userRef.update(updateData);
-        console.log("✅ AuthService: User profile document updated");
       } catch (error) {
         console.error("❌ AuthService: Failed to update user document:", error);
         throw new Error("Failed to update profile in database");
       }
 
       // Get the updated profile
-      console.log("🔄 AuthService: Fetching updated profile...");
-
       try {
         const updatedProfile = await this.getUserProfile(uid);
-        console.log("✅ AuthService: Profile update completed successfully");
 
         return updatedProfile;
       } catch (error) {
@@ -592,9 +535,6 @@ class AuthService {
         );
         // Even if we can't fetch the updated profile, the update succeeded
         // Return the original profile with our updates applied
-        console.log(
-          "⚠️ AuthService: Returning constructed profile due to fetch error",
-        );
         return {
           uid,
           ...updates,
@@ -678,7 +618,6 @@ class AuthService {
         .collection("usernames")
         .doc(username.toLowerCase());
       await usernameRef.set({ uid });
-      console.log("✅ Username reserved in usernames collection:", username);
     } catch (error) {
       console.error("❌ Username reservation failed:", error);
       throw error;

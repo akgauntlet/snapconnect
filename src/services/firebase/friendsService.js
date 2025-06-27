@@ -67,7 +67,7 @@ class FriendsService {
       // Send notification
       await this.sendFriendRequestNotification(toUserId, fromUserId);
 
-      console.log("✅ Friend request sent successfully:", requestRef.id);
+
       return requestRef.id;
     } catch (error) {
       console.error("❌ Send friend request failed:", error);
@@ -136,7 +136,7 @@ class FriendsService {
       // Send notification
       await this.sendFriendAcceptedNotification(requestData.fromUserId, userId);
 
-      console.log("✅ Friend request accepted successfully");
+
     } catch (error) {
       console.error("❌ Accept friend request failed:", error);
       throw error;
@@ -173,7 +173,7 @@ class FriendsService {
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       });
 
-      console.log("✅ Friend request declined successfully");
+
     } catch (error) {
       console.error("❌ Decline friend request failed:", error);
       throw error;
@@ -208,7 +208,7 @@ class FriendsService {
 
       await batch.commit();
 
-      console.log("✅ Friend removed successfully");
+
     } catch (error) {
       console.error("❌ Remove friend failed:", error);
       throw error;
@@ -302,11 +302,6 @@ class FriendsService {
       }
 
       await batch.commit();
-      console.log(
-        "✅ Cleaned up",
-        danglingFriendIds.length,
-        "dangling friendships",
-      );
     } catch (error) {
       console.error("❌ Failed to clean up dangling friendships:", error);
       // Don't throw - this is cleanup, main function should continue
@@ -636,7 +631,7 @@ class FriendsService {
       };
 
       await db.collection("notifications").add(notificationData);
-      console.log("✅ Friend request notification sent");
+
     } catch (error) {
       console.error("❌ Send friend request notification failed:", error);
     }
@@ -662,7 +657,7 @@ class FriendsService {
       };
 
       await db.collection("notifications").add(notificationData);
-      console.log("✅ Friend accepted notification sent");
+
     } catch (error) {
       console.error("❌ Send friend accepted notification failed:", error);
     }
@@ -797,11 +792,6 @@ class FriendsService {
         return statsDoc.data();
       } else {
         // Return default stats if document doesn't exist
-        console.log(
-          "📊 No user stats found for user:",
-          userId,
-          "- returning defaults",
-        );
         return {
           snapsSent: 0,
           snapsReceived: 0,
@@ -849,7 +839,7 @@ class FriendsService {
           { merge: true },
         );
 
-      console.log("✅ User stats updated successfully");
+
     } catch (error) {
       console.error("❌ Update user stats failed:", error);
       throw error;
@@ -875,11 +865,6 @@ class FriendsService {
           isOnline: data.status === "online",
         };
       } else {
-        console.log(
-          "👤 No presence data found for user:",
-          userId,
-          "- returning defaults",
-        );
         return {
           status: "offline",
           lastActive: new Date(),

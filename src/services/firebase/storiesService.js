@@ -85,7 +85,7 @@ class StoriesService {
       // Schedule automatic deletion
       this.scheduleStoryDeletion(storyRef.id, 24 * 60 * 60 * 1000);
 
-      console.log("✅ Story created successfully:", storyRef.id);
+
       return storyRef.id;
     } catch (error) {
       console.error("❌ Create story failed:", error);
@@ -136,7 +136,7 @@ class StoriesService {
         }
       }
 
-      console.log("✅ Story viewed successfully:", storyId);
+
       return { id: storyId, ...storyData };
     } catch (error) {
       console.error("❌ View story failed:", error);
@@ -310,7 +310,7 @@ class StoriesService {
 
         // Delete story document
         await storyRef.delete();
-        console.log("✅ Story deleted successfully:", storyId);
+  
       }
     } catch (error) {
       console.error("❌ Delete story failed:", error);
@@ -338,7 +338,7 @@ class StoriesService {
       const uploadTask = await storageRef.put(blob);
       const downloadUrl = await uploadTask.ref.getDownloadURL();
 
-      console.log("✅ Story media uploaded successfully");
+
       return downloadUrl;
     } catch (error) {
       console.error("❌ Upload story media failed:", error);
@@ -356,7 +356,7 @@ class StoriesService {
       const storage = this.getStorage();
       const fileRef = storage.refFromURL(mediaUrl);
       await fileRef.delete();
-      console.log("✅ Story media deleted successfully");
+
     } catch (error) {
       console.error("❌ Delete story media failed:", error);
       // Don't throw - file might already be deleted
@@ -417,12 +417,9 @@ class StoriesService {
     setTimeout(async () => {
       try {
         await this.deleteStory(storyId);
-        console.log("✅ Scheduled story deletion completed:", storyId);
+
       } catch (error) {
-        console.error(
-          `❌ Scheduled deletion failed for story ${storyId}:`,
-          error,
-        );
+
       }
     }, delayMs);
   }
@@ -449,7 +446,7 @@ class StoriesService {
       };
 
       await db.collection("notifications").add(notificationData);
-      console.log("✅ Story view notification sent");
+
     } catch (error) {
       console.error("❌ Notify story viewed failed:", error);
     }
@@ -488,7 +485,7 @@ class StoriesService {
 
       if (deletedCount > 0) {
         await batch.commit();
-        console.log(`✅ Cleaned up ${deletedCount} expired stories`);
+  
       }
     } catch (error) {
       console.error("❌ Cleanup expired stories failed:", error);

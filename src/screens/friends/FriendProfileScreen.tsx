@@ -70,6 +70,26 @@ interface FriendProfile {
 }
 
 /**
+ * Serializable friend interface for navigation parameters
+ * Date objects are converted to ISO strings to prevent serialization warnings
+ */
+interface SerializableFriend {
+  id: string;
+  displayName: string;
+  username: string;
+  profilePhoto?: string;
+  bio?: string;
+  lastActive?: string; // ISO string instead of Date
+  isOnline?: boolean;
+  createdAt?: string; // ISO string instead of Date
+  status: "online" | "offline" | "away";
+  mutualFriends?: number;
+  gamingPlatform?: string;
+  favoriteGames?: string[];
+  achievements?: string[];
+}
+
+/**
  * Friendship status type - updated to match service response
  */
 type FriendshipStatus =
@@ -90,7 +110,7 @@ type FriendProfileRouteProp = RouteProp<
   {
     FriendProfile: {
       friendId: string;
-      friend?: any;
+      friend?: SerializableFriend;
       isRequest?: boolean;
     };
   },
@@ -177,10 +197,6 @@ const FriendProfileScreen: React.FC = () => {
 
       // If we have initial friend data, use optimized path
       if (initialFriend) {
-        console.log(
-          "🔄 Loading profile with initial data for:",
-          initialFriend.displayName,
-        );
 
         // Get real data in parallel for better performance
         const [mutualFriendsCount, friendIds, userStats, userPresence] =
@@ -233,7 +249,7 @@ const FriendProfileScreen: React.FC = () => {
         setFriendProfile(enrichedProfile);
       } else {
         // Fallback: fetch complete profile using new enriched method
-        console.log("🔄 Loading complete profile for:", friendId);
+  
 
         const enrichedProfileData = await friendsService.getEnrichedUserProfile(
           user.uid,

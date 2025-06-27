@@ -114,11 +114,8 @@ const FilterItem: React.FC<{
               backgroundColor: isSelected ? `${item.color}20` : theme.colors.background.secondary,
               borderWidth: isSelected ? 2 : 1,
               borderColor: isSelected ? item.color : theme.colors.text.tertiary,
-              shadowColor: isSelected ? item.color : 'transparent',
-              shadowOffset: { width: 0, height: 0 },
-              shadowOpacity: 0.5,
-              shadowRadius: 8,
-            },
+              boxShadow: isSelected ? `0px 0px 8px ${item.color}80` : 'none',
+            } as any,
             animatedItemStyle,
           ]}
         >
@@ -287,7 +284,7 @@ const FilterSelector: React.FC<FilterSelectorProps> = React.memo(({
         setTimeout(onClose, 500);
       }
     } catch (error) {
-      console.error('Filter selection failed:', error);
+
     } finally {
       setIsLoading(false);
     }
@@ -359,16 +356,22 @@ const FilterSelector: React.FC<FilterSelectorProps> = React.memo(({
         style={[
           {
             position: 'absolute',
-            bottom: bottomOffset,
+            bottom: 0,
             left: 0,
             right: 0,
             backgroundColor: theme.colors.background.primary,
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
             paddingTop: 20,
-            paddingBottom: 40,
+            paddingBottom: Math.max(bottomOffset + 20, 40),
             borderTopWidth: 1,
             borderTopColor: theme.colors.accent.cyan + '30',
+            // Enhanced visual connection to navigation bar
+            shadowColor: theme.colors.accent.cyan,
+            shadowOffset: { width: 0, height: -4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 12,
+            elevation: 15,
           },
           animatedContainerStyle,
         ]}

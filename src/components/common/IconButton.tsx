@@ -286,12 +286,9 @@ export const IconButton: React.FC<IconButtonProps> = ({
       `}
       style={{
         backgroundColor: backgroundColor || undefined,
-        shadowColor: variantClasses.glow ? "#00ffff" : "transparent",
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: disabled ? 0 : 0.3,
-        shadowRadius: active ? 12 : 8,
+        boxShadow: (variantClasses.glow && !disabled) ? `0px 0px ${active ? 12 : 8}px rgba(0, 255, 255, 0.3)` : 'none',
         elevation: disabled ? 0 : active ? 12 : 8,
-      }}
+      } as any}
     >
       <Ionicons
         name={icon}

@@ -77,7 +77,6 @@ export class ARFilterEngine {
     try {
       this.performanceMode = performanceMode;
       this.isInitialized = true;
-      console.log('AR Filter Engine initialized', { performanceMode });
     } catch (error) {
       console.error('Failed to initialize AR Filter Engine:', error);
       throw error;
@@ -103,7 +102,7 @@ export class ARFilterEngine {
       return imageUri;
     }
 
-    console.log(`Applying ${filterType} filter with intensity ${intensity} on web.`);
+
 
     return new Promise((resolve, reject) => {
       const img = new window.Image();
@@ -219,7 +218,6 @@ export class ARFilterEngine {
     imageUri: string, 
     overlayConfig: GamingOverlayConfig
   ): Promise<string> {
-    console.log('Applied gaming overlay:', overlayConfig.type);
     return imageUri;
   }
 
@@ -228,7 +226,6 @@ export class ARFilterEngine {
    */
   clearCache(): void {
     this.filterCache.clear();
-    console.log('AR Filter cache cleared');
   }
 
   /**

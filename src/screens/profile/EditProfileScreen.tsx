@@ -27,15 +27,15 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { useAuthStore } from "../../stores/authStore";
 import { useThemeStore } from "../../stores/themeStore";
@@ -223,7 +223,7 @@ const EditProfileScreen: React.FC = () => {
       setIsCheckingUsername(false);
     }
 
-    console.log("🔄 Starting profile update process...");
+    
 
     try {
       const updates = {
@@ -232,17 +232,17 @@ const EditProfileScreen: React.FC = () => {
         bio: bio.trim(),
       };
 
-      console.log("📝 Profile updates to apply:", updates);
+      
 
       await updateProfile(updates);
 
-      console.log("✅ Profile update successful");
+      
 
       // Show success state and navigate back immediately
       setSaveSuccess(true);
 
       // Navigate back immediately since we're using optimistic updates
-      console.log("🔄 Navigating back to profile...");
+      
       navigation.goBack();
     } catch (updateError: any) {
       console.error("❌ Profile update failed:", updateError);

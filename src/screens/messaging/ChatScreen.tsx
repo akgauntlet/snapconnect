@@ -452,7 +452,7 @@ const ChatScreen: React.FC = () => {
           Haptics.NotificationFeedbackType.Success,
         );
 
-        console.log("✅ Media message sent successfully:", messageId);
+  
       } catch (error) {
         console.error("Send media message failed:", error);
 
@@ -473,15 +473,15 @@ const ChatScreen: React.FC = () => {
    * Handle camera/media picker
    */
   const handleCameraPress = useCallback(async () => {
-    console.log("📸 Camera button pressed");
+    
 
     if (!user) {
-      console.error("❌ User not authenticated");
+      
       showAlert("Authentication Error", "Please log in to send media.");
       return;
     }
 
-    console.log("✅ User authenticated, showing media options");
+    
 
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -493,12 +493,12 @@ const ChatScreen: React.FC = () => {
           {
             text: "Select File",
             onPress: async () => {
-              console.log("📁 File selection for web");
+      
               try {
                 // Request media library permissions (works on web as file picker)
                 const { status } =
                   await ImagePicker.requestMediaLibraryPermissionsAsync();
-                console.log("📁 Media library permission status:", status);
+        
 
                 if (status !== "granted") {
                   showAlert(
@@ -515,7 +515,7 @@ const ChatScreen: React.FC = () => {
                   quality: 0.8,
                 });
 
-                console.log("📁 File picker result:", result);
+                
 
                 if (
                   !result.canceled &&
@@ -523,7 +523,7 @@ const ChatScreen: React.FC = () => {
                   result.assets.length > 0
                 ) {
                   const asset = result.assets[0];
-                  console.log("📁 Selected asset:", asset);
+                  
                   await sendMediaMessage(asset);
                 }
               } catch (error) {
@@ -535,7 +535,7 @@ const ChatScreen: React.FC = () => {
           {
             text: "Cancel",
             style: "cancel",
-            onPress: () => console.log("❌ Media selection canceled"),
+            onPress: () => {},
           },
         ]);
       } else {
@@ -544,12 +544,12 @@ const ChatScreen: React.FC = () => {
           {
             text: "Camera",
             onPress: async () => {
-              console.log("📷 Camera option selected");
+              
               try {
                 // Request camera permissions
                 const { status } =
                   await ImagePicker.requestCameraPermissionsAsync();
-                console.log("📷 Camera permission status:", status);
+
 
                 if (status !== "granted") {
                   showAlert(
@@ -567,7 +567,7 @@ const ChatScreen: React.FC = () => {
                   videoMaxDuration: 60, // 60 seconds max
                 });
 
-                console.log("📷 Camera result:", result);
+                
 
                 if (
                   !result.canceled &&
@@ -575,7 +575,7 @@ const ChatScreen: React.FC = () => {
                   result.assets.length > 0
                 ) {
                   const asset = result.assets[0];
-                  console.log("📷 Selected asset:", asset);
+                  
                   await sendMediaMessage(asset);
                 }
               } catch (error) {
@@ -587,12 +587,12 @@ const ChatScreen: React.FC = () => {
           {
             text: "Photo Library",
             onPress: async () => {
-              console.log("🖼️ Photo library option selected");
+              
               try {
                 // Request media library permissions
                 const { status } =
                   await ImagePicker.requestMediaLibraryPermissionsAsync();
-                console.log("🖼️ Media library permission status:", status);
+
 
                 if (status !== "granted") {
                   showAlert(
@@ -609,7 +609,7 @@ const ChatScreen: React.FC = () => {
                   quality: 0.8,
                 });
 
-                console.log("🖼️ Photo library result:", result);
+
 
                 if (
                   !result.canceled &&
@@ -617,7 +617,7 @@ const ChatScreen: React.FC = () => {
                   result.assets.length > 0
                 ) {
                   const asset = result.assets[0];
-                  console.log("🖼️ Selected asset:", asset);
+                  
                   await sendMediaMessage(asset);
                 }
               } catch (error) {
@@ -632,7 +632,7 @@ const ChatScreen: React.FC = () => {
           {
             text: "Cancel",
             style: "cancel",
-            onPress: () => console.log("❌ Media selection canceled"),
+            onPress: () => {},
           },
         ]);
       }
@@ -694,7 +694,7 @@ const ChatScreen: React.FC = () => {
         ),
       );
 
-      console.log("✅ Text message sent successfully:", messageId);
+
     } catch (error) {
       console.error("Send text message failed:", error);
 
@@ -763,7 +763,7 @@ const ChatScreen: React.FC = () => {
    * Handle media view event
    */
   const handleMediaView = useCallback((messageId: string) => {
-    console.log("Media viewed:", messageId);
+    
     // Update message status if needed
   }, []);
 
@@ -771,7 +771,7 @@ const ChatScreen: React.FC = () => {
    * Handle media expire event
    */
   const handleMediaExpire = useCallback((messageId: string) => {
-    console.log("Media expired:", messageId);
+    
     // Could remove the message from UI or mark as expired
   }, []);
 
@@ -793,12 +793,9 @@ const ChatScreen: React.FC = () => {
                 : "bg-cyber-dark/40 border border-cyber-gray/20"
             }`}
             style={{
-              shadowColor: isFromMe ? accentColor : "transparent",
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 4,
+              boxShadow: isFromMe ? `0px 2px 4px rgba(0, 255, 255, 0.1)` : 'none',
               elevation: 2,
-            }}
+            } as any}
           >
             {/* Media content */}
             {hasMedia && message.mediaUrl && (

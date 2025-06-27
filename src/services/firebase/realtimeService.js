@@ -70,7 +70,7 @@ class RealtimeService {
             });
 
             if (newMessages.length > 0) {
-              console.log(`📨 Received ${newMessages.length} new message(s)`);
+      
               onMessage(newMessages);
             }
           },
@@ -83,7 +83,7 @@ class RealtimeService {
       // Store listener for cleanup
       this.listeners.set(`messages_${userId}`, unsubscribe);
 
-      console.log("✅ Started listening for messages:", userId);
+
       return unsubscribe;
     } catch (error) {
       console.error("❌ Listen for messages failed:", error);
@@ -129,7 +129,7 @@ class RealtimeService {
       // Store listener for cleanup
       this.listeners.set(`conversations_${userId}`, unsubscribe);
 
-      console.log("✅ Started listening for conversations:", userId);
+
       return unsubscribe;
     } catch (error) {
       console.error("❌ Listen for conversations failed:", error);
@@ -168,7 +168,7 @@ class RealtimeService {
       // Store listener for cleanup
       this.listeners.set(`presence_${userId}`, unsubscribe);
 
-      console.log("✅ Started listening for presence:", userId);
+
       return unsubscribe;
     } catch (error) {
       console.error("❌ Listen for presence failed:", error);
@@ -211,7 +211,7 @@ class RealtimeService {
       // Set offline on disconnect (using onDisconnect in a real implementation)
       // For now, we'll handle this in stopPresence
 
-      console.log("✅ Started presence management:", userId);
+
     } catch (error) {
       console.error("❌ Start presence failed:", error);
       throw error;
@@ -241,7 +241,7 @@ class RealtimeService {
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         });
 
-        console.log("✅ Stopped presence management:", this.currentUserId);
+
         this.currentUserId = null;
       }
     } catch (error) {
@@ -332,7 +332,7 @@ class RealtimeService {
         deliveredAt: firebase.firestore.FieldValue.serverTimestamp(),
       });
 
-      console.log("✅ Message marked as delivered:", messageId);
+      
     } catch (error) {
       console.error("❌ Mark as delivered failed:", error);
     }
@@ -357,7 +357,7 @@ class RealtimeService {
     if (unsubscribe) {
       unsubscribe();
       this.listeners.delete(listenerKey);
-      console.log("✅ Stopped listener:", listenerKey);
+      
     }
   }
 
@@ -368,14 +368,14 @@ class RealtimeService {
     this.listeners.forEach((unsubscribe, key) => {
       try {
         unsubscribe();
-        console.log("✅ Stopped listener:", key);
+
       } catch (error) {
         console.error("❌ Stop listener failed:", key, error);
       }
     });
 
     this.listeners.clear();
-    console.log("✅ Stopped all listeners");
+
   }
 
   /**
@@ -386,7 +386,7 @@ class RealtimeService {
     try {
       await this.stopPresence();
       this.stopAllListeners();
-      console.log("✅ Real-time service cleanup completed");
+
     } catch (error) {
       console.error("❌ Cleanup failed:", error);
     }

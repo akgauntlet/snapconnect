@@ -23,11 +23,11 @@
 import React, { useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import {
-  CyberButton,
-  GameCard,
-  GamingInput,
-  IconButton,
-  LoadingSpinner,
+    CyberButton,
+    GameCard,
+    GamingInput,
+    IconButton,
+    LoadingSpinner,
 } from "../common";
 
 /**
@@ -45,7 +45,6 @@ const BaseComponentsDemo: React.FC = () => {
    * Handle demo actions
    */
   const handleDemoAction = (action: string) => {
-    console.log(`Demo action: ${action}`);
     setActiveButton(action);
 
     if (action === "loading") {

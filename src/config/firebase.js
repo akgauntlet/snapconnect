@@ -113,9 +113,6 @@ export const initializeFirebaseServices = async () => {
 
       // Initialize Firebase app
       firebase.initializeApp(config);
-      console.log(`🔥 Firebase initialized for ${environment} environment`);
-    } else {
-      console.log("🔥 Firebase already initialized");
     }
 
     // Configure Auth persistence for React Native
@@ -127,13 +124,11 @@ export const initializeFirebaseServices = async () => {
       ) {
         // React Native automatically handles auth persistence with AsyncStorage
         // No need to explicitly set persistence - Firebase handles this internally
-        console.log("✅ Firebase Auth persistence enabled with AsyncStorage");
       } else {
         // For web platforms, use localStorage persistence
         await firebase
           .auth()
           .setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-        console.log("✅ Firebase Auth persistence enabled with localStorage");
       }
     } catch (persistenceError) {
       console.warn(
@@ -142,8 +137,6 @@ export const initializeFirebaseServices = async () => {
       );
       // Continue without explicit persistence configuration
     }
-
-    console.log("✅ Firebase services initialized successfully");
   } catch (error) {
     console.error("❌ Firebase services initialization failed:", error);
     throw error;

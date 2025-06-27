@@ -30,42 +30,42 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRoute } from "@react-navigation/native";
 import { ResizeMode, Video } from "expo-av";
 import {
-  CameraType,
-  CameraView,
-  FlashMode,
-  useCameraPermissions,
-  useMicrophonePermissions,
+    CameraType,
+    CameraView,
+    FlashMode,
+    useCameraPermissions,
+    useMicrophonePermissions,
 } from "expo-camera";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import * as MediaLibrary from "expo-media-library";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Animated,
-  Dimensions,
-  Image,
-  Modal,
-  Platform,
-  Pressable,
-  SafeAreaView,
-  StatusBar,
-  Text,
-  TouchableOpacity,
-  View
+    Animated,
+    Dimensions,
+    Image,
+    Modal,
+    Platform,
+    Pressable,
+    SafeAreaView,
+    StatusBar,
+    Text,
+    TouchableOpacity,
+    View
 } from "react-native";
 import type { GamingFilterType, OverlayType } from "../../components/ar-filters";
 import { FilterPreview, FilterSelector } from "../../components/ar-filters";
 import RecipientSelector from "../../components/common/RecipientSelector";
 import { useTabBarHeight } from "../../hooks/useTabBarHeight";
-import { arFilterEngine, screenRecorder } from "../../services/ar-filters";
+import { arFilterEngine } from "../../services/ar-filters";
 import { messagingService } from "../../services/firebase/messagingService";
 import { storiesService } from "../../services/firebase/storiesService";
 import { useAuthStore } from "../../stores/authStore";
 import { useThemeStore } from "../../stores/themeStore";
 import {
-  showAlert,
-  showErrorAlert,
-  showSuccessAlert,
+    showAlert,
+    showErrorAlert,
+    showSuccessAlert,
 } from "../../utils/alertService";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
@@ -121,7 +121,6 @@ const CameraScreen: React.FC = () => {
   const [currentFilter, setCurrentFilter] = useState<GamingFilterType | null>(null);
   const [showGamingOverlay, setShowGamingOverlay] = useState(false);
   const [overlayType, setOverlayType] = useState<OverlayType>('hud');
-  const [isScreenRecording, setIsScreenRecording] = useState(false);
   const [filteredMediaUri, setFilteredMediaUri] = useState<string | null>(null);
 
   // Refs
@@ -1088,59 +1087,7 @@ const CameraScreen: React.FC = () => {
     }
   }, [showGamingOverlay]);
 
-  /**
-   * Start screen recording for gaming clips
-   */
-  const startScreenRecording = useCallback(async () => {
-    try {
-      const available = await screenRecorder.isAvailable();
-      if (!available) {
-        showAlert(
-          'Screen Recording Unavailable',
-          'Screen recording is not supported on this device or browser.',
-          [{ text: 'OK', style: 'default' }]
-        );
-        return;
-      }
 
-      await screenRecorder.startRecording({
-        quality: 'medium',
-        fps: 30,
-        duration: 60,
-        includeAudio: true,
-        optimizeForGaming: true,
-      });
-
-      setIsScreenRecording(true);
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-      
-      showSuccessAlert('Screen recording started! Recording will automatically stop after 60 seconds.');
-    } catch (error) {
-      console.error('Screen recording start failed:', error);
-      showErrorAlert('Failed to start screen recording. Please try again.');
-    }
-  }, []);
-
-  /**
-   * Stop screen recording and save clip
-   */
-  const stopScreenRecording = useCallback(async () => {
-    try {
-      const result = await screenRecorder.stopRecording();
-      if (result) {
-        // Save the recording to device storage
-        await screenRecorder.saveToLibrary(result);
-        
-        setIsScreenRecording(false);
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        
-        showSuccessAlert('Gaming clip saved successfully!');
-      }
-    } catch (error) {
-      console.error('Screen recording stop failed:', error);
-      showErrorAlert('Failed to save screen recording.');
-    }
-  }, []);
 
   /**
    * Toggle filter selector visibility
@@ -1602,25 +1549,7 @@ const CameraScreen: React.FC = () => {
         bottomOffset={tabBarHeight}
       />
 
-      {/* Screen Recording Toggle Button */}
-      {!capturedMedia && (
-        <View className="absolute right-6 top-32 z-20">
-          <TouchableOpacity
-            onPress={isScreenRecording ? stopScreenRecording : startScreenRecording}
-            className={`w-12 h-12 rounded-full items-center justify-center ${
-              isScreenRecording 
-                ? 'bg-red-500/20 border-2 border-red-500' 
-                : 'bg-black/50'
-            }`}
-          >
-            <Ionicons 
-              name="videocam" 
-              size={20} 
-              color={isScreenRecording ? '#ef4444' : "white"} 
-            />
-          </TouchableOpacity>
-        </View>
-      )}
+
     </SafeAreaView>
   );
 };

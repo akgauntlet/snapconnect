@@ -75,13 +75,7 @@ const ProfileScreen: React.FC = () => {
 
   // Debug logging for profile data
   React.useEffect(() => {
-    console.log("🔄 ProfileScreen - Re-render triggered");
-    console.log("👤 ProfileScreen - Current user:", user?.uid);
-    console.log("📄 ProfileScreen - Current profile:", profile);
-    console.log("🏷️ ProfileScreen - Profile username:", profile?.username);
-    console.log("📝 ProfileScreen - Display name:", profile?.displayName);
-    console.log("💬 ProfileScreen - Bio:", profile?.bio);
-    console.log("👥 ProfileScreen - Friend count:", friendCount);
+    
   }, [user, profile, friendCount]);
 
   // Use helper functions for consistent user data with proper fallbacks
@@ -103,23 +97,21 @@ const ProfileScreen: React.FC = () => {
   const handleMenuItemPress = (title: string) => {
     switch (title) {
       case "Settings":
-        // TODO: Navigate to settings
-        console.log("Navigate to Settings");
+        navigation.navigate("Settings");
         break;
       case "Achievements":
-        // TODO: Navigate to achievements
-        console.log("Navigate to Achievements");
+        navigation.navigate("Achievements");
         break;
       case "Privacy":
-        // TODO: Navigate to privacy
-        console.log("Navigate to Privacy");
+        // TODO: Navigate to privacy - to be implemented later
+  
         break;
       case "Help":
-        // TODO: Navigate to help
-        console.log("Navigate to Help");
+        // TODO: Navigate to help - to be implemented later
+  
         break;
       default:
-        console.log(`Navigate to ${title}`);
+    
     }
   };
 
@@ -143,9 +135,7 @@ const ProfileScreen: React.FC = () => {
    */
   const handleSignOut = async () => {
     try {
-      console.log("Starting sign out process...");
-      await signOut();
-      console.log("Sign out completed successfully");
+          await signOut();
     } catch (error) {
       console.error("Sign out error:", error);
       // For web compatibility, use console.error instead of Alert

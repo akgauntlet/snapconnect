@@ -58,27 +58,21 @@ const App = () => {
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        console.log("🚀 Starting full app initialization...");
-
         // Load custom fonts
         await loadFonts();
-        console.log("✅ Fonts loaded successfully");
 
         // Initialize Firebase services FIRST
         await initializeFirebaseServices();
-        console.log("✅ Firebase services initialized");
 
         // Now it's safe to import and initialize auth store
         const { useAuthStore } = await import("./src/stores/authStore");
         const { initializeAuth } = useAuthStore.getState();
         const unsubscribe = initializeAuth();
-        console.log("✅ Auth listener initialized");
 
         // Store unsubscribe function for cleanup
         useAuthStore.getState().setAuthUnsubscribe(unsubscribe);
 
         setIsInitialized(true);
-        console.log("🎉 Full SnapConnect app initialization complete!");
       } catch (error) {
         console.error("❌ Failed to initialize app:", error);
         setInitError(error.message);
