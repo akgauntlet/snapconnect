@@ -54,7 +54,7 @@ import {
   View
 } from "react-native";
 import type { GamingFilterType, OverlayType } from "../../components/ar-filters";
-import { FilterPreview, FilterSelector, GamingOverlay, GamingStickers } from "../../components/ar-filters";
+import { FilterPreview, FilterSelector } from "../../components/ar-filters";
 import RecipientSelector from "../../components/common/RecipientSelector";
 import { useTabBarHeight } from "../../hooks/useTabBarHeight";
 import { arFilterEngine, screenRecorder } from "../../services/ar-filters";
@@ -118,23 +118,11 @@ const CameraScreen: React.FC = () => {
 
   // AR Filter state
   const [showFilterSelector, setShowFilterSelector] = useState(false);
-  const [showGamingStickers, setShowGamingStickers] = useState(false);
   const [currentFilter, setCurrentFilter] = useState<GamingFilterType | null>(null);
   const [showGamingOverlay, setShowGamingOverlay] = useState(false);
   const [overlayType, setOverlayType] = useState<OverlayType>('hud');
   const [isScreenRecording, setIsScreenRecording] = useState(false);
   const [filteredMediaUri, setFilteredMediaUri] = useState<string | null>(null);
-
-  // Sticker state
-  const [appliedStickers, setAppliedStickers] = useState<{
-    id: string;
-    emoji: string;
-    name: string;
-    x: number;
-    y: number;
-    scale: number;
-    rotation: number;
-  }[]>([]);
 
   // Refs
   const cameraRef = useRef<CameraView>(null);
@@ -874,12 +862,7 @@ const CameraScreen: React.FC = () => {
     }
   };
 
-  /**
-   * Handle messages press - placeholder for messaging feature
-   */
-  const handleMessagesPress = () => {
-    showAlert("Coming Soon", "Messages feature will be implemented next!");
-  };
+
 
   /**
    * Handle sending to recipients
@@ -893,10 +876,12 @@ const CameraScreen: React.FC = () => {
     try {
       setIsProcessing(true);
 
+      let finalMediaUri = filteredMediaUri || capturedMedia;
+
       // Get file size for tracking
       let fileSize = 0;
       try {
-        const response = await fetch(capturedMedia);
+        const response = await fetch(finalMediaUri);
         const blob = await response.blob();
         fileSize = blob.size;
       } catch (sizeError) {
@@ -904,7 +889,7 @@ const CameraScreen: React.FC = () => {
       }
 
       const mediaData = {
-        uri: capturedMedia,
+        uri: finalMediaUri,
         type: mediaType,
         size: fileSize,
       };
@@ -924,8 +909,7 @@ const CameraScreen: React.FC = () => {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
       // Clear captured media
-      setCapturedMedia(null);
-      setMediaType(null);
+      discardMedia();
       setShowRecipientSelector(false);
 
       showSuccessAlert(
@@ -952,10 +936,12 @@ const CameraScreen: React.FC = () => {
     try {
       setIsProcessing(true);
 
+      let finalMediaUri = filteredMediaUri || capturedMedia;
+
       // Get file size for tracking
       let fileSize = 0;
       try {
-        const response = await fetch(capturedMedia);
+        const response = await fetch(finalMediaUri);
         const blob = await response.blob();
         fileSize = blob.size;
       } catch (sizeError) {
@@ -963,7 +949,7 @@ const CameraScreen: React.FC = () => {
       }
 
       const mediaData = {
-        uri: capturedMedia,
+        uri: finalMediaUri,
         type: mediaType,
         size: fileSize,
       };
@@ -978,8 +964,7 @@ const CameraScreen: React.FC = () => {
       );
 
       // Clear captured media
-      setCapturedMedia(null);
-      setMediaType(null);
+      discardMedia();
       setShowStoryOptions(false);
       setIsStoryMode(false);
 
@@ -1029,9 +1014,8 @@ const CameraScreen: React.FC = () => {
     try {
       setCapturedMedia(null);
       setMediaType(null);
-      setCurrentFilter(null); // Reset filter
+      // Keep currentFilter active for next capture
       setFilteredMediaUri(null);
-      setAppliedStickers([]); // Clear applied stickers
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch (error) {
       console.error("Discard media failed:", error);
@@ -1090,31 +1074,7 @@ const CameraScreen: React.FC = () => {
     }
   }, [capturedMedia, mediaType]);
 
-  /**
-   * Handle sticker selection from gaming stickers
-   */
-  const handleStickerSelect = useCallback(async (sticker: any) => {
-    try {
-      setShowGamingStickers(false);
-      
-      // Add sticker to the applied stickers list
-      const newSticker = {
-        id: `sticker_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        emoji: sticker.emoji,
-        name: sticker.name,
-        x: 50, // Center horizontally (percentage)
-        y: 50, // Center vertically (percentage)
-        scale: 1,
-        rotation: 0,
-      };
-      
-      setAppliedStickers(prev => [...prev, newSticker]);
-      
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } catch (error) {
-      console.error('Sticker selection failed:', error);
-    }
-  }, []);
+
 
   /**
    * Toggle gaming overlay display
@@ -1194,17 +1154,7 @@ const CameraScreen: React.FC = () => {
     }
   }, [showFilterSelector]);
 
-  /**
-   * Toggle gaming stickers visibility
-   */
-  const toggleGamingStickers = useCallback(async () => {
-    try {
-      setShowGamingStickers(!showGamingStickers);
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } catch (error) {
-      console.error('Gaming stickers toggle failed:', error);
-    }
-  }, [showGamingStickers]);
+
 
   // Show permission request if not granted
   if (!cameraPermission || !microphonePermission) {
@@ -1306,7 +1256,11 @@ const CameraScreen: React.FC = () => {
   // Show media preview and sharing options if media is captured
   if (capturedMedia) {
     return (
-      <>
+      <Modal
+        visible={!!capturedMedia}
+        animationType="fade"
+        onRequestClose={discardMedia}
+      >
         <SafeAreaView
           style={{ flex: 1, backgroundColor: theme.colors.background.primary }}
         >
@@ -1314,121 +1268,58 @@ const CameraScreen: React.FC = () => {
             barStyle="light-content"
             backgroundColor={theme.colors.background.primary}
           />
-
-          <View className="flex-1 bg-cyber-black">
-            {/* Media Preview */}
-            <View className="flex-1 justify-center items-center">
-              <Text className="text-cyber-cyan font-orbitron text-xl mb-4">
-                {mediaType === "photo" ? "Photo Captured!" : "Video Recorded!"}
-              </Text>
-              <Text className="text-white/80 font-inter text-center px-8 mb-8">
-                Select recipients to send your snap, or discard to take another.
-              </Text>
-
-              {/* Actual Media Preview */}
-              <View className="w-80 h-96 bg-gray-800 rounded-lg overflow-hidden mb-8 border-2 border-cyber-cyan relative">
-                {mediaType === "photo" && capturedMedia ? (
-                  <Image
-                    source={{ uri: capturedMedia }}
-                    className="w-full h-full"
-                    resizeMode="cover"
-                  />
-                ) : mediaType === "video" && capturedMedia ? (
-                  <Video
-                    source={{ uri: capturedMedia }}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      backgroundColor: "transparent",
-                    }}
-                    useNativeControls
-                    resizeMode={ResizeMode.CONTAIN}
-                    shouldPlay={false}
-                    isLooping={false}
-                  />
-                ) : (
-                  <View className="w-full h-full justify-center items-center">
-                    <Ionicons
-                      name={mediaType === "photo" ? "image" : "videocam"}
-                      size={48}
-                      color={accentColor}
-                    />
-                  </View>
-                )}
-                
-                {/* Sticker Overlay */}
-                {appliedStickers.map((sticker) => (
-                  <Pressable
-                    key={sticker.id}
-                    className="absolute"
-                    style={{
-                      left: `${sticker.x}%`,
-                      top: `${sticker.y}%`,
-                      transform: [
-                        { translateX: -20 }, // Half of sticker size for centering
-                        { translateY: -20 },
-                        { scale: sticker.scale },
-                        { rotate: `${sticker.rotation}deg` },
-                      ],
-                    }}
-                    onPress={() => {
-                      // Remove sticker on tap
-                      setAppliedStickers(prev => 
-                        prev.filter(s => s.id !== sticker.id)
-                      );
-                    }}
-                  >
-                    <View className="w-10 h-10 items-center justify-center bg-white/10 rounded-full">
-                      <Text style={{ fontSize: 24 }}>{sticker.emoji}</Text>
-                    </View>
-                  </Pressable>
-                ))}
-              </View>
-              
-              {/* Sticker Instructions */}
-              {appliedStickers.length > 0 && (
-                <Text className="text-white/60 font-inter text-sm text-center mb-4">
-                  💡 Tap stickers to remove them
-                </Text>
-              )}
+          {/* Header */}
+          <View className="flex-row justify-between items-center px-4 py-2">
+            <TouchableOpacity onPress={discardMedia} className="p-2">
+              <Ionicons name="close" size={28} color="white" />
+            </TouchableOpacity>
+            <View className="flex-row">
+              <TouchableOpacity onPress={toggleFilterSelector} className="p-2">
+                <Ionicons name="color-filter" size={24} color={currentFilter ? accentColor : "white"} />
+              </TouchableOpacity>
             </View>
+          </View>
 
+          <View className="flex-1 bg-cyber-black justify-center items-center">
+            {/* Media Preview Container */}
+            <View className="w-full flex-1 relative justify-center items-center">
+              {mediaType === "photo" ? (
+                <Image
+                  source={{ uri: filteredMediaUri || capturedMedia }}
+                  className="w-full h-full"
+                  resizeMode="contain"
+                />
+              ) : (
+                <Video
+                  source={{ uri: capturedMedia }}
+                  style={{ width: '100%', height: '100%' }}
+                  useNativeControls
+                  resizeMode={ResizeMode.CONTAIN}
+                  shouldPlay={false}
+                  isLooping={false}
+                />
+              )}
+
+            </View>
+            
             {/* Action Buttons */}
             <View
-              className="flex-row justify-around items-center px-6"
+              className="w-full px-6"
               style={{
-                paddingTop: 32,
-                paddingBottom: Math.max(tabBarHeight + 8, 32), // Dynamic tab bar height + padding
+                paddingBottom: Math.max(tabBarHeight, 24),
+                paddingTop: 24,
               }}
             >
               <TouchableOpacity
-                onPress={discardMedia}
-                className="w-16 h-16 bg-red-500/20 border-2 border-red-500 rounded-full justify-center items-center"
+                onPress={isStoryMode ? showStoryPrivacyOptions : showSendOptions}
+                className="w-full h-16 bg-cyber-cyan rounded-full justify-center items-center"
                 disabled={isProcessing}
               >
-                <Ionicons name="trash-outline" size={24} color="#ef4444" />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={
-                  isStoryMode ? showStoryPrivacyOptions : showSendOptions
-                }
-                className="w-20 h-20 bg-cyber-cyan rounded-full justify-center items-center"
-                disabled={isProcessing}
-              >
-                <Ionicons
-                  name={isStoryMode ? "add-circle" : "send"}
-                  size={28}
-                  color="#000"
-                />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={openMediaLibrary}
-                className="w-16 h-16 bg-cyber-gray rounded-full justify-center items-center"
-                disabled={isProcessing}
-              >
-                <Ionicons name="images-outline" size={24} color="white" />
+                <Text className="text-cyber-black font-bold text-lg font-orbitron text-center">
+                  {isProcessing
+                    ? (isStoryMode ? "SHARING..." : "SENDING...")
+                    : (isStoryMode ? "Share to Story" : "Send To")}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1522,7 +1413,15 @@ const CameraScreen: React.FC = () => {
             </SafeAreaView>
           </Modal>
         )}
-      </>
+
+        {/* AR Filter Modals */}
+        <FilterSelector
+          visible={showFilterSelector}
+          currentFilter={currentFilter}
+          onFilterSelect={handleFilterSelect}
+          onClose={() => setShowFilterSelector(false)}
+        />
+      </Modal>
     );
   }
 
@@ -1555,7 +1454,7 @@ const CameraScreen: React.FC = () => {
 
         {/* Top Controls - Absolutely positioned */}
         <View className="absolute top-0 left-0 right-0 z-10 px-6 py-4 bg-black/30">
-          {/* First Row: Flash, Title, Messages */}
+          {/* First Row: Flash, Title */}
           <View className="flex-row justify-between items-center">
             <TouchableOpacity onPress={toggleFlash} className="p-2">
               <Ionicons name={getFlashIcon()} size={24} color="white" />
@@ -1574,8 +1473,13 @@ const CameraScreen: React.FC = () => {
               )}
             </View>
 
-            <TouchableOpacity onPress={handleMessagesPress} className="p-2">
-              <Ionicons name="chatbubble-outline" size={24} color="white" />
+            {/* Filter Toggle Button */}
+            <TouchableOpacity onPress={toggleFilterSelector} className="p-2">
+              <Ionicons 
+                name="color-filter" 
+                size={24} 
+                color={currentFilter ? accentColor : "white"} 
+              />
             </TouchableOpacity>
           </View>
 
@@ -1689,280 +1593,21 @@ const CameraScreen: React.FC = () => {
         </View>
       </View>
 
-      {/* Media Preview Modal */}
-      {capturedMedia && (
-        <Modal
-          visible={!!capturedMedia}
-          animationType="fade"
-          presentationStyle="fullScreen"
-        >
-          <SafeAreaView className="flex-1 bg-black">
-            {/* Header */}
-            <View className="flex-row justify-between items-center px-6 py-4">
-              <TouchableOpacity onPress={discardMedia} className="p-2">
-                <Ionicons name="close" size={24} color="white" />
-              </TouchableOpacity>
-
-              <Text className="text-white font-inter font-medium">
-                {isStoryMode ? "Add to Story" : "Send Snap"}
-              </Text>
-
-              {/* AR Filter Controls */}
-              <View className="flex-row">
-                <TouchableOpacity onPress={toggleFilterSelector} className="p-2 mr-2">
-                  <Ionicons name="color-filter" size={20} color={currentFilter ? accentColor : "white"} />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={toggleGamingStickers} className="p-2">
-                  <Ionicons name="happy" size={20} color="white" />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Media Display */}
-            <View className="flex-1 justify-center items-center px-4 relative">
-              {mediaType === "photo" ? (
-                <View className="relative" style={{
-                  width: screenWidth - 32,
-                  height: screenHeight * 0.7,
-                }}>
-                  <Image
-                    source={{ uri: filteredMediaUri || capturedMedia }}
-                    style={{
-                      width: screenWidth - 32,
-                      height: screenHeight * 0.7,
-                    }}
-                    resizeMode="contain"
-                  />
-                  
-                  {/* Sticker Overlay for Photo */}
-                  {appliedStickers.map((sticker) => (
-                    <Pressable
-                      key={sticker.id}
-                      className="absolute"
-                      style={{
-                        left: `${sticker.x}%`,
-                        top: `${sticker.y}%`,
-                        transform: [
-                          { translateX: -20 },
-                          { translateY: -20 },
-                          { scale: sticker.scale },
-                          { rotate: `${sticker.rotation}deg` },
-                        ],
-                      }}
-                      onPress={() => {
-                        setAppliedStickers(prev => 
-                          prev.filter(s => s.id !== sticker.id)
-                        );
-                      }}
-                    >
-                      <View className="w-10 h-10 items-center justify-center bg-white/10 rounded-full">
-                        <Text style={{ fontSize: 32 }}>{sticker.emoji}</Text>
-                      </View>
-                    </Pressable>
-                  ))}
-                </View>
-              ) : mediaType === "video" && capturedMedia ? (
-                <View
-                  className="relative"
-                  style={{
-                    width: screenWidth - 32,
-                    height: screenHeight * 0.7,
-                    backgroundColor: "#000",
-                    borderRadius: 8,
-                    overflow: "hidden",
-                  }}
-                >
-                  <Video
-                    source={{ uri: capturedMedia }}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                    }}
-                    useNativeControls
-                    resizeMode={ResizeMode.CONTAIN}
-                    shouldPlay={false}
-                    isLooping={false}
-                  />
-                  
-                  {/* Sticker Overlay for Video */}
-                  {appliedStickers.map((sticker) => (
-                    <Pressable
-                      key={sticker.id}
-                      className="absolute"
-                      style={{
-                        left: `${sticker.x}%`,
-                        top: `${sticker.y}%`,
-                        transform: [
-                          { translateX: -20 },
-                          { translateY: -20 },
-                          { scale: sticker.scale },
-                          { rotate: `${sticker.rotation}deg` },
-                        ],
-                      }}
-                      onPress={() => {
-                        setAppliedStickers(prev => 
-                          prev.filter(s => s.id !== sticker.id)
-                        );
-                      }}
-                    >
-                      <View className="w-10 h-10 items-center justify-center bg-white/10 rounded-full">
-                        <Text style={{ fontSize: 32 }}>{sticker.emoji}</Text>
-                      </View>
-                    </Pressable>
-                  ))}
-                </View>
-              ) : (
-                <View className="w-full h-96 bg-cyber-dark rounded-lg justify-center items-center">
-                  <Ionicons name="play-circle" size={64} color="white" />
-                  <Text className="text-white font-inter mt-4">
-                    Video Preview
-                  </Text>
-                </View>
-              )}
-
-              {/* Gaming Overlay */}
-              {showGamingOverlay && (
-                <GamingOverlay
-                  type={overlayType}
-                  position={{ x: 20, y: 20 }}
-                  size={{ width: 200, height: 100 }}
-                  data={{
-                    gameMode: 'VICTORY',
-                    health: 85,
-                    maxHealth: 100,
-                    score: 12450,
-                    level: 15,
-                    time: '02:45'
-                  }}
-                  animated={true}
-                />
-              )}
-              
-              {/* Sticker Instructions */}
-              {appliedStickers.length > 0 && (
-                <Text className="text-white/60 font-inter text-sm text-center mt-4">
-                  💡 Tap stickers to remove them
-                </Text>
-              )}
-            </View>
-
-            {/* Action Buttons */}
-            <View
-              className="px-6"
-              style={{
-                paddingBottom: Math.max(tabBarHeight + 8, 32),
-              }}
-            >
-              <View className="flex-row justify-between mb-4">
-                {/* Gaming Controls */}
-                <TouchableOpacity
-                  onPress={toggleGamingOverlay}
-                  className={`py-2 px-4 rounded-lg ${
-                    showGamingOverlay 
-                      ? 'bg-cyber-cyan/20 border border-cyber-cyan' 
-                      : 'bg-cyber-gray/20'
-                  }`}
-                >
-                  <Text 
-                    className="text-xs font-medium"
-                    style={{ 
-                      color: showGamingOverlay ? accentColor : theme.colors.text.secondary 
-                    }}
-                  >
-                    🎮 Gaming HUD
-                  </Text>
-                </TouchableOpacity>
-
-                {/* Screen Recording Toggle */}
-                <TouchableOpacity
-                  onPress={isScreenRecording ? stopScreenRecording : startScreenRecording}
-                  className={`py-2 px-4 rounded-lg ${
-                    isScreenRecording 
-                      ? 'bg-red-500/20 border border-red-500' 
-                      : 'bg-cyber-gray/20'
-                  }`}
-                >
-                  <Text 
-                    className="text-xs font-medium"
-                    style={{ 
-                      color: isScreenRecording ? '#ef4444' : theme.colors.text.secondary 
-                    }}
-                  >
-                    📹 {isScreenRecording ? 'Stop Recording' : 'Record Screen'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {isStoryMode ? (
-                // Story Mode Actions
-                <TouchableOpacity
-                  onPress={showStoryPrivacyOptions}
-                  disabled={isProcessing}
-                  className={`bg-cyber-cyan py-4 rounded-lg ${isProcessing ? "opacity-50" : ""}`}
-                >
-                  <Text className="text-cyber-black font-bold text-lg font-orbitron text-center">
-                    {isProcessing ? "CREATING STORY..." : "ADD TO STORY"}
-                  </Text>
-                </TouchableOpacity>
-              ) : (
-                // Snap Mode Actions
-                <TouchableOpacity
-                  onPress={showSendOptions}
-                  disabled={isProcessing}
-                  className={`bg-cyber-cyan py-4 rounded-lg ${isProcessing ? "opacity-50" : ""}`}
-                >
-                  <Text className="text-cyber-black font-bold text-lg font-orbitron text-center">
-                    {isProcessing ? "SENDING..." : "SEND SNAP"}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </SafeAreaView>
-        </Modal>
-      )}
-
       {/* AR Filter Components */}
       <FilterSelector
         visible={showFilterSelector}
         currentFilter={currentFilter}
         onFilterSelect={handleFilterSelect}
         onClose={() => setShowFilterSelector(false)}
+        bottomOffset={tabBarHeight}
       />
 
-      <GamingStickers
-        visible={showGamingStickers}
-        onStickerSelect={handleStickerSelect}
-        onClose={() => setShowGamingStickers(false)}
-      />
-
-      {/* Gaming Overlay Toggle Button */}
+      {/* Screen Recording Toggle Button */}
       {!capturedMedia && (
         <View className="absolute right-6 top-32 z-20">
           <TouchableOpacity
-            onPress={toggleFilterSelector}
-            className={`w-12 h-12 rounded-full items-center justify-center ${
-              currentFilter 
-                ? 'bg-cyber-cyan/20 border-2 border-cyber-cyan' 
-                : 'bg-black/50'
-            }`}
-          >
-            <Ionicons 
-              name="color-filter" 
-              size={20} 
-              color={currentFilter ? accentColor : "white"} 
-            />
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            onPress={toggleGamingStickers}
-            className="w-12 h-12 bg-black/50 rounded-full items-center justify-center mt-3"
-          >
-            <Ionicons name="happy" size={20} color="white" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
             onPress={isScreenRecording ? stopScreenRecording : startScreenRecording}
-            className={`w-12 h-12 rounded-full items-center justify-center mt-3 ${
+            className={`w-12 h-12 rounded-full items-center justify-center ${
               isScreenRecording 
                 ? 'bg-red-500/20 border-2 border-red-500' 
                 : 'bg-black/50'

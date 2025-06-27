@@ -69,6 +69,7 @@ interface FilterSelectorProps {
   visible: boolean;
   onClose?: () => void;
   previewMode?: boolean;
+  bottomOffset?: number;
 }
 
 /**
@@ -170,6 +171,7 @@ const FilterSelector: React.FC<FilterSelectorProps> = React.memo(({
   visible,
   onClose,
   previewMode = false,
+  bottomOffset = 0,
 }) => {
   const theme = useThemeStore((state) => state.theme);
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
@@ -357,7 +359,7 @@ const FilterSelector: React.FC<FilterSelectorProps> = React.memo(({
         style={[
           {
             position: 'absolute',
-            bottom: 0,
+            bottom: bottomOffset,
             left: 0,
             right: 0,
             backgroundColor: theme.colors.background.primary,
