@@ -426,7 +426,7 @@ class FriendsService {
   }
 
   /**
-   * Get friend suggestions based on mutual friends and contacts
+   * Get friend suggestions based on mutual friends, contacts, and gaming genre similarities
    * @param {string} userId - User ID
    * @param {Array} contactNumbers - User's contact phone numbers
    * @returns {Promise<Array>} Array of suggested friends
@@ -439,6 +439,8 @@ class FriendsService {
       // Get current friends to exclude them
       const currentFriends = await this.getFriendIds(userId);
       const excludeIds = [...currentFriends, userId];
+
+      console.log('🤝 Getting friend suggestions for user:', { userId, excludeCount: excludeIds.length });
 
       // Find users by phone numbers from contacts
       if (contactNumbers.length > 0) {
@@ -458,6 +460,7 @@ class FriendsService {
                 ...doc.data(),
                 reason: "contact",
               });
+              excludeIds.push(doc.id); // Prevent duplicates in other suggestion types
             }
           });
         }
@@ -468,15 +471,36 @@ class FriendsService {
         userId,
         currentFriends,
       );
-      suggestions.push(...mutualSuggestions);
+      
+      // Filter out already found suggestions and add to exclude list
+      const filteredMutualSuggestions = mutualSuggestions.filter(suggestion => {
+        if (excludeIds.includes(suggestion.id)) {
+          return false;
+        }
+        excludeIds.push(suggestion.id);
+        return true;
+      });
+      
+      suggestions.push(...filteredMutualSuggestions);
 
-      // Remove duplicates and limit results
-      const uniqueSuggestions = suggestions.filter(
-        (suggestion, index, self) =>
-          index === self.findIndex((s) => s.id === suggestion.id),
+      // Get genre-based friend suggestions
+      const genreSuggestions = await this.getGenreSimilarityFriendSuggestions(
+        userId,
+        excludeIds,
       );
+      suggestions.push(...genreSuggestions);
 
-      return uniqueSuggestions.slice(0, 20);
+      console.log('🤝 Friend suggestions summary:', {
+        contactSuggestions: suggestions.filter(s => s.reason === "contact").length,
+        mutualSuggestions: suggestions.filter(s => s.reason === "mutual_friend").length,
+        genreSuggestions: suggestions.filter(s => s.reason === "gaming").length,
+        total: suggestions.length
+      });
+
+      // Sort suggestions by priority and relevance
+      const sortedSuggestions = this.prioritizeFriendSuggestions(suggestions);
+
+      return sortedSuggestions.slice(0, 20);
     } catch (error) {
       console.error("❌ Get friend suggestions failed:", error);
       throw error;
@@ -609,6 +633,184 @@ class FriendsService {
       console.error("❌ Get mutual friend suggestions failed:", error);
       return [];
     }
+  }
+
+  /**
+   * Get friend suggestions based on gaming genre similarities
+   * @param {string} userId - User ID
+   * @param {Array} excludeIds - User IDs to exclude from suggestions
+   * @returns {Promise<Array>} Array of genre-based friend suggestions
+   */
+  async getGenreSimilarityFriendSuggestions(userId, excludeIds = []) {
+    try {
+      const db = this.getDB();
+      const suggestions = [];
+
+      // Get current user's gaming interests
+      const userDoc = await db.collection("users").doc(userId).get();
+      if (!userDoc.exists) {
+        return [];
+      }
+
+      const userData = userDoc.data();
+      const userGenres = userData.gamingInterests || [];
+
+      // If user has no gaming interests, return empty suggestions
+      if (userGenres.length === 0) {
+        return [];
+      }
+
+      console.log('🎮 Finding genre-based suggestions for user:', { userId, userGenres });
+
+      // Find users who have at least one shared gaming interest
+      // We'll use array-contains-any to find users with any matching genre
+      const usersQuery = await db
+        .collection("users")
+        .where("gamingInterests", "array-contains-any", userGenres)
+        .limit(50) // Limit initial query for performance
+        .get();
+
+      console.log('🎮 Found potential users with shared genres:', usersQuery.size);
+
+      // Calculate genre similarity for each user
+      const candidates = [];
+      usersQuery.forEach((doc) => {
+        const candidateId = doc.id;
+        const candidateData = doc.data();
+
+        // Skip if user should be excluded
+        if (excludeIds.includes(candidateId)) {
+          return;
+        }
+
+        const candidateGenres = candidateData.gamingInterests || [];
+        if (candidateGenres.length === 0) {
+          return;
+        }
+
+        // Calculate shared genres and similarity score
+        const sharedGenres = this.calculateSharedGenres(userGenres, candidateGenres);
+        const similarityScore = this.calculateGenreSimilarity(userGenres, candidateGenres);
+
+        // Only include users with meaningful similarity (at least 1 shared genre)
+        if (sharedGenres.length > 0 && similarityScore > 0.1) {
+          candidates.push({
+            id: candidateId,
+            ...candidateData,
+            reason: "gaming",
+            sharedGenres,
+            similarityScore,
+            sharedGenreCount: sharedGenres.length,
+          });
+        }
+      });
+
+      // Sort by similarity score (descending) and take top candidates
+      candidates.sort((a, b) => {
+        // Primary sort: similarity score
+        if (b.similarityScore !== a.similarityScore) {
+          return b.similarityScore - a.similarityScore;
+        }
+        // Secondary sort: number of shared genres
+        return b.sharedGenreCount - a.sharedGenreCount;
+      });
+
+      console.log('🎮 Genre similarity candidates:', {
+        totalCandidates: candidates.length,
+        topScores: candidates.slice(0, 5).map(c => ({
+          id: c.id,
+          score: c.similarityScore,
+          sharedGenres: c.sharedGenreCount
+        }))
+      });
+
+      return candidates.slice(0, 10); // Return top 10 suggestions
+
+    } catch (error) {
+      console.error("❌ Get genre similarity friend suggestions failed:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Calculate shared gaming genres between two users
+   * @param {Array} genres1 - First user's genres
+   * @param {Array} genres2 - Second user's genres
+   * @returns {Array} Array of shared genre IDs
+   */
+  calculateSharedGenres(genres1, genres2) {
+    if (!genres1 || !genres2) {
+      return [];
+    }
+
+    const set2 = new Set(genres2.map(g => g.toLowerCase()));
+    return genres1.filter(genre => set2.has(genre.toLowerCase()));
+  }
+
+  /**
+   * Calculate genre similarity score between two users
+   * Uses Jaccard similarity coefficient: |intersection| / |union|
+   * @param {Array} genres1 - First user's genres
+   * @param {Array} genres2 - Second user's genres
+   * @returns {number} Similarity score between 0 and 1
+   */
+  calculateGenreSimilarity(genres1, genres2) {
+    if (!genres1 || !genres2 || genres1.length === 0 || genres2.length === 0) {
+      return 0;
+    }
+
+    // Convert to lowercase for case-insensitive comparison
+    const set1 = new Set(genres1.map(g => g.toLowerCase()));
+    const set2 = new Set(genres2.map(g => g.toLowerCase()));
+
+    // Calculate intersection (shared genres)
+    const intersection = new Set([...set1].filter(x => set2.has(x)));
+
+    // Calculate union (all unique genres)
+    const union = new Set([...set1, ...set2]);
+
+    // Jaccard similarity: |intersection| / |union|
+    const similarity = intersection.size / union.size;
+
+    return similarity;
+  }
+
+  /**
+   * Prioritize and sort friend suggestions by relevance and priority
+   * @param {Array} suggestions - Array of friend suggestions
+   * @returns {Array} Sorted array of suggestions
+   */
+  prioritizeFriendSuggestions(suggestions) {
+    return suggestions.sort((a, b) => {
+      // Priority order: contact > mutual_friend > gaming
+      const priorityOrder = { contact: 3, mutual_friend: 2, gaming: 1 };
+      
+      const aPriority = priorityOrder[a.reason] || 0;
+      const bPriority = priorityOrder[b.reason] || 0;
+
+      // First sort by reason priority
+      if (aPriority !== bPriority) {
+        return bPriority - aPriority;
+      }
+
+      // Within same reason category, sort by specific metrics
+      if (a.reason === "gaming" && b.reason === "gaming") {
+        // For gaming suggestions, prioritize by similarity score
+        const aScore = a.similarityScore || 0;
+        const bScore = b.similarityScore || 0;
+        if (aScore !== bScore) {
+          return bScore - aScore;
+        }
+        // Then by number of shared genres
+        const aSharedCount = a.sharedGenreCount || 0;
+        const bSharedCount = b.sharedGenreCount || 0;
+        return bSharedCount - aSharedCount;
+      }
+
+      // For other suggestion types, could add additional sorting logic here
+      // For now, maintain existing order within the same reason category
+      return 0;
+    });
   }
 
   /**

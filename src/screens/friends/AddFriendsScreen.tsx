@@ -43,6 +43,7 @@ import { friendsService } from "../../services/firebase/friendsService";
 import { useAuthStore } from "../../stores/authStore";
 import { useThemeStore } from "../../stores/themeStore";
 import { showErrorAlert, showSuccessAlert } from "../../utils/alertService";
+import { GAMING_GENRES } from "../../utils/constants";
 
 /**
  * User search result interface
@@ -68,8 +69,11 @@ interface FriendSuggestion {
   username: string;
   profilePhoto?: string;
   mutualFriends: number;
-  reason: "mutual" | "contact" | "gaming";
+  reason: "mutual" | "contact" | "gaming" | "mutual_friend";
   bio?: string;
+  sharedGenres?: string[];
+  similarityScore?: number;
+  sharedGenreCount?: number;
 }
 
 /**
@@ -154,6 +158,10 @@ const AddFriendsScreen: React.FC = () => {
           mutualFriends: mutualFriendsCounts[suggestion.id] || 0,
           reason: suggestion.reason || "mutual",
           bio: suggestion.bio || "Gaming enthusiast • SnapConnect user",
+          // Include gaming-specific properties if available
+          sharedGenres: suggestion.sharedGenres,
+          similarityScore: suggestion.similarityScore,
+          sharedGenreCount: suggestion.sharedGenreCount,
         }),
       );
 
@@ -307,17 +315,32 @@ const AddFriendsScreen: React.FC = () => {
   /**
    * Get reason text for suggestions
    */
-  const getReasonText = (reason: string, mutualCount: number) => {
-    switch (reason) {
+  const getReasonText = (suggestion: FriendSuggestion) => {
+    switch (suggestion.reason) {
       case "mutual":
-        return `${mutualCount} mutual friends`;
+        return `${suggestion.mutualFriends} mutual friends`;
       case "contact":
         return "From your contacts";
       case "gaming":
-        return "Gaming connection";
+        // Show shared genres if available
+        if (suggestion.sharedGenres && suggestion.sharedGenres.length > 0) {
+          const genreCount = suggestion.sharedGenres.length;
+          return `${genreCount} shared gaming ${genreCount === 1 ? 'interest' : 'interests'}`;
+        }
+        return "Similar gaming interests";
       default:
         return "Suggested for you";
     }
+  };
+
+  /**
+   * Format gaming genre name for display
+   * @param {string} genreId - Genre ID
+   * @returns {string} Formatted genre name
+   */
+  const formatGenreName = (genreId: string): string => {
+    const genre = GAMING_GENRES[genreId.toUpperCase() as keyof typeof GAMING_GENRES];
+    return genre ? genre.name : genreId.charAt(0).toUpperCase() + genreId.slice(1).toLowerCase();
   };
 
   /**
@@ -409,9 +432,18 @@ const AddFriendsScreen: React.FC = () => {
             style={{ backgroundColor: getReasonColor(item.reason) }}
           />
           <Text className="text-white/40 font-inter text-xs">
-            {getReasonText(item.reason, item.mutualFriends)}
+            {getReasonText(item)}
           </Text>
         </View>
+        {/* Show shared genres for gaming suggestions */}
+        {item.reason === "gaming" && item.sharedGenres && item.sharedGenres.length > 0 && (
+          <View className="mt-1">
+            <Text className="text-cyber-cyan/60 font-inter text-xs">
+              {item.sharedGenres.slice(0, 3).map((genre) => formatGenreName(genre)).join(" • ")}
+              {item.sharedGenres.length > 3 && ` • +${item.sharedGenres.length - 3} more`}
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Add button */}
