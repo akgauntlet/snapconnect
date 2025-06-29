@@ -828,78 +828,23 @@ const ChatScreen: React.FC = () => {
 
   /**
    * Handle conversation starter selection
-   * Sends the selected starter as a text message
+   * Populates the text input with the selected starter
    */
   const handleStarterSelect = useCallback(async (starter: string) => {
     if (!user || isSending) return;
 
     console.log('Conversation starter selected:', starter);
 
-    // Set the starter text in the input and send it
+    // Set the starter text in the input
     setInputText(starter);
+    
+    // Focus the input field to allow editing
+    inputRef.current?.focus();
 
-    // Create optimistic message to show immediately
-    const optimisticMessage: Message = {
-      id: `temp-${Date.now()}`, // Temporary ID
-      senderId: user.uid,
-      recipientId: friendId,
-      text: starter,
-      mediaUrl: undefined,
-      mediaType: undefined,
-      timer: 5,
-      createdAt: new Date(),
-      viewed: false,
-      viewedAt: undefined,
-      expiresAt: undefined,
-      status: "sent",
-    };
-
-    // Add optimistic message to UI immediately
-    setMessages((prev) => [...prev, optimisticMessage]);
-
-    // Auto-scroll to show the new message
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-
-    setIsSending(true);
-
-    try {
-      const messageId = await messagingService.sendMessage(
-        user.uid,
-        friendId,
-        null, // No media
-        5, // 5 second timer
-        starter,
-      );
-
-      // Update the optimistic message with the real message ID
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === optimisticMessage.id
-            ? { ...msg, id: messageId, status: "delivered" }
-            : msg,
-        ),
-      );
-
-      // Clear the input text
-      setInputText("");
-
-      console.log('Conversation starter sent successfully:', { messageId, starter });
-
-    } catch (error) {
-      console.error("Send conversation starter failed:", error);
-
-      // Remove the optimistic message on error
-      setMessages((prev) =>
-        prev.filter((msg) => msg.id !== optimisticMessage.id),
-      );
-
-      showAlert("Error", "Failed to send message. Please try again.");
-    } finally {
-      setIsSending(false);
-    }
-  }, [user, friendId, isSending]);
+    // Haptic feedback for interaction
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
+  }, [user, isSending]);
 
   /**
    * Render individual message bubble
@@ -1029,7 +974,7 @@ const ChatScreen: React.FC = () => {
   /**
    * Render empty state
    */
-  const renderEmptyState = () => (
+  const renderEmptyState = useCallback(() => (
     <View className="flex-1 px-4">
       {/* Show conversation starters if we have gaming preferences */}
       {(userGenres.length > 0 || friendGenres.length > 0) ? (
@@ -1069,7 +1014,7 @@ const ChatScreen: React.FC = () => {
         </View>
       )}
     </View>
-  );
+  ), [userGenres, friendGenres, handleStarterSelect, isSending, friendDisplayName]);
 
   /**
    * Render loading state

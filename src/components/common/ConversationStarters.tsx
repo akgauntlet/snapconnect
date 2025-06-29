@@ -109,18 +109,23 @@ const ConversationStarters: React.FC<ConversationStartersProps> = ({
   }, [user1Genres, user2Genres]);
 
   /**
+   * Clean conversation starter text by removing formatting characters
+   */
+  const cleanStarterText = (starter: string): string => {
+    return starter
+      .replace(/^-\s*/, '') // Remove leading dash and optional space
+      .replace(/^["'`]|["'`]$/g, '') // Remove surrounding quotes (single, double, or backticks)
+      .trim(); // Remove any extra whitespace
+  };
+
+  /**
    * Handle starter selection
    * Clean up formatting characters (dashes, quotes) before sending
    */
   const handleStarterPress = (starter: string) => {
     if (disabled) return;
     
-    // Clean the starter text by removing leading dashes and surrounding quotes
-    const cleanedStarter = starter
-      .replace(/^-\s*/, '') // Remove leading dash and optional space
-      .replace(/^["'`]|["'`]$/g, '') // Remove surrounding quotes (single, double, or backticks)
-      .trim(); // Remove any extra whitespace
-    
+    const cleanedStarter = cleanStarterText(starter);
     onStarterSelect(cleanedStarter);
   };
 
@@ -228,7 +233,7 @@ const ConversationStarters: React.FC<ConversationStartersProps> = ({
               
               <View className="flex-1">
                 <Text className="text-white font-inter text-base leading-6">
-                  {starter}
+                  {cleanStarterText(starter)}
                 </Text>
                 
                 <View className="flex-row items-center mt-2">
