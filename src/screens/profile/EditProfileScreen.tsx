@@ -432,7 +432,7 @@ const EditProfileScreen: React.FC = () => {
         >
           {/* Avatar Edit Section */}
           <View className="mb-6 mt-6">
-            <Text className="text-cyber-cyan font-inter mb-4 font-medium text-lg">
+            <Text className="text-cyber-cyan font-inter mb-2 font-medium">
               Avatar
             </Text>
             
@@ -479,8 +479,8 @@ const EditProfileScreen: React.FC = () => {
           </View>
 
           {/* Status Message Section */}
-          <View className="mb-8">
-            <Text className="text-cyber-cyan font-inter mb-3 font-medium">
+          <View className="mb-6">
+            <Text className="text-cyber-cyan font-inter mb-2 font-medium">
               Status Message
             </Text>
             
@@ -526,9 +526,9 @@ const EditProfileScreen: React.FC = () => {
           </View>
 
           {/* Form Fields */}
-          <View className="space-y-6">
+          <View className="space-y-8">
             {/* Display Name */}
-            <View className="mb-6">
+            <View>
               <Text className="text-cyber-cyan font-inter mb-2 font-medium">
                 Display Name
               </Text>
@@ -546,7 +546,7 @@ const EditProfileScreen: React.FC = () => {
             </View>
 
             {/* Username */}
-            <View className="mb-6">
+            <View>
               <Text className="text-cyber-cyan font-inter mb-2 font-medium">
                 Username
               </Text>
@@ -556,13 +556,7 @@ const EditProfileScreen: React.FC = () => {
                   onChangeText={handleUsernameChange}
                   placeholder="Enter your username"
                   placeholderTextColor="#6B7280"
-                  className={`bg-cyber-dark border rounded-lg px-4 py-3 text-white font-jetbrains pr-10 ${
-                    usernameError
-                      ? "border-red-500"
-                      : username && !usernameError && !isCheckingUsername
-                      ? "border-green-500"
-                      : "border-cyber-gray"
-                  }`}
+                  className="bg-cyber-dark border border-cyber-gray rounded-lg px-4 py-3 text-white font-jetbrains pr-10"
                   autoCapitalize="none"
                   autoCorrect={false}
                   editable={!isLoading}
@@ -594,7 +588,7 @@ const EditProfileScreen: React.FC = () => {
             </View>
 
             {/* Bio */}
-            <View className="mb-6">
+            <View>
               <Text className="text-cyber-cyan font-inter mb-2 font-medium">
                 Bio
               </Text>
@@ -618,7 +612,7 @@ const EditProfileScreen: React.FC = () => {
             </View>
 
             {/* Gaming Interests - Enhanced Section */}
-            <View className="mb-6">
+            <View>
               {/* Header with enhanced styling */}
               <View className="bg-cyber-dark/60 border border-cyber-cyan/30 rounded-lg p-4 mb-4">
                 <TouchableOpacity
