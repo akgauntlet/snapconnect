@@ -1,25 +1,26 @@
 /**
  * @file AddFriendsScreen.tsx
- * @description Add friends screen with user search, contact sync, and friend suggestions.
- * Allows searching for users by username/phone and sending friend requests.
+ * @description Add friends screen with user search and friend suggestions.
+ * Provides username-based search and AI-powered friend recommendations.
  *
  * @author SnapConnect Team
- * @created 2024-01-24
+ * @created 2024-01-20
+ * @modified 2024-01-26
  *
  * @dependencies
- * - react: React hooks
- * - react-native: Core components
- * - @react-navigation/native: Navigation
- * - @/services/firebase/friendsService: Friends management
+ * - react: React hooks and state management
+ * - react-native: Core components and navigation
+ * - @/services/firebase/friendsService: Friend management
+ * - @/hooks/useFriendRequests: Friend request notifications
  * - @/stores/authStore: Authentication state
- * - @/stores/themeStore: Theme management
  *
  * @usage
- * Friend discovery and addition interface with multiple discovery methods.
+ * Accessible from Friends tab via "Add Friends" button.
+ * Provides search functionality and personalized friend suggestions.
  *
  * @ai_context
- * AI-powered friend suggestions based on gaming patterns and mutual connections.
- * Smart contact matching and recommendation algorithms.
+ * AI-powered friend suggestions based on gaming preferences,
+ * mutual connections, and social behavior patterns.
  */
 
 import { Ionicons } from "@expo/vector-icons";
@@ -27,14 +28,14 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  SafeAreaView,
-  StatusBar,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    SafeAreaView,
+    StatusBar,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import NotificationBadge from "../../components/common/NotificationBadge";
 import { useFriendRequests } from "../../hooks/useFriendRequests";
@@ -69,7 +70,7 @@ interface FriendSuggestion {
   username: string;
   profilePhoto?: string;
   mutualFriends: number;
-  reason: "mutual" | "contact" | "gaming" | "mutual_friend";
+  reason: "mutual" | "gaming" | "mutual_friend";
   bio?: string;
   sharedGenres?: string[];
   similarityScore?: number;
@@ -118,7 +119,7 @@ const AddFriendsScreen: React.FC = () => {
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<
-    "search" | "suggestions" | "contacts"
+    "search" | "suggestions"
   >("suggestions");
   const [pendingRequests, setPendingRequests] = useState<Set<string>>(
     new Set(),
@@ -137,7 +138,6 @@ const AddFriendsScreen: React.FC = () => {
       // Get friend suggestions from Firebase
       const suggestionsData = await friendsService.getFriendSuggestions(
         user.uid,
-        [],
       );
 
       // Transform to display format with batch mutual friends count calculation
@@ -303,8 +303,6 @@ const AddFriendsScreen: React.FC = () => {
     switch (reason) {
       case "mutual":
         return "#10b981"; // green
-      case "contact":
-        return "#3b82f6"; // blue
       case "gaming":
         return "#8b5cf6"; // purple
       default:
@@ -319,8 +317,6 @@ const AddFriendsScreen: React.FC = () => {
     switch (suggestion.reason) {
       case "mutual":
         return `${suggestion.mutualFriends} mutual friends`;
-      case "contact":
-        return "From your contacts";
       case "gaming":
         // Show shared genres if available
         if (suggestion.sharedGenres && suggestion.sharedGenres.length > 0) {
@@ -535,7 +531,6 @@ const AddFriendsScreen: React.FC = () => {
           suggestions.length,
         )}
         {renderTab("search", "Search", "search-outline", searchResults.length)}
-        {renderTab("contacts", "Contacts", "phone-portrait-outline")}
       </View>
 
       {/* Search Bar - Only show on search tab */}
@@ -546,7 +541,7 @@ const AddFriendsScreen: React.FC = () => {
             <TextInput
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder="Search by username or phone number..."
+              placeholder="Search by username..."
               placeholderTextColor="rgba(255,255,255,0.5)"
               className="flex-1 text-white font-inter ml-3"
               autoCapitalize="none"
@@ -606,7 +601,7 @@ const AddFriendsScreen: React.FC = () => {
                 Search for Friends
               </Text>
               <Text className="text-white/50 font-inter text-sm text-center">
-                Enter a username or phone number to find friends on SnapConnect
+                Enter a username to find friends on SnapConnect
               </Text>
             </View>
           ) : isSearching ? (
@@ -635,31 +630,10 @@ const AddFriendsScreen: React.FC = () => {
                 No users found
               </Text>
               <Text className="text-white/50 font-inter text-sm text-center">
-                Try searching with a different username or phone number
+                Try searching with a different username
               </Text>
             </View>
           ))}
-
-        {activeTab === "contacts" && (
-          <View className="flex-1 justify-center items-center px-8">
-            <Ionicons
-              name="phone-portrait-outline"
-              size={64}
-              color="rgba(255,255,255,0.3)"
-            />
-            <Text className="text-white/70 font-inter text-lg mt-4 mb-2">
-              Contact Sync Coming Soon
-            </Text>
-            <Text className="text-white/50 font-inter text-sm text-center mb-6">
-              Sync your contacts to find friends who are already on SnapConnect
-            </Text>
-            <TouchableOpacity className="bg-cyber-cyan/20 px-6 py-3 rounded-lg">
-              <Text className="text-cyber-cyan font-inter font-semibold">
-                Enable Contact Sync
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
       </View>
 
       {/* Error Display */}

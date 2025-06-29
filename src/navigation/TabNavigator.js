@@ -35,7 +35,7 @@ import ChatScreen from "../screens/messaging/ChatScreen";
 import MessagesScreen from "../screens/messaging/MessagesScreen";
 import AchievementsScreen from "../screens/profile/AchievementsScreen";
 import EditProfileScreen from "../screens/profile/EditProfileScreen";
-import ProfileCustomizationScreen from "../screens/profile/ProfileCustomizationScreen";
+
 import ProfileScreen from "../screens/profile/ProfileScreen";
 import SettingsScreen from "../screens/profile/SettingsScreen";
 import StoriesScreen from "../screens/stories/StoriesScreen";
@@ -299,13 +299,7 @@ const TabNavigator = () => {
         }}
       />
 
-      <Stack.Screen
-        name="ProfileCustomization"
-        component={ProfileCustomizationScreen}
-        options={{
-          animation: "slide_from_right",
-        }}
-      />
+
 
       <Stack.Screen
         name="Settings"

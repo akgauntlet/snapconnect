@@ -65,10 +65,6 @@ const SettingsScreen: React.FC = () => {
   
   // Theme store actions
   const setAccentColor = useThemeStore((state) => state.setAccentColor);
-  const toggleAnimations = useThemeStore((state) => state.toggleAnimations);
-  const toggleGlowEffects = useThemeStore((state) => state.toggleGlowEffects);
-  const toggleHighContrast = useThemeStore((state) => state.toggleHighContrast);
-  const toggleGamingMode = useThemeStore((state) => state.toggleGamingMode);
   const resetTheme = useThemeStore((state) => state.resetTheme);
 
   // Auth store
@@ -76,7 +72,6 @@ const SettingsScreen: React.FC = () => {
   const userPreferences = useAuthStore((state) => state.preferences);
 
   // Local state for temporary settings
-  const [notificationsEnabled, setNotificationsEnabled] = useState(userPreferences.notifications);
   const [privacyMode, setPrivacyMode] = useState(userPreferences.privacy);
 
   /**
@@ -84,14 +79,6 @@ const SettingsScreen: React.FC = () => {
    */
   const handleAccentColorChange = (color: string) => {
     setAccentColor(color);
-  };
-
-  /**
-   * Handle notification toggle
-   */
-  const handleNotificationToggle = (enabled: boolean) => {
-    setNotificationsEnabled(enabled);
-    updatePreferences({ notifications: enabled });
   };
 
   /**
@@ -311,49 +298,7 @@ const SettingsScreen: React.FC = () => {
         {/* Theme Settings */}
         {renderSection(
           "Theme & Appearance",
-          <>
-            {renderAccentColorPicker()}
-            {renderSwitchItem(
-              "Animations",
-              "Enable smooth animations and transitions",
-              preferences.animationsEnabled,
-              toggleAnimations,
-              "play-outline"
-            )}
-            {renderSwitchItem(
-              "Glow Effects",
-              "Enable cyber glow effects and shadows",
-              preferences.glowEffects,
-              toggleGlowEffects,
-              "flashlight-outline"
-            )}
-            {renderSwitchItem(
-              "High Contrast",
-              "Increase contrast for better visibility",
-              preferences.highContrast,
-              toggleHighContrast,
-              "contrast-outline"
-            )}
-            {renderSwitchItem(
-              "Gaming Mode",
-              "Enhanced gaming interface and features",
-              preferences.gamingMode,
-              toggleGamingMode,
-              "game-controller-outline"
-            )}
-          </>
-        )}
-
-        {/* Notification Settings */}
-        {renderSection(
-          "Notifications",
-          renderSwitchItem(
-            "Push Notifications",
-            "Receive notifications for messages and updates",
-            notificationsEnabled,
-            handleNotificationToggle,
-            "notifications-outline"
-          )
+          renderAccentColorPicker()
         )}
 
         {/* Privacy Settings */}

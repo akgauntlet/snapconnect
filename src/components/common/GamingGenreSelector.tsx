@@ -24,15 +24,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo, useState } from "react";
 import {
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import {
-    GAMING_GENRES,
-    GAMING_GENRE_CATEGORIES,
-    GAMING_INTEREST_PRESETS,
+  GAMING_GENRES,
+  GAMING_GENRE_CATEGORIES,
+  GAMING_INTEREST_PRESETS,
 } from "../../utils/constants";
 
 // Type definitions
@@ -151,72 +151,84 @@ const GamingGenreSelector: React.FC<GamingGenreSelectorProps> = ({
   };
 
   /**
-   * Render a single genre item
-   * @param {Object} genre - Genre object
+   * Render individual genre item with enhanced styling
+   * @param {Object} genre - Genre object to render
    * @returns {React.ReactElement} Rendered genre item
    */
   const renderGenreItem = (genre: any) => {
     const isSelected = isGenreSelected(genre.id);
-    const canSelect = !isSelected && selectedGenres.length < maxSelections;
+    const isAtLimit = selectedGenres.length >= maxSelections && !isSelected;
 
     return (
       <TouchableOpacity
         key={genre.id}
         onPress={() => handleGenreToggle(genre.id)}
-        disabled={disabled || (!isSelected && !canSelect)}
-        className={`flex-row items-center p-3 m-1 rounded-lg border ${
-          isSelected
-            ? "bg-cyber-cyan/20 border-cyber-cyan"
-            : canSelect || isSelected
-            ? "bg-cyber-dark border-cyber-gray"
-            : "bg-cyber-gray/30 border-cyber-gray/50"
-        } ${compact ? "p-2 m-0.5" : ""}`}
-        style={{
-          opacity: disabled || (!isSelected && !canSelect) ? 0.5 : 1,
-        }}
+        disabled={disabled || isAtLimit}
+        className={`
+          ${compact ? 'mr-2 mb-2' : 'mr-3 mb-3'} 
+          ${compact ? 'px-3 py-2' : 'px-4 py-3'} 
+          rounded-lg border transition-all duration-200
+          ${
+            isSelected
+              ? 'bg-cyber-cyan/20 border-cyber-cyan shadow-lg shadow-cyber-cyan/20'
+              : isAtLimit
+              ? 'bg-cyber-gray/10 border-cyber-gray/30 opacity-50'
+              : 'bg-cyber-dark/60 border-cyber-gray/50 hover:bg-cyber-dark hover:border-cyber-cyan/40'
+          }
+        `}
+        style={isSelected ? {
+          shadowColor: '#00ffff',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.3,
+          shadowRadius: 4,
+        } : undefined}
       >
-        <View
-          className={`w-8 h-8 rounded-full mr-3 justify-center items-center ${
-            compact ? "w-6 h-6 mr-2" : ""
-          }`}
-          style={{
-            backgroundColor: isSelected ? genre.color : `${genre.color}40`,
-          }}
-        >
-          <Ionicons
-            name={genre.icon as any}
-            size={compact ? 12 : 16}
-            color={isSelected ? "#ffffff" : genre.color}
-          />
-        </View>
+        <View className="flex-row items-center">
+          {/* Genre Icon */}
+          <View className={`
+            ${compact ? 'w-6 h-6' : 'w-8 h-8'} 
+            rounded-full justify-center items-center mr-2
+            ${isSelected ? 'bg-cyber-cyan/30' : 'bg-cyber-gray/20'}
+          `}>
+            <Ionicons
+              name={genre.icon as any}
+              size={compact ? 12 : 16}
+              color={isSelected ? '#00ffff' : '#ffffff'}
+            />
+          </View>
 
-        <View className="flex-1">
-          <Text
-            className={`font-inter font-medium ${
-              isSelected ? "text-cyber-cyan" : "text-white"
-            } ${compact ? "text-sm" : "text-base"}`}
-          >
-            {genre.name}
-          </Text>
-          {!compact && (
+          {/* Genre Info */}
+          <View className="flex-1">
             <Text
-              className={`font-inter text-xs mt-1 ${
-                isSelected ? "text-cyber-cyan/70" : "text-white/60"
-              }`}
-              numberOfLines={1}
+              className={`
+                font-inter font-medium
+                ${compact ? 'text-sm' : 'text-base'}
+                ${isSelected ? 'text-cyber-cyan' : isAtLimit ? 'text-white/40' : 'text-white'}
+              `}
             >
-              {genre.description}
+              {genre.name}
             </Text>
+            
+            {!compact && genre.description && (
+              <Text
+                className={`
+                  font-inter text-xs mt-1
+                  ${isSelected ? 'text-cyber-cyan/70' : 'text-white/60'}
+                `}
+                numberOfLines={1}
+              >
+                {genre.description}
+              </Text>
+            )}
+          </View>
+
+          {/* Selection Indicator */}
+          {isSelected && (
+            <View className="ml-2">
+              <Ionicons name="checkmark-circle" size={20} color="#00ffff" />
+            </View>
           )}
         </View>
-
-        {isSelected && (
-          <Ionicons
-            name="checkmark-circle"
-            size={compact ? 16 : 20}
-            color="#00ffff"
-          />
-        )}
       </TouchableOpacity>
     );
   };
@@ -276,19 +288,120 @@ const GamingGenreSelector: React.FC<GamingGenreSelectorProps> = ({
   };
 
   /**
-   * Render category section
+   * Get category color scheme
+   * @param {string} categoryName - Category name
+   * @returns {Object} Color scheme for the category
+   */
+  const getCategoryColors = (categoryName: string) => {
+    const colorSchemes = {
+      core: {
+        primary: '#00ffff', // Cyan
+        secondary: '#00ffff20',
+        icon: 'game-controller',
+        gradient: 'from-cyan-500/20 to-cyan-500/5'
+      },
+      competitive: {
+        primary: '#ff4444', // Red
+        secondary: '#ff444420',
+        icon: 'trophy',
+        gradient: 'from-red-500/20 to-red-500/5'
+      },
+      creative: {
+        primary: '#44ff44', // Green
+        secondary: '#44ff4420',
+        icon: 'color-palette',
+        gradient: 'from-green-500/20 to-green-500/5'
+      },
+      casual: {
+        primary: '#ffaa00', // Orange
+        secondary: '#ffaa0020',
+        icon: 'happy',
+        gradient: 'from-orange-500/20 to-orange-500/5'
+      },
+      immersive: {
+        primary: '#aa44ff', // Purple
+        secondary: '#aa44ff20',
+        icon: 'globe',
+        gradient: 'from-purple-500/20 to-purple-500/5'
+      },
+      social: {
+        primary: '#ff44aa', // Pink
+        secondary: '#ff44aa20',
+        icon: 'people',
+        gradient: 'from-pink-500/20 to-pink-500/5'
+      }
+    };
+
+    return colorSchemes[categoryName.toLowerCase() as keyof typeof colorSchemes] || colorSchemes.core;
+  };
+
+  /**
+   * Render category section with enhanced styling and colors
    * @param {string} categoryName - Category name
    * @param {Array} genres - Genres in category
    * @returns {React.ReactElement} Rendered category section
    */
   const renderCategory = (categoryName: string, genres: any[]) => {
     const displayName = categoryName.charAt(0).toUpperCase() + categoryName.slice(1);
+    const categorySelectedCount = genres.filter(genre => isGenreSelected(genre.id)).length;
+    const colors = getCategoryColors(categoryName);
     
     return (
-      <View key={categoryName} className="mb-4">
-        <Text className="text-white font-inter font-medium mb-2 text-sm">
-          {displayName.replace('_', ' ')}
-        </Text>
+      <View key={categoryName} className="mb-6">
+        {/* Category Header */}
+        <View 
+          className={`bg-gradient-to-r ${colors.gradient} border rounded-lg p-3 mb-3`}
+          style={{ borderColor: colors.primary + '40' }}
+        >
+          <View className="flex-row justify-between items-center">
+            <View className="flex-row items-center flex-1">
+              {/* Category Icon */}
+              <View 
+                className="w-8 h-8 rounded-full justify-center items-center mr-3"
+                style={{ backgroundColor: colors.secondary }}
+              >
+                <Ionicons
+                  name={colors.icon as any}
+                  size={16}
+                  color={colors.primary}
+                />
+              </View>
+              
+              {/* Category Title */}
+              <View className="flex-1">
+                <Text 
+                  className="font-inter font-semibold text-sm tracking-wide"
+                  style={{ color: colors.primary }}
+                >
+                  {displayName.replace('_', ' ')}
+                </Text>
+                <Text className="text-white/60 font-inter text-xs">
+                  {genres.length} genre{genres.length !== 1 ? 's' : ''}
+                </Text>
+              </View>
+            </View>
+            
+            {/* Selection Count */}
+            {categorySelectedCount > 0 && (
+              <View 
+                className="px-2 py-1 rounded-full border"
+                style={{ 
+                  backgroundColor: colors.secondary,
+                  borderColor: colors.primary + '60'
+                }}
+              >
+                <Text 
+                  className="font-mono text-xs font-bold"
+                  style={{ color: colors.primary }}
+                >
+                  {categorySelectedCount}
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+        
+        {/* Category Genres Grid */}
         <View className="flex-row flex-wrap">
           {genres.map(renderGenreItem)}
         </View>
@@ -297,24 +410,26 @@ const GamingGenreSelector: React.FC<GamingGenreSelectorProps> = ({
   };
 
   return (
-    <View className="flex-1 bg-cyber-black">
-      {/* Header with selection count */}
-      <View className="flex-row justify-between items-center mb-4">
-        <View>
-          <Text className="text-cyber-cyan font-inter font-medium text-lg">
-            Gaming Interests
-          </Text>
-          <Text className="text-white/60 font-inter text-sm">
-            Select up to {maxSelections} genres you enjoy
-          </Text>
+    <View className="flex-1">
+      {/* Header with selection count - only show if not compact */}
+      {!compact && (
+        <View className="flex-row justify-between items-center mb-4">
+          <View>
+            <Text className="text-cyber-cyan font-inter font-medium text-lg">
+              Gaming Interests
+            </Text>
+            <Text className="text-white/60 font-inter text-sm">
+              Select your favorite genres
+            </Text>
+          </View>
+          
+          <View className="bg-cyber-dark px-3 py-1 rounded-full border border-cyber-cyan/40">
+            <Text className="text-cyber-cyan font-mono text-sm">
+              {selectedGenres.length}/{maxSelections}
+            </Text>
+          </View>
         </View>
-        
-        <View className="bg-cyber-dark px-3 py-1 rounded-full">
-          <Text className="text-cyber-cyan font-mono text-sm">
-            {selectedGenres.length}/{maxSelections}
-          </Text>
-        </View>
-      </View>
+      )}
 
       <View className="flex-1">
         {/* Presets */}
@@ -322,22 +437,31 @@ const GamingGenreSelector: React.FC<GamingGenreSelectorProps> = ({
 
         {/* Manual Selection */}
         <View className="mb-4">
-          <View className="flex-row justify-between items-center mb-3">
-            <Text className="text-cyber-cyan font-inter font-medium">
-              Individual Selection
-            </Text>
-            
-            {showCategories && (
+          {showCategories && (
+            <View className="flex-row justify-end items-center mb-3">
               <TouchableOpacity
                 onPress={() => setShowAllGenres(!showAllGenres)}
-                className="px-3 py-1 bg-cyber-dark rounded-full"
+                className="bg-cyber-cyan/10 border border-cyber-cyan/40 rounded-lg px-4 py-2 shadow-sm"
+                style={{
+                  shadowColor: '#00ffff',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 2,
+                }}
               >
-                <Text className="text-cyber-cyan font-inter text-xs">
-                  {showAllGenres ? "Show Categories" : "Show All"}
-                </Text>
+                <View className="flex-row items-center">
+                  <Ionicons 
+                    name={showAllGenres ? "grid-outline" : "list-outline"} 
+                    size={14} 
+                    color="#00ffff" 
+                  />
+                  <Text className="text-cyber-cyan font-inter text-sm font-medium ml-2">
+                    {showAllGenres ? "Show Categories" : "Show All"}
+                  </Text>
+                </View>
               </TouchableOpacity>
-            )}
-          </View>
+            </View>
+          )}
 
           {showAllGenres || !showCategories ? (
             <View className="flex-row flex-wrap">
@@ -351,6 +475,18 @@ const GamingGenreSelector: React.FC<GamingGenreSelectorProps> = ({
             </View>
           )}
         </View>
+
+        {/* Selection limit warning */}
+        {selectedGenres.length >= maxSelections && (
+          <View className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mt-4">
+            <View className="flex-row items-center justify-center">
+              <Ionicons name="warning" size={16} color="#FbbF24" />
+                             <Text className="text-yellow-400 font-inter text-sm ml-2">
+                 Maximum selections reached
+               </Text>
+            </View>
+          </View>
+        )}
 
 
       </View>

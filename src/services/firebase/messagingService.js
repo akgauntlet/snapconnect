@@ -106,10 +106,6 @@ class MessagingService {
         messageType,
       );
 
-      // Send push notification
-      await this.sendPushNotification(recipientId, senderId, "new_message");
-
-
       return messageId;
     } catch (error) {
       console.error("❌ Send message failed:", error);
@@ -453,22 +449,6 @@ class MessagingService {
   }
 
   /**
-   * Send push notification (placeholder implementation)
-   * @param {string} recipientId - Recipient user ID
-   * @param {string} senderId - Sender user ID
-   * @param {string} type - Notification type
-   * @returns {Promise<void>}
-   */
-  async sendPushNotification(recipientId, senderId, type) {
-    try {
-      // TODO: Implement actual push notification using Firebase Cloud Messaging
-
-    } catch (error) {
-      console.error("❌ Send push notification failed:", error);
-    }
-  }
-
-  /**
    * Notify sender that message was viewed
    * @param {string} senderId - Sender user ID
    * @param {string} messageId - Message ID
@@ -551,10 +531,6 @@ class MessagingService {
       };
 
       await db.collection("notifications").add(notificationData);
-
-      // Also send push notification
-      await this.sendPushNotification(senderId, viewerId, "screenshot_taken");
-
 
     } catch (error) {
       console.error("❌ Notify screenshot failed:", error);

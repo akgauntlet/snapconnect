@@ -148,10 +148,8 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
 
       setFriends(formattedFriends);
 
-      // If no friends, show helpful message
-      if (formattedFriends.length === 0) {
-        setError("No friends found. Add friends to start sending snaps!");
-      }
+      // Don't set error for empty friends list - it's a normal state
+      // Empty friends list will be handled by renderEmptyState
     } catch (error) {
       console.error("Load friends failed:", error);
       setError("Failed to load friends. Please try again.");
@@ -417,7 +415,7 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({
         <Text className="text-white/60 font-inter text-lg mt-4 mb-2">
           No friends yet
         </Text>
-        <Text className="text-white/40 font-inter text-sm text-center px-8">
+        <Text className="text-white/40 font-inter text-sm text-center px-8 mb-4">
           Add friends to start sending snaps!
         </Text>
       </View>

@@ -1,20 +1,23 @@
 /**
  * @file friendsService.js
- * @description Firebase friends service for SnapConnect Phase 2.
- * Handles friend discovery, requests, management, and contact sync.
+ * @description Friends management service for SnapConnect gaming platform.
+ * Handles friend discovery, requests, management, and gaming-based recommendations.
  *
  * @author SnapConnect Team
  * @created 2024-01-20
- * @modified 2024-01-24
+ * @modified 2024-01-26
  *
  * @dependencies
- * - firebase/firestore: Firestore Web SDK
+ * - Firebase Firestore: User data and friend relationships
+ * - Firebase Functions: Batch operations and queries
  *
  * @usage
- * import { friendsService } from '@/services/firebase/friendsService';
+ * import { friendsService } from '@/services/firebase';
+ * await friendsService.sendFriendRequest(fromUserId, toUserId);
  *
  * @ai_context
- * Integrates with AI services for smart friend suggestions and social graph analysis.
+ * AI-powered friend discovery based on gaming preferences,
+ * mutual connections, and social behavior analysis.
  */
 
 import { getFirebaseDB } from "../../config/firebase";
@@ -426,12 +429,11 @@ class FriendsService {
   }
 
   /**
-   * Get friend suggestions based on mutual friends, contacts, and gaming genre similarities
+   * Get friend suggestions for a user
    * @param {string} userId - User ID
-   * @param {Array} contactNumbers - User's contact phone numbers
    * @returns {Promise<Array>} Array of suggested friends
    */
-  async getFriendSuggestions(userId, contactNumbers = []) {
+  async getFriendSuggestions(userId) {
     try {
       const db = this.getDB();
       const suggestions = [];
@@ -441,30 +443,6 @@ class FriendsService {
       const excludeIds = [...currentFriends, userId];
 
       console.log('🤝 Getting friend suggestions for user:', { userId, excludeCount: excludeIds.length });
-
-      // Find users by phone numbers from contacts
-      if (contactNumbers.length > 0) {
-        const batchSize = 10;
-        for (let i = 0; i < contactNumbers.length; i += batchSize) {
-          const batch = contactNumbers.slice(i, i + batchSize);
-
-          const contactSnapshot = await db
-            .collection("users")
-            .where("phoneNumber", "in", batch)
-            .get();
-
-          contactSnapshot.forEach((doc) => {
-            if (!excludeIds.includes(doc.id)) {
-              suggestions.push({
-                id: doc.id,
-                ...doc.data(),
-                reason: "contact",
-              });
-              excludeIds.push(doc.id); // Prevent duplicates in other suggestion types
-            }
-          });
-        }
-      }
 
       // Get mutual friend suggestions
       const mutualSuggestions = await this.getMutualFriendSuggestions(
@@ -491,7 +469,6 @@ class FriendsService {
       suggestions.push(...genreSuggestions);
 
       console.log('🤝 Friend suggestions summary:', {
-        contactSuggestions: suggestions.filter(s => s.reason === "contact").length,
         mutualSuggestions: suggestions.filter(s => s.reason === "mutual_friend").length,
         genreSuggestions: suggestions.filter(s => s.reason === "gaming").length,
         total: suggestions.length
@@ -782,8 +759,8 @@ class FriendsService {
    */
   prioritizeFriendSuggestions(suggestions) {
     return suggestions.sort((a, b) => {
-      // Priority order: contact > mutual_friend > gaming
-      const priorityOrder = { contact: 3, mutual_friend: 2, gaming: 1 };
+      // Priority order: mutual_friend > gaming
+      const priorityOrder = { mutual_friend: 2, gaming: 1 };
       
       const aPriority = priorityOrder[a.reason] || 0;
       const bPriority = priorityOrder[b.reason] || 0;

@@ -26,13 +26,13 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React from "react";
 import {
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { CyberButton, GameCard } from "../../components/common";
 import { AchievementShowcase } from "../../components/profile";
@@ -43,11 +43,11 @@ import { useAuthStore } from "../../stores/authStore";
 import { useThemeStore } from "../../stores/themeStore";
 import { getActualAchievementCount } from "../../utils/achievementHelpers";
 import {
-    getProfileCompletionPercentage,
-    getUserBio,
-    getUserDisplayName,
-    getUserStats,
-    getUserUsername
+  getProfileCompletionPercentage,
+  getUserBio,
+  getUserDisplayName,
+  getUserStats,
+  getUserUsername
 } from "../../utils/userHelpers";
 
 /**
@@ -158,19 +158,13 @@ const ProfileScreen: React.FC = () => {
 
     switch (item.title) {
       case "Customize Profile":
-        navigation.navigate("ProfileCustomization");
+        navigation.navigate("EditProfile");
         break;
       case "Settings":
         navigation.navigate("Settings");
         break;
       case "Achievements":
         navigation.navigate("Achievements");
-        break;
-      case "Privacy":
-        // TODO: Navigate to privacy - to be implemented later
-        break;
-      case "Help":
-        // TODO: Navigate to help - to be implemented later
         break;
       default:
         console.log(`No handler for menu item: ${item.title}`);
@@ -217,8 +211,6 @@ const ProfileScreen: React.FC = () => {
       title: "Achievements",
       subtitle: "Gaming milestones",
     },
-    { icon: "shield-outline", title: "Privacy", subtitle: "Account security" },
-    { icon: "help-circle-outline", title: "Help", subtitle: "Support center" },
   ];
 
   /**

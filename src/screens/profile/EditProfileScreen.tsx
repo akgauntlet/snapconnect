@@ -27,24 +27,25 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useEffect, useRef, useState } from "react";
 import {
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { GamingGenreSelector } from "../../components/common";
-import { AvatarUploader, BannerUploader, StatusMessageEditor } from "../../components/profile";
+import { AvatarSelector, AvatarUploader, BannerUploader, StatusMessageEditor } from "../../components/profile";
 import { mediaService } from "../../services/media";
 import { useAuthStore } from "../../stores/authStore";
 import { useThemeStore } from "../../stores/themeStore";
 import { showDestructiveAlert, showErrorAlert } from "../../utils/alertService";
-import { REGEX_PATTERNS } from "../../utils/constants";
+import { GAMING_GENRES, REGEX_PATTERNS } from "../../utils/constants";
 
 // Type definitions
 type EditProfileNavigationProp = NativeStackNavigationProp<any, "EditProfile">;
@@ -82,6 +83,8 @@ const EditProfileScreen: React.FC = () => {
 
   // Avatar state
   const [showAvatarUploader, setShowAvatarUploader] = useState(false);
+  const [showAvatarSelector, setShowAvatarSelector] = useState(false);
+  const [selectedPresetAvatar, setSelectedPresetAvatar] = useState<string | null>(null);
 
   // Banner state
   const [showBannerUploader, setShowBannerUploader] = useState(false);
@@ -364,6 +367,30 @@ const EditProfileScreen: React.FC = () => {
     }
   };
 
+  /**
+   * Handle preset avatar selection
+   */
+  const handlePresetAvatarSelect = async (avatarId: string) => {
+    try {
+      console.log('✅ Preset avatar selected:', avatarId);
+      setSelectedPresetAvatar(avatarId);
+      
+      // Update profile with preset avatar
+      await updateProfile({ 
+        avatar: { 
+          id: avatarId, 
+          type: 'preset',
+          urls: null // Preset avatars don't need URLs
+        } 
+      });
+      
+      setShowAvatarSelector(false);
+    } catch (error) {
+      console.error('❌ Failed to set preset avatar:', error);
+      showErrorAlert('Failed to update avatar', 'Avatar Update Failed');
+    }
+  };
+
   // Cleanup timeout when component unmounts
   useEffect(() => {
     return () => {
@@ -436,6 +463,72 @@ const EditProfileScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          {/* Avatar Edit Section */}
+          <View className="mb-8 mt-6">
+            <Text className="text-cyber-cyan font-inter mb-4 font-medium text-lg">
+              Avatar
+            </Text>
+            
+            {/* Clickable Avatar Display */}
+            <View className="items-center mb-6">
+              <TouchableOpacity
+                onPress={() => setShowAvatarUploader(true)}
+                className="relative mb-4 active:opacity-75"
+                activeOpacity={0.8}
+              >
+                {getCurrentAvatarUrl() ? (
+                  <Image
+                    source={{ uri: getCurrentAvatarUrl() }}
+                    className="w-32 h-32 rounded-full border-2 border-cyber-cyan/30"
+                    style={{ backgroundColor: '#2a2a2a' }}
+                  />
+                ) : (
+                  <View className="w-32 h-32 bg-cyber-cyan/20 rounded-full justify-center items-center border-2 border-cyber-cyan/30">
+                    <Ionicons name="person" size={48} color={accentColor} />
+                  </View>
+                )}
+                
+                {/* Edit Overlay */}
+                <View className="absolute inset-0 bg-black/50 rounded-full justify-center items-center opacity-0 active:opacity-100">
+                  <Ionicons name="camera-outline" size={24} color="white" />
+                  <Text className="text-white font-inter text-xs mt-1">
+                    Change
+                  </Text>
+                </View>
+                
+                {/* Avatar Type Indicator */}
+                <View className="absolute -top-2 -right-2 bg-cyber-dark border border-cyber-cyan/50 rounded-full px-2 py-1">
+                  <Text className="text-cyber-cyan font-inter text-xs">
+                    {profile?.avatar?.type === 'preset' ? 'PRESET' : 'CUSTOM'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+              
+              <Text className="text-white/60 font-inter text-sm text-center mb-2">
+                Tap to change your avatar
+              </Text>
+            </View>
+
+            {/* Current Avatar Info */}
+            {profile?.avatar && (
+              <View className="bg-cyber-dark/50 rounded-lg p-3 border border-cyber-gray/20">
+                <View className="flex-row items-center">
+                  <Ionicons 
+                    name="information-circle-outline" 
+                    size={16} 
+                    color="#6B7280" 
+                  />
+                  <Text className="text-white/60 font-inter text-xs ml-2">
+                    {profile.avatar.type === 'preset' 
+                      ? `Using preset avatar: ${profile.avatar.id}`
+                      : 'Using custom uploaded avatar'
+                    }
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
+
           {/* Profile Banner Section */}
           <View className="mb-8">
             <Text className="text-cyber-cyan font-inter mb-3 font-medium">
@@ -520,43 +613,6 @@ const EditProfileScreen: React.FC = () => {
                   <Ionicons name="chevron-forward" size={16} color="#6B7280" />
                 </View>
               )}
-            </TouchableOpacity>
-          </View>
-
-          {/* Profile Photo Section */}
-          <View className="items-center py-8">
-            {/* Avatar Display */}
-            <TouchableOpacity
-              onPress={() => setShowAvatarUploader(true)}
-              className="mb-4"
-            >
-              {getCurrentAvatarUrl() ? (
-                <View className="relative">
-                  <Image
-                    source={{ uri: getCurrentAvatarUrl() }}
-                    className="w-24 h-24 rounded-full"
-                    style={{ backgroundColor: '#2a2a2a' }}
-                  />
-                  {/* Edit Overlay */}
-                  <View className="absolute inset-0 bg-black/50 rounded-full justify-center items-center">
-                    <Ionicons name="camera-outline" size={24} color="white" />
-                  </View>
-                </View>
-              ) : (
-                <View className="w-24 h-24 bg-cyber-cyan/20 rounded-full justify-center items-center">
-                  <Ionicons name="person" size={40} color={accentColor} />
-                </View>
-              )}
-            </TouchableOpacity>
-
-            {/* Change Photo Button */}
-            <TouchableOpacity 
-              onPress={() => setShowAvatarUploader(true)}
-              className="bg-cyber-dark px-4 py-2 rounded-lg border border-cyber-cyan/30"
-            >
-              <Text className="text-cyber-cyan font-inter font-medium">
-                {getCurrentAvatarUrl() ? 'Change Photo' : 'Add Photo'}
-              </Text>
             </TouchableOpacity>
           </View>
 
@@ -652,64 +708,139 @@ const EditProfileScreen: React.FC = () => {
               </Text>
             </View>
 
-            {/* Gaming Interests */}
+            {/* Gaming Interests - Enhanced Section */}
             <View className="mb-6">
-              <TouchableOpacity
-                onPress={() => setShowGamingInterests(!showGamingInterests)}
-                className="flex-row justify-between items-center mb-3"
-              >
-                <Text className="text-cyber-cyan font-inter font-medium">
-                  Gaming Interests
-                </Text>
-                <View className="flex-row items-center">
-                  <Text className="text-white/60 font-inter text-sm mr-2">
-                    {gamingInterests.length} selected
-                  </Text>
-                  <Ionicons
-                    name={showGamingInterests ? "chevron-up" : "chevron-down"}
-                    size={20}
-                    color="#00ffff"
-                  />
-                </View>
-              </TouchableOpacity>
+              {/* Header with enhanced styling */}
+              <View className="bg-cyber-dark/60 border border-cyber-cyan/30 rounded-lg p-4 mb-4">
+                <TouchableOpacity
+                  onPress={() => setShowGamingInterests(!showGamingInterests)}
+                  className="flex-row justify-between items-center"
+                >
+                  <View className="flex-row items-center flex-1">
+                    <View className="bg-cyber-cyan/20 rounded-full p-2 mr-3">
+                      <Ionicons name="game-controller" size={20} color="#00ffff" />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-cyber-cyan font-inter font-semibold text-lg">
+                        Gaming Interests
+                      </Text>
+                      <Text className="text-white/60 font-inter text-sm">
+                        {gamingInterests.length > 0 
+                          ? `${gamingInterests.length} genre${gamingInterests.length !== 1 ? 's' : ''} selected`
+                          : 'Select your favorite gaming genres'
+                        }
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  <View className="flex-row items-center">
+                    {/* Progress indicator */}
+                    {gamingInterests.length > 0 && (
+                      <View className="bg-cyber-cyan/20 px-2 py-1 rounded-full mr-2">
+                        <Text className="text-cyber-cyan font-mono text-xs">
+                          {gamingInterests.length}/8
+                        </Text>
+                      </View>
+                    )}
+                    <Ionicons
+                      name={showGamingInterests ? "chevron-up" : "chevron-down"}
+                      size={20}
+                      color="#00ffff"
+                    />
+                  </View>
+                </TouchableOpacity>
 
+                {/* Quick Preview of Selected Interests */}
+                {gamingInterests.length > 0 && !showGamingInterests && (
+                  <View className="mt-3 pt-3 border-t border-cyber-cyan/20">
+                    <Text className="text-white/70 font-inter text-xs mb-2">
+                      Selected Genres:
+                    </Text>
+                    <View className="flex-row flex-wrap">
+                      {gamingInterests.slice(0, 4).map((genreId, index) => {
+                        const genre = Object.values(GAMING_GENRES).find(g => g.id === genreId);
+                        return (
+                          <View
+                            key={genreId}
+                            className="bg-cyber-cyan/10 border border-cyber-cyan/30 rounded-full px-2 py-1 mr-2 mb-1"
+                          >
+                            <Text className="text-cyber-cyan font-inter text-xs">
+                              {genre?.name || genreId}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                      {gamingInterests.length > 4 && (
+                        <View className="bg-cyber-gray/20 rounded-full px-2 py-1">
+                          <Text className="text-white/60 font-inter text-xs">
+                            +{gamingInterests.length - 4} more
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                )}
+              </View>
+
+              {/* Expanded Gaming Interests Selector */}
               {showGamingInterests && (
-                <View className="bg-cyber-dark border border-cyber-gray rounded-lg p-4">
-                  <GamingGenreSelector
-                    selectedGenres={gamingInterests}
-                    onGenresChange={setGamingInterests}
-                    maxSelections={8}
-                    showPresets={false}
-                    showCategories={true}
-                    compact={true}
-                    disabled={isLoading}
-                  />
+                <View className="bg-cyber-dark/40 border border-cyber-cyan/20 rounded-lg p-4 mb-4">
+                  {/* Enhanced Gaming Genre Selector */}
+                  <View className="space-y-4">
+                                                              <View className="flex-row justify-between items-center">
+                       <Text className="text-white font-inter font-medium">
+                         Select Your Gaming Genres
+                       </Text>
+                       <View className="bg-cyber-dark border border-cyber-cyan/40 rounded-full px-3 py-1">
+                         <Text className="text-cyber-cyan font-mono text-sm">
+                           {gamingInterests.length}/8
+                         </Text>
+                       </View>
+                     </View>
+
+                    {/* Gaming Genre Selector Component */}
+                    <GamingGenreSelector
+                      selectedGenres={gamingInterests}
+                      onGenresChange={setGamingInterests}
+                      maxSelections={8}
+                      showPresets={false}
+                      showCategories={true}
+                      compact={true}
+                      disabled={isLoading}
+                    />
+                    
+                    {/* Selection Summary */}
+                    {gamingInterests.length > 0 && (
+                      <View className="bg-cyber-dark/60 border border-cyber-cyan/20 rounded-lg p-3 mt-4">
+                        <Text className="text-cyber-cyan font-inter text-sm mb-2">
+                          Your Gaming Profile:
+                        </Text>
+                        <View className="flex-row flex-wrap">
+                          {gamingInterests.map((genreId) => {
+                            const genre = Object.values(GAMING_GENRES).find(g => g.id === genreId);
+                            return (
+                              <View
+                                key={genreId}
+                                className="bg-cyber-cyan/10 border border-cyber-cyan/30 rounded-full px-3 py-1 mr-2 mb-2 flex-row items-center"
+                              >
+                                <Ionicons 
+                                  name={genre?.icon as any || "game-controller"} 
+                                  size={12} 
+                                  color="#00ffff" 
+                                />
+                                <Text className="text-cyber-cyan font-inter text-xs ml-1">
+                                  {genre?.name || genreId}
+                                </Text>
+                              </View>
+                            );
+                          })}
+                        </View>
+                      </View>
+                    )}
+                  </View>
                 </View>
               )}
             </View>
-          </View>
-
-          {/* Advanced Customization Link */}
-          <View className="mb-8">
-            <TouchableOpacity
-              onPress={() => navigation.navigate("ProfileCustomization")}
-              className="bg-cyber-dark/50 p-4 rounded-xl border border-cyber-cyan/30"
-            >
-              <View className="flex-row items-center justify-between">
-                <View className="flex-row items-center">
-                  <Ionicons name="color-palette-outline" size={24} color={accentColor} />
-                  <View className="ml-3">
-                    <Text className="text-cyber-cyan font-inter font-medium">
-                      Advanced Customization
-                    </Text>
-                    <Text className="text-white/60 font-inter text-sm">
-                      Avatars, banners, status showcase
-                    </Text>
-                  </View>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={accentColor} />
-              </View>
-            </TouchableOpacity>
           </View>
 
           {/* Gaming Aesthetic Elements */}
@@ -730,16 +861,32 @@ const EditProfileScreen: React.FC = () => {
       />
 
       {/* Banner Uploader Modal */}
-      {showBannerUploader && profile?.uid && (
-        <View className="absolute inset-0 bg-black/80 z-50">
-          <SafeAreaView className="flex-1">
-            <View className="flex-row justify-between items-center px-6 py-4 border-b border-cyber-gray/20">
-              <Text className="text-white font-orbitron text-xl">Profile Banner</Text>
-              <TouchableOpacity onPress={() => setShowBannerUploader(false)}>
-                <Ionicons name="close" size={24} color="white" />
-              </TouchableOpacity>
-            </View>
-            <ScrollView className="flex-1 p-6">
+      <Modal
+        visible={showBannerUploader}
+        animationType="slide"
+        presentationStyle="formSheet"
+        onRequestClose={() => setShowBannerUploader(false)}
+      >
+        <View 
+          className="flex-1"
+          style={{ backgroundColor: theme.colors.background.primary }}
+        >
+          {/* Header */}
+          <View className="flex-row justify-between items-center p-6 border-b border-cyber-gray/20">
+            <TouchableOpacity onPress={() => setShowBannerUploader(false)}>
+              <Ionicons name="close" size={24} color="white" />
+            </TouchableOpacity>
+            
+            <Text className="text-white font-orbitron text-lg">
+              Profile Banner
+            </Text>
+            
+            <View className="w-6" />
+          </View>
+
+          {/* Content */}
+          <ScrollView className="flex-1 p-6">
+            {profile?.uid && (
               <BannerUploader
                 userId={profile.uid}
                 currentBanner={profile.profileBanner}
@@ -747,10 +894,10 @@ const EditProfileScreen: React.FC = () => {
                 onUploadError={handleBannerUploadError}
                 aspectRatio="16:9"
               />
-            </ScrollView>
-          </SafeAreaView>
+            )}
+          </ScrollView>
         </View>
-      )}
+      </Modal>
 
       {/* Status Message Editor Modal */}
       <StatusMessageEditor
@@ -769,6 +916,46 @@ const EditProfileScreen: React.FC = () => {
           // Profile will be updated automatically by the auth store
         }}
       />
+
+      {/* Avatar Selector Modal */}
+      <Modal
+        visible={showAvatarSelector}
+        animationType="slide"
+        presentationStyle="formSheet"
+        onRequestClose={() => setShowAvatarSelector(false)}
+      >
+        <View 
+          className="flex-1"
+          style={{ backgroundColor: theme.colors.background.primary }}
+        >
+          {/* Header */}
+          <View className="flex-row justify-between items-center p-6 border-b border-cyber-gray/20">
+            <TouchableOpacity onPress={() => setShowAvatarSelector(false)}>
+              <Ionicons name="close" size={24} color="white" />
+            </TouchableOpacity>
+            
+            <Text className="text-white font-orbitron text-lg">
+              Choose Avatar
+            </Text>
+            
+            <View className="w-6" />
+          </View>
+
+          {/* Avatar Selector Content */}
+          <View className="flex-1 p-6">
+            <AvatarSelector
+              selectedAvatar={profile?.avatar?.type === 'preset' ? profile.avatar.id : null}
+              onAvatarSelect={handlePresetAvatarSelect}
+              onCustomUpload={() => {
+                setShowAvatarSelector(false);
+                setShowAvatarUploader(true);
+              }}
+              showCategories={true}
+              compact={false}
+            />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
