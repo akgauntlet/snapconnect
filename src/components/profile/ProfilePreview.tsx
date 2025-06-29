@@ -41,7 +41,6 @@ import { useThemeStore } from '../../stores/themeStore';
  */
 interface PreviewData {
   avatar: any;
-  banner: any;
   statusMessage: any;
   achievementShowcase: any[];
 }
@@ -84,23 +83,20 @@ const ProfilePreview: React.FC<ProfilePreviewProps> = ({
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
 
   /**
-   * Get avatar URL for preview
+   * Get preview avatar URL with fallback
    */
   const getPreviewAvatarUrl = () => {
     if (previewData.avatar?.urls) {
-      return mediaService.getOptimizedAvatarUrl(previewData.avatar, compact ? '48' : '96');
+      return mediaService.getOptimizedAvatarUrl(previewData.avatar, compact ? 'small' : 'medium');
     }
     return previewData.avatar?.url || null;
   };
 
   /**
-   * Get banner URL for preview
+   * Get status display data for consistent formatting
    */
-  const getPreviewBannerUrl = () => {
-    if (previewData.banner?.urls) {
-      return mediaService.getOptimizedBannerUrl(previewData.banner, compact ? 'medium' : 'large');
-    }
-    return previewData.banner?.url || null;
+  const getStatusDisplayData = (statusMessage: any) => {
+    // Implementation of getStatusDisplayData function
   };
 
   /**
@@ -122,7 +118,6 @@ const ProfilePreview: React.FC<ProfilePreviewProps> = ({
   };
 
   const avatarSize = compact ? 48 : 96;
-  const bannerHeight = compact ? 80 : 120;
 
   return (
     <View className={`bg-cyber-dark/50 rounded-xl p-4 ${compact ? 'mb-4' : 'mb-6'}`}>
@@ -132,27 +127,8 @@ const ProfilePreview: React.FC<ProfilePreviewProps> = ({
         </Text>
       )}
       
-      {/* Banner Section */}
+      {/* Profile Section */}
       <View className="relative mb-4">
-        {getPreviewBannerUrl() ? (
-          <View>
-            <Image
-              source={{ uri: getPreviewBannerUrl() }}
-              className="w-full rounded-lg"
-              style={{ height: bannerHeight, resizeMode: 'cover' }}
-            />
-            <View className="absolute inset-0 bg-black/30 rounded-lg" />
-          </View>
-        ) : (
-          <View 
-            className="w-full bg-cyber-gray/20 rounded-lg justify-center items-center"
-            style={{ height: bannerHeight }}
-          >
-            <Ionicons name="image-outline" size={compact ? 20 : 24} color="#6B7280" />
-            <Text className="text-white/40 text-xs mt-1">No Banner</Text>
-          </View>
-        )}
-
         {/* Avatar Overlay */}
         <View className={`absolute ${compact ? '-bottom-4 left-3' : '-bottom-6 left-4'}`}>
           {getPreviewAvatarUrl() ? (
@@ -267,10 +243,9 @@ const ProfilePreview: React.FC<ProfilePreviewProps> = ({
               <Text className="text-white text-xs">
                 {[
                   previewData.avatar ? 1 : 0,
-                  previewData.banner ? 1 : 0,
                   previewData.statusMessage ? 1 : 0,
                   previewData.achievementShowcase?.length > 0 ? 1 : 0,
-                ].reduce((a, b) => a + b, 0)}/4
+                ].reduce((a, b) => a + b, 0)}/3
               </Text>
             </View>
             <View className="items-center">

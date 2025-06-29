@@ -474,43 +474,8 @@ export const useAuthStore = create(
       },
 
       /**
-       * Update profile banner
-       * @param {Object} bannerData - Banner data with URLs and paths
-       * @returns {Promise<void>}
-       */
-      updateProfileBanner: async (bannerData) => {
-        const { user } = get();
-
-        if (!user) {
-          throw new Error("No authenticated user");
-        }
-
-        set({ isLoading: true, error: null });
-
-        try {
-          const updatedProfile = await authService.updateProfileBanner(user.uid, bannerData);
-
-          set({
-            profile: updatedProfile,
-            isLoading: false,
-            error: null,
-          });
-
-          console.log("✅ Profile banner updated successfully");
-        } catch (error) {
-          set({
-            isLoading: false,
-            error: error.message,
-          });
-          console.error("❌ Profile banner update failed:", error.message);
-          throw error;
-        }
-      },
-
-      /**
        * Update status message
        * @param {Object} statusData - Status message data
-       * @returns {Promise<void>}
        */
       updateStatusMessage: async (statusData) => {
         const { user } = get();

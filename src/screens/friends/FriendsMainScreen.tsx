@@ -67,7 +67,6 @@ interface Friend {
   username: string;
   profilePhoto?: string;
   avatar?: any; // Avatar data with URLs
-  profileBanner?: any; // Banner data with URLs
   statusMessage?: {
     text?: string;
     emoji?: string;
@@ -92,7 +91,6 @@ interface SerializableFriend {
   displayName: string;
   username: string;
   profilePhoto?: string;
-  profileBanner?: any; // Banner data with URLs
   statusMessage?: {
     text?: string;
     emoji?: string;
@@ -191,7 +189,6 @@ const FriendsMainScreen: React.FC = () => {
           username: friend.username || "no-username",
           profilePhoto: friend.profilePhoto,
           avatar: friend.avatar,
-          profileBanner: friend.profileBanner,
           statusMessage: friend.statusMessage,
           lastActive: presence.lastActive,
           isOnline: presence.isOnline,
@@ -391,16 +388,7 @@ const FriendsMainScreen: React.FC = () => {
     return friend.profilePhoto || null;
   };
 
-  /**
-   * Get friend's banner URL with fallback
-   */
-  const getFriendBannerUrl = (friend: Friend) => {
-    if (friend.profileBanner?.urls) {
-      return mediaService.getOptimizedBannerUrl(friend.profileBanner, 'small');
-    }
-    // Fallback to old banner URL field
-    return friend.profileBanner?.url || null;
-  };
+
 
   /**
    * Format last active time
@@ -428,21 +416,8 @@ const FriendsMainScreen: React.FC = () => {
       onPress={() => handleViewProfile(item)}
       className="mx-4 mb-2 rounded-lg overflow-hidden active:opacity-80"
     >
-      {/* Banner Background (if available) */}
-      {getFriendBannerUrl(item) && (
-        <View className="absolute inset-0">
-          <Image
-            source={{ uri: getFriendBannerUrl(item)! }}
-            className="w-full h-full"
-            style={{ resizeMode: 'cover' }}
-          />
-          {/* Banner Overlay */}
-          <View className="absolute inset-0 bg-black/70" />
-        </View>
-      )}
-
       {/* Content Container */}
-      <View className={`flex-row items-center p-4 ${!getFriendBannerUrl(item) ? 'bg-cyber-dark/50' : ''}`}>
+      <View className="flex-row items-center p-4 bg-cyber-dark/50">
         {/* Avatar with status indicator */}
         <View className="relative mr-4">
           {getFriendAvatarUrl(item) ? (

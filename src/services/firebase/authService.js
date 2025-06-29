@@ -906,41 +906,6 @@ class AuthService {
   }
 
   /**
-   * Update user profile banner
-   * @param {string} uid - User ID
-   * @param {Object} bannerData - Banner data with URLs and paths
-   * @returns {Promise<Object>} Updated profile
-   */
-  async updateProfileBanner(uid, bannerData) {
-    try {
-      const db = this.getDB();
-      const { firebase } = require("../../config/firebase");
-
-      // Update user profile with banner data
-      const updateData = {
-        profileBanner: {
-          url: bannerData.mainUrl,
-          urls: bannerData.urls,
-          paths: bannerData.paths,
-          position: bannerData.position || 'center',
-          uploadedAt: bannerData.uploadedAt,
-        },
-        lastActive: firebase.firestore.FieldValue.serverTimestamp(),
-      };
-
-      const userRef = db.collection("users").doc(uid);
-      await userRef.update(updateData);
-
-      // Get updated profile
-      const updatedProfile = await this.getUserProfile(uid);
-      return updatedProfile;
-    } catch (error) {
-      console.error("❌ Profile banner update failed:", error);
-      throw error;
-    }
-  }
-
-  /**
    * Update user status message
    * @param {string} uid - User ID
    * @param {Object} statusData - Status message data

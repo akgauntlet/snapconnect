@@ -101,9 +101,20 @@ const ProfileScreen: React.FC = () => {
   };
 
   /**
-   * Get availability status color
-   * @param {string} availability - Availability status
-   * @returns {string} Color hex code
+   * Get current avatar URL with fallback
+   */
+  const getCurrentAvatarUrl = () => {
+    // Use the optimized avatar URL if available
+    if (profile?.avatar?.urls) {
+      return mediaService.getOptimizedAvatarUrl(profile.avatar, 'large');
+    }
+    
+    // Fallback to old avatar URL field
+    return profile?.profilePhoto || null;
+  };
+
+  /**
+   * Get availability color based on status
    */
   const getAvailabilityColor = (availability: string) => {
     switch (availability) {
@@ -118,32 +129,6 @@ const ProfileScreen: React.FC = () => {
       default:
         return '#10B981'; // Default to green
     }
-  };
-
-  /**
-   * Get current avatar URL with fallback
-   */
-  const getCurrentAvatarUrl = () => {
-    // Use the optimized avatar URL if available
-    if (profile?.avatar?.urls) {
-      return mediaService.getOptimizedAvatarUrl(profile.avatar, '96');
-    }
-    
-    // Fallback to old profilePhoto field
-    return profile?.profilePhoto || null;
-  };
-
-  /**
-   * Get current banner URL with fallback
-   */
-  const getCurrentBannerUrl = () => {
-    // Use the optimized banner URL if available
-    if (profile?.profileBanner?.urls) {
-      return mediaService.getOptimizedBannerUrl(profile.profileBanner, 'large');
-    }
-    
-    // Fallback to old banner URL field
-    return profile?.profileBanner?.url || null;
   };
 
   /**
@@ -199,7 +184,7 @@ const ProfileScreen: React.FC = () => {
     {
       icon: "color-palette-outline",
       title: "Customize Profile",
-      subtitle: "Avatars, banners, status",
+      subtitle: "Avatars, status",
     },
     {
       icon: "settings-outline",
@@ -278,21 +263,8 @@ const ProfileScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: tabBarHeight + 20 }}
       >
-        {/* Profile Banner */}
-        {getCurrentBannerUrl() && (
-          <View className="relative">
-            <Image
-              source={{ uri: getCurrentBannerUrl() }}
-              className="w-full h-48"
-              style={{ resizeMode: 'cover' }}
-            />
-            {/* Banner Overlay */}
-            <View className="absolute inset-0 bg-black/30" />
-          </View>
-        )}
-
         {/* Profile Header */}
-        <View className={`items-center px-6 ${getCurrentBannerUrl() ? 'py-4 -mt-12' : 'py-8'}`}>
+        <View className="items-center px-6 py-8">
           {/* Avatar */}
           {renderProfileAvatar()}
 

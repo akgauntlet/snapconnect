@@ -821,21 +821,9 @@ const ChatScreen: React.FC = () => {
    */
   const getFriendAvatarUrl = () => {
     if (friendProfile?.avatar?.urls) {
-      return mediaService.getOptimizedAvatarUrl(friendProfile.avatar, '48');
+      return mediaService.getOptimizedAvatarUrl(friendProfile.avatar, 'medium');
     }
-    // Fallback to old profilePhoto field
     return friendProfile?.profilePhoto || null;
-  };
-
-  /**
-   * Get friend's banner URL with fallback
-   */
-  const getFriendBannerUrl = () => {
-    if (friendProfile?.profileBanner?.urls) {
-      return mediaService.getOptimizedBannerUrl(friendProfile.profileBanner, 'medium');
-    }
-    // Fallback to old banner URL field
-    return friendProfile?.profileBanner?.url || null;
   };
 
   /**
@@ -1104,21 +1092,10 @@ const ChatScreen: React.FC = () => {
         backgroundColor={theme.colors.background.primary}
       />
 
-      {/* Friend Banner */}
-      {getFriendBannerUrl() && (
-        <View className="relative">
-          <Image
-            source={{ uri: getFriendBannerUrl() }}
-            className="w-full h-32"
-            style={{ resizeMode: 'cover' }}
-          />
-          {/* Banner Overlay */}
-          <View className="absolute inset-0 bg-black/40" />
-        </View>
-      )}
+
 
       {/* Header */}
-      <View className={`flex-row items-center justify-between px-4 py-3 border-b border-cyber-gray/10 ${getFriendBannerUrl() ? 'bg-cyber-black/80' : ''}`}>
+      <View className={`flex-row items-center justify-between px-4 py-3 border-b border-cyber-gray/10`}>
         <TouchableOpacity onPress={handleBack} className="p-2 -ml-2">
           <Ionicons name="arrow-back" size={24} color="#ffffff" />
         </TouchableOpacity>

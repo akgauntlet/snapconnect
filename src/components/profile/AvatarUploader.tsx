@@ -102,7 +102,7 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
     try {
       setIsProcessing(true);
       
-      const result = await mediaService.selectImageFromGallery();
+      const result = await mediaService.selectAvatarFromGallery();
       
       if (result) {
         setSelectedImage(result);
@@ -126,7 +126,7 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
     try {
       setIsProcessing(true);
       
-      const result = await mediaService.captureImageFromCamera();
+      const result = await mediaService.captureAvatarFromCamera();
       
       if (result) {
         setSelectedImage(result);
@@ -153,6 +153,8 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
       // Validate image
       const validation = mediaService.validateImage(imageAsset) as ValidationResult;
       if (!validation.isValid) {
+        // Clean up web object URL if validation fails
+        mediaService.cleanupWebObjectUrl(imageAsset);
         throw new Error(validation.errors[0]);
       }
 
@@ -166,6 +168,10 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
       console.log('✅ Image processed successfully');
     } catch (error) {
       console.error('❌ Image processing failed:', error);
+      
+      // Clean up web object URL on error
+      mediaService.cleanupWebObjectUrl(imageAsset);
+      
       showErrorAlert(
         (error as Error).message || 'Failed to process image',
         'Image Processing Failed'
@@ -215,7 +221,7 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
       showSuccessAlert('Avatar updated successfully!');
       onUploadComplete(uploadResult);
       
-      // Reset state
+      // Reset state and cleanup
       resetState();
     } catch (error) {
       console.error('❌ Avatar upload failed:', error);
@@ -232,6 +238,11 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
    * Reset component state
    */
   const resetState = () => {
+    // Clean up web object URLs before resetting
+    if (selectedImage) {
+      mediaService.cleanupWebObjectUrl(selectedImage);
+    }
+    
     setSelectedImage(null);
     setProcessedImage(null);
     setUploadProgress([]);

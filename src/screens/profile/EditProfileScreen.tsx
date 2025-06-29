@@ -40,7 +40,7 @@ import {
   View,
 } from "react-native";
 import { GamingGenreSelector } from "../../components/common";
-import { AvatarSelector, AvatarUploader, BannerUploader, StatusMessageEditor } from "../../components/profile";
+import { AvatarSelector, AvatarUploader, StatusMessageEditor } from "../../components/profile";
 import { mediaService } from "../../services/media";
 import { useAuthStore } from "../../stores/authStore";
 import { useThemeStore } from "../../stores/themeStore";
@@ -85,9 +85,6 @@ const EditProfileScreen: React.FC = () => {
   const [showAvatarUploader, setShowAvatarUploader] = useState(false);
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
   const [selectedPresetAvatar, setSelectedPresetAvatar] = useState<string | null>(null);
-
-  // Banner state
-  const [showBannerUploader, setShowBannerUploader] = useState(false);
 
   // Status message state
   const [showStatusMessageEditor, setShowStatusMessageEditor] = useState(false);
@@ -285,23 +282,6 @@ const EditProfileScreen: React.FC = () => {
   };
 
   /**
-   * Handle banner upload complete
-   */
-  const handleBannerUploadComplete = (bannerData: any) => {
-    console.log("✅ Banner upload completed:", bannerData);
-    setShowBannerUploader(false);
-    // Profile will be updated automatically by the auth store
-  };
-
-  /**
-   * Handle banner upload error
-   */
-  const handleBannerUploadError = (error: string) => {
-    console.error("❌ Banner upload error:", error);
-    showErrorAlert(error, "Banner Upload Failed");
-  };
-
-  /**
    * Get current avatar URL with fallback
    */
   const getCurrentAvatarUrl = () => {
@@ -312,19 +292,6 @@ const EditProfileScreen: React.FC = () => {
     
     // Fallback to old profilePhoto field
     return profile?.profilePhoto || null;
-  };
-
-  /**
-   * Get current banner URL with fallback
-   */
-  const getCurrentBannerUrl = () => {
-    // Use the optimized banner URL if available
-    if (profile?.profileBanner?.urls) {
-      return mediaService.getOptimizedBannerUrl(profile.profileBanner, 'large');
-    }
-    
-    // Fallback to old banner URL field
-    return profile?.profileBanner?.url || null;
   };
 
   /**
@@ -464,7 +431,7 @@ const EditProfileScreen: React.FC = () => {
           keyboardShouldPersistTaps="handled"
         >
           {/* Avatar Edit Section */}
-          <View className="mb-8 mt-6">
+          <View className="mb-6 mt-6">
             <Text className="text-cyber-cyan font-inter mb-4 font-medium text-lg">
               Avatar
             </Text>
@@ -504,69 +471,11 @@ const EditProfileScreen: React.FC = () => {
                 </View>
               </TouchableOpacity>
               
-              <Text className="text-white/60 font-inter text-sm text-center mb-2">
+              <Text className="text-white/60 font-inter text-sm text-center">
                 Tap to change your avatar
               </Text>
             </View>
 
-            {/* Current Avatar Info */}
-            {profile?.avatar && (
-              <View className="bg-cyber-dark/50 rounded-lg p-3 border border-cyber-gray/20">
-                <View className="flex-row items-center">
-                  <Ionicons 
-                    name="information-circle-outline" 
-                    size={16} 
-                    color="#6B7280" 
-                  />
-                  <Text className="text-white/60 font-inter text-xs ml-2">
-                    {profile.avatar.type === 'preset' 
-                      ? `Using preset avatar: ${profile.avatar.id}`
-                      : 'Using custom uploaded avatar'
-                    }
-                  </Text>
-                </View>
-              </View>
-            )}
-          </View>
-
-          {/* Profile Banner Section */}
-          <View className="mb-8">
-            <Text className="text-cyber-cyan font-inter mb-3 font-medium">
-              Profile Banner
-            </Text>
-            
-            {/* Banner Preview/Upload Area */}
-            <TouchableOpacity
-              onPress={() => setShowBannerUploader(true)}
-              className="w-full h-32 rounded-xl overflow-hidden bg-cyber-dark border-2 border-dashed border-cyber-gray/50"
-            >
-              {getCurrentBannerUrl() ? (
-                <View className="relative w-full h-full">
-                  <Image
-                    source={{ uri: getCurrentBannerUrl() }}
-                    className="w-full h-full"
-                    style={{ resizeMode: 'cover' }}
-                  />
-                  {/* Edit Overlay */}
-                  <View className="absolute inset-0 bg-black/50 justify-center items-center">
-                    <Ionicons name="camera-outline" size={24} color="white" />
-                    <Text className="text-white font-inter text-sm mt-1">
-                      Change Banner
-                    </Text>
-                  </View>
-                </View>
-              ) : (
-                <View className="flex-1 justify-center items-center">
-                  <Ionicons name="image-outline" size={32} color="#6B7280" />
-                  <Text className="text-white/60 font-inter text-sm mt-2">
-                    Add Profile Banner
-                  </Text>
-                  <Text className="text-white/40 font-inter text-xs mt-1">
-                    Landscape images work best
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
           </View>
 
           {/* Status Message Section */}
@@ -859,45 +768,6 @@ const EditProfileScreen: React.FC = () => {
         onUploadComplete={handleAvatarUploadComplete}
         onCancel={() => setShowAvatarUploader(false)}
       />
-
-      {/* Banner Uploader Modal */}
-      <Modal
-        visible={showBannerUploader}
-        animationType="slide"
-        presentationStyle="formSheet"
-        onRequestClose={() => setShowBannerUploader(false)}
-      >
-        <View 
-          className="flex-1"
-          style={{ backgroundColor: theme.colors.background.primary }}
-        >
-          {/* Header */}
-          <View className="flex-row justify-between items-center p-6 border-b border-cyber-gray/20">
-            <TouchableOpacity onPress={() => setShowBannerUploader(false)}>
-              <Ionicons name="close" size={24} color="white" />
-            </TouchableOpacity>
-            
-            <Text className="text-white font-orbitron text-lg">
-              Profile Banner
-            </Text>
-            
-            <View className="w-6" />
-          </View>
-
-          {/* Content */}
-          <ScrollView className="flex-1 p-6">
-            {profile?.uid && (
-              <BannerUploader
-                userId={profile.uid}
-                currentBanner={profile.profileBanner}
-                onUploadComplete={handleBannerUploadComplete}
-                onUploadError={handleBannerUploadError}
-                aspectRatio="16:9"
-              />
-            )}
-          </ScrollView>
-        </View>
-      </Modal>
 
       {/* Status Message Editor Modal */}
       <StatusMessageEditor

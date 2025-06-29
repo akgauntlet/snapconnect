@@ -20,6 +20,7 @@
 
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
+import { Platform } from 'react-native';
 import { getFirebaseStorage } from '../../config/firebase';
 
 /**
@@ -51,6 +52,11 @@ class MediaService {
    */
   async requestPermissions() {
     try {
+      // On web, we don't need explicit permissions
+      if (Platform.OS === 'web') {
+        return true;
+      }
+
       // Request camera permissions
       const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
       
@@ -73,21 +79,32 @@ class MediaService {
   }
 
   /**
-   * Select image from gallery with optimized settings
+   * Select image from gallery with web compatibility
+   * @param {Object} options - Selection options (aspectRatio, allowsEditing, etc.)
    * @returns {Promise<Object|null>} Selected image result or null
    */
-  async selectImageFromGallery() {
+  async selectImageFromGallery(options = {}) {
     try {
+      if (Platform.OS === 'web') {
+        return await this.selectImageFromGalleryWeb();
+      }
+
       const hasPermissions = await this.requestPermissions();
       if (!hasPermissions) {
         throw new Error('Media library permissions required');
       }
 
+      const {
+        aspectRatio = [1, 1], // Default to square for avatars
+        allowsEditing = true,
+        quality = 0.8,
+      } = options;
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1], // Square aspect ratio for avatars
-        quality: 0.8,
+        allowsEditing,
+        aspect: aspectRatio,
+        quality,
         allowsMultipleSelection: false,
         exif: false, // Remove EXIF data for privacy
       });
@@ -104,21 +121,118 @@ class MediaService {
   }
 
   /**
-   * Capture image from camera with optimized settings
+   * Select avatar image from gallery (square optimized)
+   * @returns {Promise<Object|null>} Selected image result or null
+   */
+  async selectAvatarFromGallery() {
+    return this.selectImageFromGallery({
+      aspectRatio: [1, 1], // Square aspect ratio for avatars
+      allowsEditing: true,
+      quality: 0.8,
+    });
+  }
+
+  /**
+   * Web-specific image selection using HTML input
+   * @returns {Promise<Object|null>} Selected image result or null
+   */
+  async selectImageFromGalleryWeb() {
+    return new Promise((resolve, reject) => {
+      try {
+        // Create file input element
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.multiple = false;
+        
+        input.onchange = async (event) => {
+          try {
+            const file = event.target.files[0];
+            if (!file) {
+              resolve(null);
+              return;
+            }
+
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+              throw new Error('Please select an image file');
+            }
+
+            // Validate file size
+            if (file.size > this.maxFileSize) {
+              throw new Error(`File size too large. Maximum size is ${this.maxFileSize / (1024 * 1024)}MB`);
+            }
+
+            // Create object URL for the file
+            const uri = URL.createObjectURL(file);
+            
+            // Create an image element to get dimensions
+            const img = new Image();
+            img.onload = () => {
+              const imageAsset = {
+                uri,
+                width: img.width,
+                height: img.height,
+                type: file.type,
+                fileSize: file.size,
+                fileName: file.name,
+                webFile: file, // Store original file for web processing
+                isWebFile: true, // Flag to identify web files for cleanup
+              };
+              
+              resolve(imageAsset);
+            };
+            
+            img.onerror = () => {
+              URL.revokeObjectURL(uri);
+              reject(new Error('Failed to load selected image'));
+            };
+            
+            img.src = uri;
+          } catch (error) {
+            reject(error);
+          }
+        };
+
+        input.oncancel = () => {
+          resolve(null);
+        };
+
+        // Trigger file selection
+        input.click();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  /**
+   * Capture image from camera with web compatibility
+   * @param {Object} options - Capture options (aspectRatio, allowsEditing, etc.)
    * @returns {Promise<Object|null>} Captured image result or null
    */
-  async captureImageFromCamera() {
+  async captureImageFromCamera(options = {}) {
     try {
+      if (Platform.OS === 'web') {
+        return await this.captureImageFromCameraWeb();
+      }
+
       const hasPermissions = await this.requestPermissions();
       if (!hasPermissions) {
         throw new Error('Camera permissions required');
       }
 
+      const {
+        aspectRatio = [1, 1], // Default to square for avatars
+        allowsEditing = true,
+        quality = 0.8,
+      } = options;
+
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1], // Square aspect ratio for avatars
-        quality: 0.8,
+        allowsEditing,
+        aspect: aspectRatio,
+        quality,
         exif: false, // Remove EXIF data for privacy
       });
 
@@ -131,6 +245,35 @@ class MediaService {
       console.error('❌ Image capture failed:', error);
       throw error;
     }
+  }
+
+  /**
+   * Capture avatar image from camera (square optimized)
+   * @returns {Promise<Object|null>} Captured image result or null
+   */
+  async captureAvatarFromCamera() {
+    return this.captureImageFromCamera({
+      aspectRatio: [1, 1], // Square aspect ratio for avatars
+      allowsEditing: true,
+      quality: 0.8,
+    });
+  }
+
+  /**
+   * Web-specific camera capture using getUserMedia
+   * @returns {Promise<Object|null>} Captured image result or null
+   */
+  async captureImageFromCameraWeb() {
+    return new Promise((resolve, reject) => {
+      try {
+        // For web, we'll fall back to file selection since camera capture
+        // requires a more complex implementation with getUserMedia
+        console.warn('⚠️ Camera capture on web - falling back to file selection');
+        this.selectImageFromGalleryWeb().then(resolve).catch(reject);
+      } catch (error) {
+        reject(new Error('Camera capture not supported on web. Please select an image from your files.'));
+      }
+    });
   }
 
   /**
@@ -375,7 +518,7 @@ class MediaService {
     const requestedIndex = fallbackOrder.indexOf(size);
     
     if (requestedIndex === -1) {
-      return avatarData.urls['256'] || avatarData.mainUrl || null;
+      return avatarData.urls['256'] || null;
     }
 
     // Try requested size first, then larger sizes
@@ -386,278 +529,22 @@ class MediaService {
       }
     }
 
-    return avatarData.mainUrl || null;
+    return avatarData.urls['256'] || null;
   }
 
   /**
-   * Process banner image for different sizes and aspect ratios
-   * @param {string} imageUri - Local image URI
-   * @param {Object} options - Processing options
-   * @returns {Promise<Object>} Object with different sized banner images
+   * Clean up web object URLs to prevent memory leaks
+   * @param {Object} imageAsset - Image asset that may contain web object URLs
    */
-  async processBannerImage(imageUri, options = {}) {
-    try {
-      const {
-        quality = 0.8,
-        aspectRatio = '16:9', // '16:9' or '3:1'
-        generateSizes = true,
-      } = options;
-
-      // Calculate dimensions based on aspect ratio
-      const aspectRatios = {
-        '16:9': { width: 800, height: 450 },
-        '3:1': { width: 900, height: 300 },
-      };
-
-      const dimensions = aspectRatios[aspectRatio] || aspectRatios['16:9'];
-
-      const baseResult = await ImageManipulator.manipulateAsync(
-        imageUri,
-        [
-          {
-            resize: dimensions,
-          },
-        ],
-        {
-          compress: quality,
-          format: ImageManipulator.SaveFormat.JPEG,
-          base64: false,
-        }
-      );
-
-      if (!generateSizes) {
-        return { 
-          main: baseResult,
-          sizes: { 'large': baseResult },
-          aspectRatio,
-        };
-      }
-
-      // Generate different sizes for performance optimization
-      const sizes = {
-        'large': baseResult,   // Full size for profile
-        'medium': null,        // Medium size for previews
-        'small': null,         // Small size for thumbnails
-      };
-
-      // Generate smaller sizes maintaining aspect ratio
-      const ratio = dimensions.width / dimensions.height;
-      const sizeConfigs = [
-        { width: 400, height: Math.round(400 / ratio), key: 'medium' },
-        { width: 200, height: Math.round(200 / ratio), key: 'small' },
-      ];
-
-      const sizePromises = sizeConfigs.map(async ({ width, height, key }) => {
-        const result = await ImageManipulator.manipulateAsync(
-          imageUri,
-          [
-            {
-              resize: { width, height },
-            },
-          ],
-          {
-            compress: quality,
-            format: ImageManipulator.SaveFormat.JPEG,
-            base64: false,
-          }
-        );
-        return { key, result };
-      });
-
-      const sizeResults = await Promise.all(sizePromises);
-      sizeResults.forEach(({ key, result }) => {
-        sizes[key] = result;
-      });
-
-      return {
-        main: baseResult,
-        sizes,
-        aspectRatio,
-      };
-    } catch (error) {
-      console.error('❌ Banner processing failed:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Upload banner image to Firebase Storage
-   * @param {string} userId - User ID
-   * @param {Object} processedBanner - Processed banner data
-   * @param {Function} onProgress - Progress callback
-   * @returns {Promise<Object>} Upload result with URLs
-   */
-  async uploadBanner(userId, processedBanner, onProgress) {
-    try {
-      const storage = this.getStorage();
-      const timestamp = Date.now();
-      
-      // Upload all sizes
-      const uploadPromises = Object.entries(processedBanner.sizes).map(
-        async ([size, imageData]) => {
-          const fileName = `banner_${size}_${timestamp}.jpg`;
-          const storagePath = `banners/${userId}/${fileName}`;
-          
-          // Convert to blob for upload
-          const response = await fetch(imageData.uri);
-          const blob = await response.blob();
-          
-          // Create storage reference
-          const storageRef = storage.ref(storagePath);
-          
-          // Upload with progress tracking
-          const uploadTask = storageRef.put(blob);
-          
-          return new Promise((resolve, reject) => {
-            uploadTask.on(
-              'state_changed',
-              (snapshot) => {
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                onProgress?.(progress, size);
-              },
-              (error) => {
-                console.error(`❌ Banner upload failed for size ${size}:`, error);
-                reject(error);
-              },
-              async () => {
-                try {
-                  const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
-                  resolve({ size, url: downloadURL, path: storagePath });
-                } catch (error) {
-                  reject(error);
-                }
-              }
-            );
-          });
-        }
-      );
-
-      const uploadResults = await Promise.all(uploadPromises);
-      
-      // Organize results by size
-      const urls = {};
-      const paths = {};
-      
-      uploadResults.forEach(({ size, url, path }) => {
-        urls[size] = url;
-        paths[size] = path;
-      });
-
-      return {
-        urls,
-        paths,
-        mainUrl: urls['large'], // Primary banner URL
-        aspectRatio: processedBanner.aspectRatio,
-        uploadedAt: new Date().toISOString(),
-      };
-    } catch (error) {
-      console.error('❌ Banner upload failed:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Delete banner from Firebase Storage
-   * @param {string} userId - User ID
-   * @param {Object} bannerPaths - Object with storage paths for different sizes
-   * @returns {Promise<void>}
-   */
-  async deleteBanner(userId, bannerPaths) {
-    try {
-      const storage = this.getStorage();
-      
-      const deletePromises = Object.values(bannerPaths).map(async (path) => {
-        try {
-          const storageRef = storage.ref(path);
-          await storageRef.delete();
-          console.log(`✅ Deleted banner: ${path}`);
-        } catch (error) {
-          console.warn(`⚠️ Failed to delete banner: ${path}`, error);
-          // Don't throw - continue with other deletions
-        }
-      });
-
-      await Promise.allSettled(deletePromises);
-    } catch (error) {
-      console.error('❌ Banner deletion failed:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get optimized banner URL for specific size
-   * @param {Object} bannerData - Banner data with URLs
-   * @param {string} size - Requested size ('small', 'medium', 'large')
-   * @returns {string|null} Optimized banner URL or null
-   */
-  getOptimizedBannerUrl(bannerData, size = 'large') {
-    if (!bannerData || !bannerData.urls) {
-      return null;
-    }
-
-    // Return requested size or fallback to larger sizes
-    const fallbackOrder = ['large', 'medium', 'small'];
-    const requestedIndex = fallbackOrder.indexOf(size);
-    
-    if (requestedIndex === -1) {
-      return bannerData.urls['large'] || bannerData.mainUrl || null;
-    }
-
-    // Try requested size first, then larger sizes
-    for (let i = requestedIndex; i >= 0; i--) {
-      const fallbackSize = fallbackOrder[i];
-      if (bannerData.urls[fallbackSize]) {
-        return bannerData.urls[fallbackSize];
+  cleanupWebObjectUrl(imageAsset) {
+    if (Platform.OS === 'web' && imageAsset && imageAsset.isWebFile && imageAsset.uri) {
+      try {
+        URL.revokeObjectURL(imageAsset.uri);
+        console.log('✅ Cleaned up web object URL');
+      } catch (error) {
+        console.warn('⚠️ Failed to cleanup web object URL:', error);
       }
     }
-
-    return bannerData.mainUrl || null;
-  }
-
-  /**
-   * Validate banner image file
-   * @param {Object} imageAsset - Image asset from picker
-   * @returns {Object} Validation result
-   */
-  validateBannerImage(imageAsset) {
-    const errors = [];
-
-    // Check file size (larger limit for banners)
-    const maxBannerSize = 8 * 1024 * 1024; // 8MB for banners
-    if (imageAsset.fileSize && imageAsset.fileSize > maxBannerSize) {
-      errors.push(`File size too large. Maximum size is ${maxBannerSize / (1024 * 1024)}MB`);
-    }
-
-    // Check dimensions for landscape orientation
-    if (imageAsset.width && imageAsset.height) {
-      const minWidth = 300;
-      const minHeight = 150;
-      const maxDimension = 5000;
-      
-      if (imageAsset.width < minWidth || imageAsset.height < minHeight) {
-        errors.push(`Image too small. Minimum size is ${minWidth}x${minHeight}px`);
-      }
-      
-      if (imageAsset.width > maxDimension || imageAsset.height > maxDimension) {
-        errors.push(`Image too large. Maximum size is ${maxDimension}x${maxDimension}px`);
-      }
-
-      // Check aspect ratio is landscape
-      const aspectRatio = imageAsset.width / imageAsset.height;
-      if (aspectRatio < 1.5) {
-        errors.push('Banner should be landscape orientation (width > height)');
-      }
-    }
-
-    // Check format
-    if (imageAsset.type && !imageAsset.type.includes('image/')) {
-      errors.push('File must be an image');
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-    };
   }
 }
 
