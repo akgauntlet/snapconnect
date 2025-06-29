@@ -45,6 +45,7 @@ import {
     showErrorAlert,
     showSuccessAlert,
 } from "../../utils/alertService";
+import { GAMING_GENRES } from "../../utils/constants";
 
 /**
  * Friend profile interface
@@ -65,6 +66,7 @@ interface FriendProfile {
   streaks?: number;
   gamingPlatform?: string;
   favoriteGames?: string[];
+  gamingInterests?: string[];
   achievements?: string[];
   status: "online" | "offline" | "away";
 }
@@ -86,6 +88,7 @@ interface SerializableFriend {
   mutualFriends?: number;
   gamingPlatform?: string;
   favoriteGames?: string[];
+  gamingInterests?: string[];
   achievements?: string[];
 }
 
@@ -183,6 +186,16 @@ const FriendProfileScreen: React.FC = () => {
   };
 
   /**
+   * Helper function to get genre data from constants
+   * @param genreId - Genre ID to look up
+   * @returns Genre data object or null
+   */
+  const getGenreData = (genreId: string) => {
+    const genreKey = genreId.toUpperCase();
+    return GAMING_GENRES[genreKey as keyof typeof GAMING_GENRES] || null;
+  };
+
+  /**
    * Load friend profile data - enhanced to handle all scenarios
    */
   const loadFriendProfile = useCallback(async () => {
@@ -195,17 +208,24 @@ const FriendProfileScreen: React.FC = () => {
         return;
       }
 
-      // If we have initial friend data, use optimized path
+      // If we have initial friend data, use optimized path but also fetch full profile for fresh data
       if (initialFriend) {
-
         // Get real data in parallel for better performance
-        const [mutualFriendsCount, friendIds, userStats, userPresence] =
-          await Promise.all([
-            friendsService.getMutualFriendsCount(user.uid, initialFriend.id),
-            friendsService.getFriendIds(initialFriend.id),
-            friendsService.getUserStats(initialFriend.id),
-            friendsService.getUserPresence(initialFriend.id),
-          ]);
+        const [
+          userProfileData,
+          mutualFriendsCount,
+          friendIds,
+          userStats,
+          userPresence,
+        ] = await Promise.all([
+          friendsService.getUserProfile(initialFriend.id),
+          friendsService.getMutualFriendsCount(user.uid, initialFriend.id),
+          friendsService.getFriendIds(initialFriend.id),
+          friendsService.getUserStats(initialFriend.id),
+          friendsService.getUserPresence(initialFriend.id),
+        ]);
+
+        const fullUserProfile = { ...initialFriend, ...userProfileData };
 
         // Type assertions for Firebase data
         const stats = userStats as {
@@ -224,13 +244,13 @@ const FriendProfileScreen: React.FC = () => {
         };
 
         const enrichedProfile: FriendProfile = {
-          id: initialFriend.id,
-          displayName: initialFriend.displayName || "Unknown User",
-          username: initialFriend.username || "no-username",
-          profilePhoto: initialFriend.profilePhoto,
-          bio: initialFriend.bio || "Gaming enthusiast • SnapConnect user",
+          id: fullUserProfile.id,
+          displayName: fullUserProfile.displayName || "Unknown User",
+          username: fullUserProfile.username || "no-username",
+          profilePhoto: fullUserProfile.profilePhoto,
+          bio: fullUserProfile.bio || "Gaming enthusiast • SnapConnect user",
           joinedDate:
-            safeToDate(initialFriend.createdAt) ||
+            safeToDate(fullUserProfile.createdAt) ||
             stats.joinedDate ||
             new Date(),
           lastActive: presence.lastActive,
@@ -240,17 +260,16 @@ const FriendProfileScreen: React.FC = () => {
           snapsSent: stats.snapsSent || 0,
           snapsReceived: stats.snapsReceived || 0,
           streaks: stats.streaks || 0,
-          gamingPlatform: initialFriend.gamingPlatform || "Multiple Platforms",
-          favoriteGames: initialFriend.favoriteGames || [],
-          achievements: initialFriend.achievements || [],
+          gamingPlatform: fullUserProfile.gamingPlatform || "Multiple Platforms",
+          favoriteGames: fullUserProfile.favoriteGames || [],
+          gamingInterests: fullUserProfile.gamingInterests || [],
+          achievements: fullUserProfile.achievements || [],
           status: presence.status,
         };
 
         setFriendProfile(enrichedProfile);
       } else {
         // Fallback: fetch complete profile using new enriched method
-  
-
         const enrichedProfileData = await friendsService.getEnrichedUserProfile(
           user.uid,
           friendId,
@@ -283,6 +302,7 @@ const FriendProfileScreen: React.FC = () => {
           gamingPlatform:
             enrichedProfile.gamingPlatform || "Multiple Platforms",
           favoriteGames: enrichedProfile.favoriteGames || [],
+          gamingInterests: enrichedProfile.gamingInterests || [],
           achievements: enrichedProfile.achievements || [],
           status: enrichedProfile.status || "offline",
         };
@@ -561,12 +581,106 @@ const FriendProfileScreen: React.FC = () => {
   };
 
   /**
-   * Render action button based on friendship status - enhanced for new status types
+   * Render stat item
+   */
+  const renderStatItem = (
+    label: string,
+    value: string | number,
+    icon: string,
+    color?: string,
+  ) => (
+    <View 
+      className="bg-cyber-dark/40 border border-white/10 p-4 rounded-xl flex-1 items-center"
+      style={{
+        shadowColor: color || accentColor,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      }}
+    >
+      <View 
+        className="w-12 h-12 rounded-full justify-center items-center mb-3"
+        style={{ backgroundColor: (color || accentColor) + '20' }}
+      >
+        <Ionicons name={icon as any} size={24} color={color || accentColor} />
+      </View>
+      <Text className="text-white font-inter font-bold text-xl mb-1">
+        {value}
+      </Text>
+      <Text className="text-white/60 font-inter text-sm text-center">
+        {label}
+      </Text>
+    </View>
+  );
+
+  /**
+   * Render enhanced profile avatar with glow effects
+   */
+  const renderProfileAvatar = () => {
+    if (!friendProfile) return null;
+
+    const statusColor = getStatusColor(friendProfile.status);
+    
+    return (
+      <View className="relative mb-6">
+        {/* Glow Effect Background */}
+        <View 
+          className="absolute inset-0 w-32 h-32 rounded-full opacity-20"
+          style={{
+            backgroundColor: statusColor,
+            transform: [{ scale: 1.2 }],
+            shadowColor: statusColor,
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.6,
+            shadowRadius: 20,
+          }}
+        />
+        
+        {/* Main Avatar */}
+        <View className="w-32 h-32 rounded-full border-4 border-white/20 overflow-hidden">
+          {friendProfile.profilePhoto ? (
+            <Image
+              source={{ uri: friendProfile.profilePhoto }}
+              className="w-full h-full"
+              onError={() => {
+                console.warn(
+                  "Failed to load profile photo for:",
+                  friendProfile.displayName,
+                );
+              }}
+            />
+          ) : (
+            <View className="w-full h-full bg-cyber-cyan/20 justify-center items-center">
+              <Text className="text-cyber-cyan font-inter font-bold text-3xl">
+                {getUserInitials()}
+              </Text>
+            </View>
+          )}
+        </View>
+        
+        {/* Enhanced Status Indicator */}
+        <View className="absolute -bottom-2 -right-2">
+          <View
+            className="w-8 h-8 rounded-full border-4 border-cyber-black flex items-center justify-center"
+            style={{ backgroundColor: statusColor }}
+          >
+            <View 
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: 'white', opacity: 0.9 }}
+            />
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  /**
+   * Render enhanced action buttons with better styling
    */
   const renderActionButton = () => {
     if (isProcessing) {
       return (
-        <View className="bg-cyber-gray/20 px-6 py-3 rounded-lg flex-row items-center justify-center">
+        <View className="bg-cyber-gray/30 border border-cyber-gray/50 px-6 py-4 rounded-xl flex-row items-center justify-center">
           <ActivityIndicator size="small" color={accentColor} />
           <Text className="text-white/60 font-inter font-medium ml-2">
             Processing...
@@ -578,8 +692,8 @@ const FriendProfileScreen: React.FC = () => {
     switch (friendshipStatus) {
       case "self":
         return (
-          <View className="bg-cyber-gray/20 px-6 py-3 rounded-lg">
-            <Text className="text-white/60 font-inter font-medium text-center">
+          <View className="bg-cyber-dark/50 border border-cyber-cyan/30 px-6 py-4 rounded-xl">
+            <Text className="text-cyber-cyan font-inter font-medium text-center">
               This is your profile
             </Text>
           </View>
@@ -590,17 +704,23 @@ const FriendProfileScreen: React.FC = () => {
           <View className="flex-row space-x-3">
             <TouchableOpacity
               onPress={sendMessage}
-              className="flex-1 bg-cyber-cyan px-6 py-3 rounded-lg flex-row items-center justify-center"
+              className="flex-1 bg-cyber-cyan px-6 py-4 rounded-xl flex-row items-center justify-center shadow-lg"
+              style={{
+                shadowColor: '#00ffff',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+              }}
             >
               <Ionicons name="chatbubble" size={20} color="#0a0a0a" />
-              <Text className="text-cyber-black font-inter font-semibold ml-2">
+              <Text className="text-cyber-black font-inter font-bold ml-2">
                 Message
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={removeFriend}
-              className="bg-red-500/20 px-4 py-3 rounded-lg"
+              className="bg-red-500/20 border border-red-500/30 px-4 py-4 rounded-xl"
             >
               <Ionicons name="person-remove" size={20} color="#ef4444" />
             </TouchableOpacity>
@@ -609,7 +729,7 @@ const FriendProfileScreen: React.FC = () => {
 
       case "pending_sent":
         return (
-          <View className="bg-amber-500/20 px-6 py-3 rounded-lg">
+          <View className="bg-amber-500/20 border border-amber-500/30 px-6 py-4 rounded-xl">
             <Text className="text-amber-400 font-inter font-medium text-center">
               Friend Request Sent
             </Text>
@@ -621,17 +741,17 @@ const FriendProfileScreen: React.FC = () => {
           <View className="flex-row space-x-3">
             <TouchableOpacity
               onPress={acceptFriendRequest}
-              className="flex-1 bg-green-500/20 px-6 py-3 rounded-lg flex-row items-center justify-center"
+              className="flex-1 bg-green-500/20 border border-green-500/30 px-6 py-4 rounded-xl flex-row items-center justify-center"
             >
               <Ionicons name="checkmark-circle" size={20} color="#10b981" />
               <Text className="text-green-400 font-inter font-semibold ml-2">
-                Accept Request
+                Accept
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={declineFriendRequest}
-              className="bg-red-500/20 px-4 py-3 rounded-lg"
+              className="bg-red-500/20 border border-red-500/30 px-4 py-4 rounded-xl"
             >
               <Ionicons name="close-circle" size={20} color="#ef4444" />
             </TouchableOpacity>
@@ -643,76 +763,20 @@ const FriendProfileScreen: React.FC = () => {
         return (
           <TouchableOpacity
             onPress={sendFriendRequest}
-            className="bg-cyber-cyan px-6 py-3 rounded-lg flex-row items-center justify-center"
+            className="bg-cyber-cyan px-6 py-4 rounded-xl flex-row items-center justify-center shadow-lg"
+            style={{
+              shadowColor: '#00ffff',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+            }}
           >
             <Ionicons name="person-add" size={20} color="#0a0a0a" />
-            <Text className="text-cyber-black font-inter font-semibold ml-2">
+            <Text className="text-cyber-black font-inter font-bold ml-2">
               Add Friend
             </Text>
           </TouchableOpacity>
         );
-    }
-  };
-
-  /**
-   * Render stat item
-   */
-  const renderStatItem = (
-    label: string,
-    value: string | number,
-    icon: string,
-  ) => (
-    <View className="bg-cyber-dark/30 p-4 rounded-lg flex-1 items-center">
-      <Ionicons name={icon as any} size={24} color={accentColor} />
-      <Text className="text-white font-inter font-bold text-lg mt-2">
-        {value}
-      </Text>
-      <Text className="text-white/60 font-inter text-sm">{label}</Text>
-    </View>
-  );
-
-  /**
-   * Render profile avatar with proper image handling
-   */
-  const renderProfileAvatar = () => {
-    if (!friendProfile) return null;
-
-    if (friendProfile.profilePhoto) {
-      return (
-        <View className="relative mb-4">
-          <Image
-            source={{ uri: friendProfile.profilePhoto }}
-            className="w-24 h-24 rounded-full"
-            onError={() => {
-              // Fallback to initials if image fails to load
-              console.warn(
-                "Failed to load profile photo for:",
-                friendProfile.displayName,
-              );
-            }}
-          />
-          {/* Status indicator */}
-          <View
-            className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-4 border-cyber-black"
-            style={{ backgroundColor: getStatusColor(friendProfile.status) }}
-          />
-        </View>
-      );
-    } else {
-      return (
-        <View className="relative mb-4">
-          <View className="w-24 h-24 bg-cyber-cyan/20 rounded-full justify-center items-center">
-            <Text className="text-cyber-cyan font-inter font-bold text-2xl">
-              {getUserInitials()}
-            </Text>
-          </View>
-          {/* Status indicator */}
-          <View
-            className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-4 border-cyber-black"
-            style={{ backgroundColor: getStatusColor(friendProfile.status) }}
-          />
-        </View>
-      );
     }
   };
 
@@ -726,9 +790,14 @@ const FriendProfileScreen: React.FC = () => {
           backgroundColor={theme.colors.background.primary}
         />
         <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color={accentColor} />
-          <Text className="text-white/60 font-inter text-base mt-4">
+          <View className="bg-cyber-cyan/10 w-20 h-20 rounded-full justify-center items-center mb-6">
+            <ActivityIndicator size="large" color={accentColor} />
+          </View>
+          <Text className="text-white/60 font-inter text-base">
             Loading profile...
+          </Text>
+          <Text className="text-cyber-cyan font-mono text-xs mt-2">
+            [ FETCHING USER DATA ]
           </Text>
         </View>
       </SafeAreaView>
@@ -745,13 +814,18 @@ const FriendProfileScreen: React.FC = () => {
           backgroundColor={theme.colors.background.primary}
         />
         <View className="flex-1 justify-center items-center px-8">
-          <Ionicons name="alert-circle-outline" size={64} color="#ef4444" />
-          <Text className="text-white/70 font-inter text-lg mt-4 mb-2 text-center">
-            {error || "Profile not found"}
+          <View className="bg-red-500/10 w-24 h-24 rounded-full justify-center items-center mb-6">
+            <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
+          </View>
+          <Text className="text-white/70 font-inter text-xl font-semibold mb-2 text-center">
+            Profile Not Found
+          </Text>
+          <Text className="text-white/50 font-inter text-base mb-6 text-center">
+            {error || "This user profile could not be loaded"}
           </Text>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
-            className="bg-cyber-cyan/20 px-6 py-3 rounded-lg mt-4"
+            className="bg-cyber-cyan/20 border border-cyber-cyan/30 px-8 py-4 rounded-xl"
           >
             <Text className="text-cyber-cyan font-inter font-semibold">
               Go Back
@@ -771,156 +845,345 @@ const FriendProfileScreen: React.FC = () => {
         backgroundColor={theme.colors.background.primary}
       />
 
-      {/* Header */}
-      <View className="flex-row justify-between items-center px-6 py-4">
-        <TouchableOpacity onPress={() => navigation.goBack()} className="p-2">
-          <Ionicons name="arrow-back" size={24} color="white" />
+      {/* Enhanced Header */}
+      <View className="flex-row justify-between items-center px-6 py-4 border-b border-white/5">
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()} 
+          className="w-10 h-10 bg-cyber-dark/50 rounded-full justify-center items-center"
+        >
+          <Ionicons name="arrow-back" size={20} color="white" />
         </TouchableOpacity>
 
-        <Text className="text-white font-orbitron text-lg">Profile</Text>
+        <View className="flex-1 items-center">
+          <Text className="text-white font-orbitron text-lg">
+            {friendProfile.displayName}
+          </Text>
+          <Text className="text-cyber-cyan font-mono text-xs">
+            [ USER PROFILE ]
+          </Text>
+        </View>
 
-        <TouchableOpacity className="p-2">
-          <Ionicons name="ellipsis-vertical" size={24} color="white" />
+        <TouchableOpacity className="w-10 h-10 bg-cyber-dark/50 rounded-full justify-center items-center">
+          <Ionicons name="ellipsis-vertical" size={20} color="white" />
         </TouchableOpacity>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
-        {/* Profile Header */}
-        <View className="items-center px-6 py-8">
-          {/* Avatar with status */}
+        {/* Hero Profile Section */}
+        <View className="items-center px-6 py-12">
+          {/* Avatar */}
           {renderProfileAvatar()}
 
-          {/* Name and username */}
-          <Text className="text-white font-inter font-bold text-2xl mb-1">
+          {/* Name and Username */}
+          <Text className="text-white font-inter font-bold text-3xl mb-2 text-center">
             {friendProfile.displayName}
           </Text>
-          <Text className="text-white/60 font-inter text-lg mb-2">
+          <Text className="text-cyber-cyan font-inter text-lg mb-1">
             @{friendProfile.username}
           </Text>
 
-          {/* Status text */}
-          <Text className="text-white/40 font-inter text-sm mb-4">
-            {friendProfile.status === "online"
-              ? "Online now"
-              : friendProfile.lastActive
-                ? formatLastActive(friendProfile.lastActive)
-                : "Offline"}
-          </Text>
+          {/* Enhanced Status */}
+          <View className="flex-row items-center mb-6">
+            <View 
+              className="w-2 h-2 rounded-full mr-2"
+              style={{ backgroundColor: getStatusColor(friendProfile.status) }}
+            />
+            <Text className="text-white/60 font-inter text-sm">
+              {friendProfile.status === "online"
+                ? "Online now"
+                : friendProfile.lastActive
+                  ? formatLastActive(friendProfile.lastActive)
+                  : "Offline"}
+            </Text>
+          </View>
 
           {/* Bio */}
           {friendProfile.bio && (
-            <Text
-              className="text-white/70 font-inter text-center text-base mb-6 px-4"
-              numberOfLines={1}
-            >
-              {friendProfile.bio}
-            </Text>
+            <View className="bg-cyber-dark/30 border border-white/10 p-4 rounded-xl mb-6 w-full">
+              <Text className="text-white/80 font-inter text-center text-base leading-6">
+                {friendProfile.bio}
+              </Text>
+            </View>
           )}
 
           {/* Action Button */}
           <View className="w-full">{renderActionButton()}</View>
         </View>
 
-        {/* Stats Section */}
+        {/* Enhanced Stats Section */}
         <View className="px-6 mb-8">
-          <Text className="text-white font-orbitron text-lg mb-4">Stats</Text>
-
-          <View className="flex-row space-x-3 mb-4">
-            {renderStatItem(
-              "Friends",
-              friendProfile.totalFriends || 0,
-              "people",
-            )}
-            {renderStatItem(
-              "Mutual",
-              friendProfile.mutualFriends || 0,
-              "heart",
-            )}
+          <View className="flex-row items-center mb-6">
+            <View className="bg-cyber-cyan/20 rounded-full p-2 mr-3">
+              <Ionicons name="stats-chart" size={20} color="#00ffff" />
+            </View>
+            <Text className="text-white font-orbitron text-xl">Statistics</Text>
           </View>
 
-          <View className="flex-row space-x-3">
-            {renderStatItem(
-              "Snaps Sent",
-              friendProfile.snapsSent || 0,
-              "paper-plane",
-            )}
-            {renderStatItem("Streaks", friendProfile.streaks || 0, "flame")}
+          <View className="space-y-4">
+            <View className="flex-row space-x-4">
+              {renderStatItem(
+                "Friends",
+                friendProfile.totalFriends || 0,
+                "people",
+                "#00ff41"
+              )}
+              {renderStatItem(
+                "Mutual",
+                friendProfile.mutualFriends || 0,
+                "heart",
+                "#ff00ff"
+              )}
+            </View>
+
+            <View className="flex-row space-x-4">
+              {renderStatItem(
+                "Snaps Sent",
+                friendProfile.snapsSent || 0,
+                "paper-plane",
+                "#0080ff"
+              )}
+              {renderStatItem(
+                "Streaks",
+                friendProfile.streaks || 0,
+                "flame",
+                "#ff8000"
+              )}
+            </View>
           </View>
         </View>
 
         {/* Gaming Section */}
-        {friendProfile.favoriteGames &&
-          friendProfile.favoriteGames.length > 0 && (
-            <View className="px-6 mb-8">
-              <Text className="text-white font-orbitron text-lg mb-4">
-                Gaming
-              </Text>
-
-              <View className="bg-cyber-dark/30 p-4 rounded-lg mb-4">
-                <Text className="text-white/60 font-inter text-sm mb-2">
-                  Platform
-                </Text>
-                <Text className="text-white font-inter font-medium">
-                  {friendProfile.gamingPlatform}
-                </Text>
+        {(friendProfile.favoriteGames &&
+          friendProfile.favoriteGames.length > 0) ||
+        (friendProfile.gamingInterests &&
+          friendProfile.gamingInterests.length > 0) ? (
+          <View className="px-6 mb-8">
+            <View className="flex-row items-center mb-6">
+              <View className="bg-gaming-epic/20 rounded-full p-2 mr-3">
+                <Ionicons name="game-controller" size={20} color="#a335ee" />
               </View>
+              <Text className="text-white font-orbitron text-xl">Gaming Profile</Text>
+            </View>
 
-              <View className="bg-cyber-dark/30 p-4 rounded-lg">
-                <Text className="text-white/60 font-inter text-sm mb-3">
-                  Favorite Games
-                </Text>
-                <View className="flex-row flex-wrap">
-                  {friendProfile.favoriteGames.map((game, index) => (
-                    <View
-                      key={index}
-                      className="bg-cyber-cyan/20 px-3 py-1 rounded-full mr-2 mb-2"
-                    >
-                      <Text className="text-cyber-cyan font-inter text-sm">
-                        {game}
-                      </Text>
-                    </View>
-                  ))}
+            {/* Gaming Platform */}
+            <View className="bg-cyber-dark/40 border border-white/10 p-4 rounded-xl mb-4">
+              <View className="flex-row items-center">
+                <Ionicons name="desktop" size={20} color="#00ffff" />
+                <View className="ml-3">
+                  <Text className="text-white/60 font-inter text-sm">
+                    Primary Platform
+                  </Text>
+                  <Text className="text-white font-inter font-semibold text-base">
+                    {friendProfile.gamingPlatform}
+                  </Text>
                 </View>
               </View>
             </View>
-          )}
 
-        {/* Achievements Section */}
+            {friendProfile.gamingInterests &&
+              friendProfile.gamingInterests.length > 0 && (
+                <View className="bg-cyber-dark/40 border border-white/10 p-4 rounded-xl mb-4">
+                  <View className="flex-row items-center justify-between mb-4">
+                    <View className="flex-row items-center">
+                      <View className="bg-gaming-epic/20 rounded-full p-2 mr-3">
+                        <Ionicons name="game-controller" size={16} color="#a335ee" />
+                      </View>
+                      <Text className="text-white/60 font-inter text-sm font-medium">
+                        Gaming Interests
+                      </Text>
+                    </View>
+                    <View className="bg-gaming-epic/10 px-2 py-1 rounded-full">
+                      <Text className="text-gaming-epic font-mono text-xs">
+                        {friendProfile.gamingInterests.length}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  <View className="space-y-3">
+                    {friendProfile.gamingInterests.map((interest, index) => {
+                      const genreData = getGenreData(interest);
+                      const genreColor = genreData?.color || "#a335ee";
+                      const genreIcon = genreData?.icon || "game-controller";
+                      const genreName = genreData?.name || interest;
+                      const genreDescription = genreData?.description;
+                      
+                      return (
+                        <View
+                          key={index}
+                          className="bg-cyber-dark/50 border border-white/10 rounded-lg p-3 flex-row items-center"
+                          style={{
+                            shadowColor: genreColor,
+                            shadowOffset: { width: 0, height: 1 },
+                            shadowOpacity: 0.2,
+                            shadowRadius: 3,
+                          }}
+                        >
+                          {/* Genre Icon */}
+                          <View 
+                            className="w-10 h-10 rounded-full justify-center items-center mr-3"
+                            style={{ backgroundColor: genreColor + '20' }}
+                          >
+                            <Ionicons 
+                              name={genreIcon as any} 
+                              size={18} 
+                              color={genreColor} 
+                            />
+                          </View>
+                          
+                          {/* Genre Info */}
+                          <View className="flex-1">
+                            <Text 
+                              className="font-inter font-semibold text-base"
+                              style={{ color: genreColor }}
+                            >
+                              {genreName}
+                            </Text>
+                            {genreDescription && (
+                              <Text className="text-white/60 font-inter text-xs mt-1">
+                                {genreDescription}
+                              </Text>
+                            )}
+                          </View>
+                          
+                          {/* Gaming Accent */}
+                          <View className="w-1 h-8 rounded-full" style={{ backgroundColor: genreColor }} />
+                        </View>
+                      );
+                    })}
+                  </View>
+                  
+                  {/* Gaming Stats Footer */}
+                  <View className="mt-4 pt-3 border-t border-white/10">
+                    <View className="flex-row items-center justify-center">
+                      <Ionicons name="stats-chart" size={12} color="#00ffff" />
+                      <Text className="text-cyber-cyan font-mono text-xs ml-2">
+                        GAMING PROFILE • {friendProfile.gamingInterests.length} GENRES
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+
+            {friendProfile.favoriteGames &&
+              friendProfile.favoriteGames.length > 0 && (
+                <View className="bg-cyber-dark/40 border border-white/10 p-4 rounded-xl">
+                  <View className="flex-row items-center justify-between mb-4">
+                    <View className="flex-row items-center">
+                      <View className="bg-cyber-cyan/20 rounded-full p-2 mr-3">
+                        <Ionicons name="trophy" size={16} color="#00ffff" />
+                      </View>
+                      <Text className="text-white/60 font-inter text-sm font-medium">
+                        Favorite Games
+                      </Text>
+                    </View>
+                    <View className="bg-cyber-cyan/10 px-2 py-1 rounded-full">
+                      <Text className="text-cyber-cyan font-mono text-xs">
+                        {friendProfile.favoriteGames.length}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  <View className="flex-row flex-wrap">
+                    {friendProfile.favoriteGames.map((game, index) => (
+                      <View
+                        key={index}
+                        className="bg-cyber-cyan/10 border border-cyber-cyan/30 px-4 py-2 rounded-full mr-2 mb-2 flex-row items-center"
+                        style={{
+                          shadowColor: '#00ffff',
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.2,
+                          shadowRadius: 3,
+                        }}
+                      >
+                        <Ionicons name="game-controller" size={14} color="#00ffff" />
+                        <Text className="text-cyber-cyan font-inter text-sm ml-2 font-medium">
+                          {game}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                  
+                  {/* Gaming Stats Footer */}
+                  <View className="mt-4 pt-3 border-t border-white/10">
+                    <View className="flex-row items-center justify-center">
+                      <Ionicons name="library" size={12} color="#00ffff" />
+                      <Text className="text-cyber-cyan font-mono text-xs ml-2">
+                        GAME LIBRARY • {friendProfile.favoriteGames.length} FAVORITES
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+          </View>
+        ) : null}
+
+        {/* Enhanced Achievements Section */}
         {friendProfile.achievements &&
           friendProfile.achievements.length > 0 && (
             <View className="px-6 mb-8">
-              <Text className="text-white font-orbitron text-lg mb-4">
-                Achievements
-              </Text>
-
-              {friendProfile.achievements.map((achievement, index) => (
-                <View
-                  key={index}
-                  className="flex-row items-center bg-cyber-dark/30 p-4 rounded-lg mb-3"
-                >
-                  <View className="w-10 h-10 bg-yellow-500/20 rounded-full justify-center items-center mr-4">
-                    <Ionicons name="trophy" size={20} color="#f59e0b" />
-                  </View>
-                  <Text className="text-white font-inter font-medium">
-                    {achievement}
-                  </Text>
+              <View className="flex-row items-center mb-6">
+                <View className="bg-yellow-500/20 rounded-full p-2 mr-3">
+                  <Ionicons name="trophy" size={20} color="#f59e0b" />
                 </View>
-              ))}
+                <Text className="text-white font-orbitron text-xl">Achievements</Text>
+              </View>
+
+              <View className="space-y-3">
+                {friendProfile.achievements.map((achievement, index) => (
+                  <View
+                    key={index}
+                    className="flex-row items-center bg-cyber-dark/40 border border-white/10 p-4 rounded-xl"
+                    style={{
+                      shadowColor: '#f59e0b',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 3,
+                    }}
+                  >
+                    <View className="w-12 h-12 bg-yellow-500/20 rounded-full justify-center items-center mr-4">
+                      <Ionicons name="trophy" size={24} color="#f59e0b" />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-white font-inter font-semibold text-base">
+                        {achievement}
+                      </Text>
+                      <Text className="text-yellow-400 font-mono text-xs mt-1">
+                        ACHIEVEMENT UNLOCKED
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
             </View>
           )}
 
-        {/* Member Since */}
-        <View className="px-6 mb-20">
-          <View className="bg-cyber-dark/30 p-4 rounded-lg">
-            <Text className="text-white/60 font-inter text-sm mb-1">
-              Member Since
-            </Text>
-            <Text className="text-white font-inter font-medium">
-              {friendProfile.joinedDate
-                ? formatJoinDate(friendProfile.joinedDate)
-                : "Unknown"}
-            </Text>
+        {/* Enhanced Member Since */}
+        <View className="px-6 mb-8">
+          <View className="bg-cyber-dark/40 border border-white/10 p-4 rounded-xl">
+            <View className="flex-row items-center">
+              <View className="bg-cyber-cyan/20 rounded-full p-2 mr-3">
+                <Ionicons name="calendar" size={20} color="#00ffff" />
+              </View>
+              <View>
+                <Text className="text-white/60 font-inter text-sm">
+                  Member Since
+                </Text>
+                <Text className="text-white font-inter font-semibold text-base">
+                  {friendProfile.joinedDate
+                    ? formatJoinDate(friendProfile.joinedDate)
+                    : "Unknown"}
+                </Text>
+              </View>
+            </View>
           </View>
+        </View>
+
+        {/* Gaming Footer */}
+        <View className="items-center mb-12">
+          <View className="w-full h-px bg-cyber-cyan opacity-20 mb-4" />
+          <Text className="text-cyber-cyan font-mono text-xs">
+            [ SNAPCONNECT GAMING PROFILE ]
+          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>

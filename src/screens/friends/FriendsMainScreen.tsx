@@ -296,6 +296,37 @@ const FriendsMainScreen: React.FC = () => {
   }, [navigation]);
 
   /**
+   * Helper function to safely convert Firestore timestamp or Date to ISO string
+   */
+  const safeToISOString = (dateValue: any): string | undefined => {
+    if (!dateValue) return undefined;
+
+    // If it's already a Date object, return its ISO string
+    if (dateValue instanceof Date) {
+      return dateValue.toISOString();
+    }
+
+    // If it's a Firestore Timestamp with toDate method
+    if (dateValue && typeof dateValue.toDate === "function") {
+      return dateValue.toDate().toISOString();
+    }
+
+    // If it's a timestamp number
+    if (typeof dateValue === "number") {
+      return new Date(dateValue).toISOString();
+    }
+
+    // If it's a string that can be parsed
+    if (typeof dateValue === "string") {
+      const parsed = new Date(dateValue);
+      return isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
+    }
+
+    // Fallback to undefined
+    return undefined;
+  };
+
+  /**
    * View friend profile
    */
   const handleViewProfile = useCallback(
@@ -305,11 +336,11 @@ const FriendsMainScreen: React.FC = () => {
         ...friend,
         statusMessage: friend.statusMessage ? {
           ...friend.statusMessage,
-          expiresAt: friend.statusMessage.expiresAt?.toISOString(),
-          updatedAt: friend.statusMessage.updatedAt?.toISOString(),
+          expiresAt: safeToISOString(friend.statusMessage.expiresAt),
+          updatedAt: safeToISOString(friend.statusMessage.updatedAt),
         } : undefined,
-        lastActive: friend.lastActive ? friend.lastActive.toISOString() : undefined,
-        createdAt: friend.createdAt ? friend.createdAt.toISOString() : undefined,
+        lastActive: safeToISOString(friend.lastActive),
+        createdAt: safeToISOString(friend.createdAt),
       };
       
       navigation.navigate("FriendProfile", { 

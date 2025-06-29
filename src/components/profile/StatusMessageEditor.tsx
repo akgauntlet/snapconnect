@@ -110,7 +110,7 @@ const StatusMessageEditor: React.FC<StatusMessageEditorProps> = ({
 }) => {
   const theme = useThemeStore((state) => state.theme);
   const accentColor = useThemeStore((state) => state.getCurrentAccentColor());
-  const { updateStatusMessage, isLoading, profile } = useAuthStore();
+  const { isLoading, profile } = useAuthStore();
 
   // Form state
   const [statusText, setStatusText] = useState(initialStatus.text || '');
@@ -196,8 +196,6 @@ const StatusMessageEditor: React.FC<StatusMessageEditorProps> = ({
         expiresAt: expirationMinutes ? new Date(Date.now() + expirationMinutes * 60 * 1000) : null,
       };
 
-      await updateStatusMessage(statusData);
-      
       if (onSave) {
         onSave(statusData);
       }
@@ -221,8 +219,6 @@ const StatusMessageEditor: React.FC<StatusMessageEditorProps> = ({
         expiresAt: null,
       };
 
-      await updateStatusMessage(statusData);
-      
       if (onSave) {
         onSave(statusData);
       }

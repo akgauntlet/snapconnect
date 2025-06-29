@@ -335,6 +335,7 @@ export const useAuthStore = create(
             username: updates.username?.trim(),
             bio: updates.bio?.trim(),
             gamingInterests: updates.gamingInterests,
+            statusMessage: updates.statusMessage,
             onboardingComplete: updates.onboardingComplete,
             profileCompletedAt: updates.profileCompletedAt,
           };
@@ -512,30 +513,33 @@ export const useAuthStore = create(
        * @returns {Promise<void>}
        */
       updateAchievementShowcase: async (achievements) => {
-        const { user } = get();
+        const { user, profile } = get();
 
         if (!user) {
           throw new Error("No authenticated user");
         }
 
-        set({ isLoading: true, error: null });
+        const originalProfile = { ...profile };
+
+        // Optimistic update
+        set({
+          profile: {
+            ...profile,
+            achievementShowcase: achievements,
+          },
+        });
 
         try {
-          const updatedProfile = await authService.updateAchievementShowcase(user.uid, achievements);
-
-          set({
-            profile: updatedProfile,
-            isLoading: false,
-            error: null,
-          });
-
+          // Server update in the background
+          await authService.updateAchievementShowcase(user.uid, achievements);
           console.log("✅ Achievement showcase updated successfully");
         } catch (error) {
+          // Rollback on error
           set({
-            isLoading: false,
-            error: error.message,
+            profile: originalProfile,
+            error: `Failed to update showcase: ${error.message}`,
           });
-          console.error("❌ Achievement showcase update failed:", error.message);
+          console.error("❌ Achievement showcase update failed:", error);
           throw error;
         }
       },

@@ -34,7 +34,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { CyberButton, GameCard } from "../../components/common";
+import { GameCard } from "../../components/common";
 import { AchievementShowcase } from "../../components/profile";
 import { useFriendCount } from "../../hooks/useFriendCount";
 import { useTabBarHeight } from "../../hooks/useTabBarHeight";
@@ -369,18 +369,27 @@ const ProfileScreen: React.FC = () => {
               />
             </TouchableOpacity>
           ))}
+        </View>
 
-          {/* Sign Out Button */}
-          <CyberButton
-            variant="danger"
-            icon="log-out-outline"
-            fullWidth
-            loading={isLoading}
-            onPress={handleSignOut}
-            className="mt-4"
-          >
-            Sign Out
-          </CyberButton>
+        {/* Account Actions */}
+        <View className="px-6 mt-6 mb-4">
+          <View className="border-t border-cyber-gray/20 pt-6">           
+            {/* Sign Out Button */}
+            <TouchableOpacity
+              onPress={handleSignOut}
+              disabled={isLoading}
+              className="flex-row items-center justify-center py-4 px-4 border border-red-500/30 rounded-lg bg-red-500/10"
+            >
+              <Ionicons 
+                name="log-out-outline" 
+                size={20} 
+                color="#EF4444" 
+              />
+              <Text className="text-red-400 font-inter font-medium ml-2">
+                {isLoading ? "Signing out..." : "Sign Out"}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>

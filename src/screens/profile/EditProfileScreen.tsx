@@ -79,6 +79,7 @@ const EditProfileScreen: React.FC = () => {
   const [username, setUsername] = useState(profile?.username || "");
   const [bio, setBio] = useState(profile?.bio || "");
   const [gamingInterests, setGamingInterests] = useState<string[]>(profile?.gamingInterests || []);
+  const [statusMessage, setStatusMessage] = useState(profile?.statusMessage || {});
   const [originalUsername] = useState(profile?.username || "");
 
   // Avatar state
@@ -108,6 +109,7 @@ const EditProfileScreen: React.FC = () => {
       username: profile?.username || "",
       bio: profile?.bio || "",
       gamingInterests: profile?.gamingInterests || [],
+      statusMessage: profile?.statusMessage || {},
     };
 
     const currentData = {
@@ -115,6 +117,7 @@ const EditProfileScreen: React.FC = () => {
       username,
       bio,
       gamingInterests,
+      statusMessage,
     };
 
     const changes = Object.keys(originalData).some(
@@ -122,9 +125,9 @@ const EditProfileScreen: React.FC = () => {
         const originalValue = originalData[key as keyof typeof originalData];
         const currentValue = currentData[key as keyof typeof currentData];
         
-        // Special handling for arrays
-        if (Array.isArray(originalValue) && Array.isArray(currentValue)) {
-          return JSON.stringify(originalValue.sort()) !== JSON.stringify(currentValue.sort());
+        // Special handling for objects and arrays
+        if (typeof originalValue === 'object' && originalValue !== null) {
+          return JSON.stringify(originalValue) !== JSON.stringify(currentValue);
         }
         
         return originalValue !== currentValue;
@@ -132,7 +135,7 @@ const EditProfileScreen: React.FC = () => {
     );
 
     setHasChanges(changes);
-  }, [displayName, username, bio, gamingInterests, profile]);
+  }, [displayName, username, bio, gamingInterests, statusMessage, profile]);
 
   /**
    * Validate username format
@@ -231,6 +234,7 @@ const EditProfileScreen: React.FC = () => {
         username: username.trim(),
         bio: bio.trim(),
         gamingInterests: gamingInterests,
+        statusMessage: statusMessage,
       };
 
       await updateProfile(updates);
@@ -489,21 +493,21 @@ const EditProfileScreen: React.FC = () => {
               onPress={() => setShowStatusMessageEditor(true)}
               className="w-full p-4 rounded-xl bg-cyber-dark border border-cyber-gray/50"
             >
-              {profile?.statusMessage && (profile?.statusMessage?.text || profile?.statusMessage?.emoji) ? (
+              {statusMessage && (statusMessage?.text || statusMessage?.emoji) ? (
                 <View className="flex-row items-center">
                   {/* Availability Indicator */}
                   <View 
                     className="w-3 h-3 rounded-full mr-3"
-                    style={{ backgroundColor: getAvailabilityColor(profile.statusMessage.availability) }}
+                    style={{ backgroundColor: getAvailabilityColor(statusMessage.availability) }}
                   />
                   <View className="flex-1">
                     <Text className="text-white font-inter">
-                      {profile.statusMessage.emoji && `${profile.statusMessage.emoji} `}
-                      {profile.statusMessage.text}
+                      {statusMessage.emoji && `${statusMessage.emoji} `}
+                      {statusMessage.text}
                     </Text>
                     <Text className="text-white/60 font-inter text-xs mt-1">
-                      {getAvailabilityLabel(profile.statusMessage.availability)}
-                      {profile.statusMessage.gameContext && ` • ${profile.statusMessage.gameContext}`}
+                      {getAvailabilityLabel(statusMessage.availability)}
+                      {statusMessage.gameContext && ` • ${statusMessage.gameContext}`}
                     </Text>
                   </View>
                   <Ionicons name="chevron-forward" size={16} color="#6B7280" />
@@ -775,9 +779,9 @@ const EditProfileScreen: React.FC = () => {
           expiresAt: profile?.statusMessage?.expiresAt || undefined,
         }}
         onSave={(statusData: any) => {
-          console.log('✅ Status message saved:', statusData);
+          console.log('✅ Status message updated in parent state:', statusData);
+          setStatusMessage(statusData);
           setShowStatusMessageEditor(false);
-          // Profile will be updated automatically by the auth store
         }}
       />
 

@@ -235,13 +235,6 @@ const ConversationStarters: React.FC<ConversationStartersProps> = ({
                 <Text className="text-white font-inter text-base leading-6">
                   {cleanStarterText(starter)}
                 </Text>
-                
-                <View className="flex-row items-center mt-2">
-                  <Ionicons name="send" size={12} color="#00ffff" />
-                  <Text className="text-cyber-cyan font-jetbrains text-xs ml-1">
-                    Tap to send
-                  </Text>
-                </View>
               </View>
             </View>
           </TouchableOpacity>

@@ -81,6 +81,7 @@ const AchievementsScreen: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [pinnedAchievements, setPinnedAchievements] = useState<string[]>([]);
   const [isUpdatingShowcase, setIsUpdatingShowcase] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
 
   // Initialize pinned achievements from profile
   useEffect(() => {
@@ -90,10 +91,17 @@ const AchievementsScreen: React.FC = () => {
     }
   }, [profile?.achievementShowcase]);
 
+  // Check for changes to enable save button
+  useEffect(() => {
+    const originalPinnedIds = profile?.achievementShowcase?.map((a: any) => a.id) || [];
+    const hasChanged = JSON.stringify(originalPinnedIds.sort()) !== JSON.stringify(pinnedAchievements.sort());
+    setHasChanges(hasChanged);
+  }, [pinnedAchievements, profile?.achievementShowcase]);
+
   /**
    * Handle pinning/unpinning achievement
    */
-  const handleTogglePin = async (achievement: AchievementData) => {
+  const handleTogglePin = (achievement: AchievementData) => {
     if (!achievement.unlocked) {
       Alert.alert(
         "Achievement Locked",
@@ -114,28 +122,32 @@ const AchievementsScreen: React.FC = () => {
       return;
     }
 
+    let newPinnedIds: string[];
+    
+    if (isCurrentlyPinned) {
+      // Unpin achievement
+      newPinnedIds = pinnedAchievements.filter(id => id !== achievement.id);
+    } else {
+      // Pin achievement
+      newPinnedIds = [...pinnedAchievements, achievement.id];
+    }
+    
+    setPinnedAchievements(newPinnedIds);
+  };
+
+  /**
+   * Handle saving the showcase
+   */
+  const handleSaveChanges = async () => {
     setIsUpdatingShowcase(true);
-
     try {
-      let newPinnedIds: string[];
-      
-      if (isCurrentlyPinned) {
-        // Unpin achievement
-        newPinnedIds = pinnedAchievements.filter(id => id !== achievement.id);
-      } else {
-        // Pin achievement
-        newPinnedIds = [...pinnedAchievements, achievement.id];
-      }
-
-      // Convert to showcase format using shared utility
-      const showcaseAchievements = achievements
-        .filter(a => newPinnedIds.includes(a.id) && a.unlocked)
+      const showcaseAchievements = getAchievements(profile)
+        .filter(a => pinnedAchievements.includes(a.id) && a.unlocked)
         .map(convertToShowcaseFormat);
 
       await updateAchievementShowcase(showcaseAchievements);
-      setPinnedAchievements(newPinnedIds);
-
-      console.log(`✅ Achievement ${isCurrentlyPinned ? 'unpinned' : 'pinned'}: ${achievement.title}`);
+      setHasChanges(false); // Reset changes after successful save
+      console.log('✅ Achievement showcase updated successfully');
     } catch (error) {
       console.error("❌ Failed to update achievement showcase:", error);
       Alert.alert(
@@ -369,13 +381,30 @@ const AchievementsScreen: React.FC = () => {
           <Text className="text-white font-orbitron text-2xl">Achievements</Text>
         </View>
         
-        {/* Showcase Info */}
-        <View className="flex-row items-center bg-cyber-dark px-3 py-2 rounded-lg">
-          <Ionicons name="bookmark" size={16} color={accentColor} />
-          <Text className="text-cyber-cyan font-inter text-sm ml-2 font-medium">
-            {pinnedAchievements.length}/5
-          </Text>
-        </View>
+        {/* Save/Showcase Info */}
+        {hasChanges ? (
+          <TouchableOpacity
+            onPress={handleSaveChanges}
+            disabled={isUpdatingShowcase}
+            className="flex-row items-center bg-cyber-cyan px-4 py-2 rounded-lg"
+          >
+            <Ionicons 
+              name={isUpdatingShowcase ? "hourglass-outline" : "save-outline"} 
+              size={16} 
+              color="#000" 
+            />
+            <Text className="text-cyber-black font-inter text-sm ml-2 font-medium">
+              {isUpdatingShowcase ? "Saving..." : "Save"}
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <View className="flex-row items-center bg-cyber-dark px-3 py-2 rounded-lg">
+            <Ionicons name="bookmark" size={16} color={accentColor} />
+            <Text className="text-cyber-cyan font-inter text-sm ml-2 font-medium">
+              {pinnedAchievements.length}/5
+            </Text>
+          </View>
+        )}
       </View>
 
       <ScrollView
