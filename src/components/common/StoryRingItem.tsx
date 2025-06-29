@@ -28,7 +28,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
+import { mediaService } from "../../services/media";
 import { useThemeStore } from "../../stores/themeStore";
+import { getStatusDisplayData } from "../../utils/statusHelpers";
 
 /**
  * Story user interface
@@ -39,6 +41,15 @@ export interface StoryUser {
     displayName: string;
     username?: string;
     profilePhoto?: string;
+    avatar?: any; // Avatar data with URLs
+    statusMessage?: {
+      text?: string;
+      emoji?: string;
+      gameContext?: string;
+      availability?: 'available' | 'busy' | 'gaming' | 'afk';
+      expiresAt?: Date;
+      updatedAt?: Date;
+    };
   };
   stories: {
     id: string;
@@ -103,6 +114,17 @@ const StoryRingItem: React.FC<StoryRingItemProps> = ({
       .map((n) => n.charAt(0).toUpperCase())
       .join("")
       .slice(0, 2);
+  };
+
+  /**
+   * Get user's avatar URL with fallback
+   */
+  const getUserAvatarUrl = (user: any) => {
+    if (user?.avatar?.urls) {
+      return mediaService.getOptimizedAvatarUrl(user.avatar, '48');
+    }
+    // Fallback to old profilePhoto field
+    return user?.profilePhoto || null;
   };
 
   /**
@@ -178,6 +200,7 @@ const StoryRingItem: React.FC<StoryRingItemProps> = ({
     const latestStory = storyUser.stories[0];
     const displayName =
       storyUser.user.displayName || storyUser.user.username || "Unknown";
+    const avatarUrl = getUserAvatarUrl(storyUser.user);
 
     return (
       <TouchableOpacity onPress={onPress} className="items-center w-20">
@@ -191,9 +214,9 @@ const StoryRingItem: React.FC<StoryRingItemProps> = ({
             }`}
           >
             <View className="w-full h-full bg-cyber-black rounded-full p-0.5">
-              {latestStory.mediaUrl ? (
+              {avatarUrl ? (
                 <Image
-                  source={{ uri: latestStory.mediaUrl }}
+                  source={{ uri: avatarUrl }}
                   style={{ width: "100%", height: "100%", borderRadius: 24 }}
                   contentFit="cover"
                   placeholder={null}
@@ -229,6 +252,18 @@ const StoryRingItem: React.FC<StoryRingItemProps> = ({
           {storyUser.hasUnviewed && (
             <View className="absolute top-1 left-1 w-3 h-3 bg-cyber-cyan rounded-full" />
           )}
+
+          {/* Status indicator for gaming status */}
+          {(() => {
+            const statusDisplay = getStatusDisplayData(storyUser.user.statusMessage);
+            if (statusDisplay && statusDisplay.availability === 'gaming') {
+              return (
+                <View className="absolute top-1 right-1 w-3 h-3 rounded-full border border-cyber-black" 
+                      style={{ backgroundColor: statusDisplay.color }} />
+              );
+            }
+            return null;
+          })()}
         </View>
 
         <Text

@@ -99,7 +99,9 @@ const PhoneVerificationScreen: React.FC<PhoneVerificationScreenProps> = () => {
    */
   useEffect(() => {
     if (!phoneVerification) {
-      navigation.goBack();
+      // If no phone verification data, user shouldn't be on this screen
+      // But we don't allow going back during onboarding
+      console.log("⚠️ No phone verification data - this shouldn't happen during onboarding");
     }
   }, [phoneVerification, navigation]);
 
@@ -149,12 +151,14 @@ const PhoneVerificationScreen: React.FC<PhoneVerificationScreenProps> = () => {
 
     try {
       const result = await verifyPhoneNumber(codeToVerify);
-
+      
+      // Navigation will be handled automatically by AppNavigator when auth state changes
+      console.log("✅ Phone verification successful - navigation will be handled by AppNavigator");
+      
       if (result?.isNewUser) {
-        // Navigate to profile setup for new users
-        navigation.navigate("ProfileSetup");
+        console.log("📝 New phone user - will be routed to onboarding");
       } else {
-        // Navigation will be handled by auth state change for existing users
+        console.log("🔄 Existing phone user - will be routed based on profile completeness");
       }
     } catch (error: any) {
       showErrorAlert(error.message, "Verification Failed");
@@ -191,8 +195,9 @@ const PhoneVerificationScreen: React.FC<PhoneVerificationScreenProps> = () => {
    * Handle back navigation
    */
   const handleGoBack = () => {
-    clearPhoneVerification();
-    navigation.goBack();
+    // Back navigation is disabled during onboarding flow
+    // Users must complete the verification process
+    console.log("⚠️ Back navigation disabled during phone verification");
   };
 
   if (!phoneVerification) {
@@ -285,13 +290,6 @@ const PhoneVerificationScreen: React.FC<PhoneVerificationScreenProps> = () => {
             [ VERIFICATION IN PROGRESS ]
           </Text>
         </View>
-
-        {/* Back Button */}
-        <TouchableOpacity onPress={handleGoBack} className="items-center">
-          <Text className="text-gray-300 font-inter">
-            Use different phone number
-          </Text>
-        </TouchableOpacity>
 
         {/* Instructions */}
         <View className="mt-8 bg-cyber-dark/50 rounded-lg p-4">

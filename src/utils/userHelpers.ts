@@ -55,12 +55,12 @@ export function getUserUsername(profile: any, isLoading: boolean = false): strin
 }
 
 /**
- * Get user bio with fallback
+ * Get user bio with no fallback - returns empty string if not set
  * @param {Object} profile - User profile from database
- * @returns {string} User bio or default
+ * @returns {string} User bio or empty string
  */
 export function getUserBio(profile: any): string {
-  return profile?.bio || UX_CONFIG.DEFAULT_BIO;
+  return profile?.bio || '';
 }
 
 /**
@@ -77,6 +77,23 @@ export function getUserStats(profile: any): any {
     highlights: stats.highlights || UX_CONFIG.DEFAULT_PROFILE_STATS.highlights,
     friends: stats.friends || UX_CONFIG.DEFAULT_PROFILE_STATS.friends, // Note: Use useFriendCount hook for real-time count
     achievements: stats.achievements || UX_CONFIG.DEFAULT_PROFILE_STATS.achievements,
+  };
+}
+
+/**
+ * Get user stats with actual achievement count calculated dynamically
+ * @param {Object} profile - User profile from database
+ * @returns {Object} User stats with real-time achievement count
+ */
+export function getUserStatsWithActualAchievements(profile: any): any {
+  const baseStats = getUserStats(profile);
+  
+  // Import here to avoid circular dependency
+  const { getActualAchievementCount } = require('./achievementHelpers');
+  
+  return {
+    ...baseStats,
+    achievements: getActualAchievementCount(profile),
   };
 }
 
@@ -176,4 +193,113 @@ export function getProfileCompletionPercentage(profile: any): number {
   
   const completedFields = fields.filter(field => field && field.trim()).length;
   return Math.round((completedFields / fields.length) * 100);
+}
+
+/**
+ * Check if a user profile is complete and valid
+ * @param {Object|null} profile - User profile object
+ * @returns {boolean} True if profile is complete and valid
+ */
+export function isProfileComplete(profile: any): boolean {
+  if (!profile) {
+    return false;
+  }
+
+  // Check if onboarding is explicitly marked as complete
+  if (!profile.onboardingComplete) {
+    return false;
+  }
+
+  // Additional validation for critical profile fields
+  const hasRequiredFields = profile.uid && (profile.email || profile.phoneNumber);
+  if (!hasRequiredFields) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Determine what onboarding step a user needs to complete
+ * @param {Object|null} profile - User profile object
+ * @returns {string} The onboarding step needed
+ */
+export function getOnboardingStep(profile: any): string {
+  if (!profile) {
+    return 'signup'; // User needs to create an account
+  }
+
+  // Check basic profile fields
+  if (!profile.displayName || !profile.username) {
+    return 'profile_setup'; // User needs to complete basic profile
+  }
+
+  // Check gaming interests
+  if (!profile.gamingInterests || profile.gamingInterests.length === 0) {
+    return 'gaming_interests'; // User needs to select gaming interests
+  }
+
+  // Check if onboarding is marked complete
+  if (!profile.onboardingComplete) {
+    return 'gaming_interests'; // Default to gaming interests if not complete
+  }
+
+  return 'complete'; // Profile is complete
+}
+
+/**
+ * Check if a user needs onboarding based on their profile
+ * @param {Object|null} profile - User profile object
+ * @returns {boolean} True if user needs onboarding
+ */
+export function needsOnboarding(profile: any): boolean {
+  return !isProfileComplete(profile);
+}
+
+/**
+ * Validate user profile data for completeness
+ * @param {Object} profile - User profile object
+ * @returns {Object} Validation result with missing fields
+ */
+export function validateUserProfile(profile: any): { 
+  isValid: boolean; 
+  missingFields: string[]; 
+  errors: string[] 
+} {
+  const missingFields: string[] = [];
+  const errors: string[] = [];
+
+  if (!profile) {
+    return {
+      isValid: false,
+      missingFields: ['profile'],
+      errors: ['User profile is missing completely']
+    };
+  }
+
+  // Check required fields
+  if (!profile.uid) missingFields.push('uid');
+  if (!profile.displayName) missingFields.push('displayName');
+  if (!profile.username) missingFields.push('username');
+  if (!profile.email && !profile.phoneNumber) {
+    missingFields.push('email or phoneNumber');
+    errors.push('User must have either email or phone number');
+  }
+
+  // Check onboarding completion
+  if (!profile.onboardingComplete) {
+    missingFields.push('onboardingComplete');
+    errors.push('User has not completed onboarding flow');
+  }
+
+  // Check if gaming interests are set (optional but recommended)
+  if (!profile.gamingInterests || profile.gamingInterests.length === 0) {
+    errors.push('User has not selected gaming interests (recommended)');
+  }
+
+  return {
+    isValid: missingFields.length === 0 && errors.length === 0,
+    missingFields,
+    errors
+  };
 } 

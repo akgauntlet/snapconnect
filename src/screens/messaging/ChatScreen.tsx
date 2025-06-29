@@ -26,9 +26,9 @@
 
 import { Ionicons } from "@expo/vector-icons";
 import {
-  useFocusEffect,
-  useNavigation,
-  useRoute,
+    useFocusEffect,
+    useNavigation,
+    useRoute,
 } from "@react-navigation/native";
 import { ResizeMode, Video } from "expo-av";
 import * as Haptics from "expo-haptics";
@@ -36,17 +36,17 @@ import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  StatusBar,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
+    StatusBar,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 import { ConversationStarters } from "../../components/common";
@@ -54,9 +54,11 @@ import MediaViewer from "../../components/common/MediaViewer";
 import { friendsService } from "../../services/firebase/friendsService";
 import { messagingService } from "../../services/firebase/messagingService";
 import { realtimeService } from "../../services/firebase/realtimeService";
+import { mediaService } from "../../services/media";
 import { useAuthStore } from "../../stores/authStore";
 import { useThemeStore } from "../../stores/themeStore";
 import { showAlert } from "../../utils/alertService";
+import { getStatusDisplayData } from "../../utils/statusHelpers";
 import { formatConversationUserName, getLoadingText } from "../../utils/userHelpers";
 
 /**
@@ -134,6 +136,9 @@ const ChatScreen: React.FC = () => {
   // Gaming preferences for conversation starters
   const [userGenres, setUserGenres] = useState<string[]>([]);
   const [friendGenres, setFriendGenres] = useState<string[]>([]);
+
+  // Friend profile data for avatar display
+  const [friendProfile, setFriendProfile] = useState<any>(null);
 
   // Refs
   const flatListRef = useRef<FlatList>(null);
@@ -245,23 +250,26 @@ const ChatScreen: React.FC = () => {
   }, [friendId]);
 
   /**
-   * Load friend profile data including display name and gaming genres
+   * Load friend profile data including display name, avatar, and gaming genres
    */
   const loadFriendProfile = useCallback(async () => {
     try {
-      const friendProfile = (await friendsService.getUserProfile(
+      const friendProfileData = (await friendsService.getUserProfile(
         friendId,
       )) as any;
-      if (friendProfile) {
+      if (friendProfileData) {
+        // Store the full profile data for avatar access
+        setFriendProfile(friendProfileData);
+        
         // Use displayName first, then username, then fallback
-        const displayName = formatConversationUserName(friendProfile);
+        const displayName = formatConversationUserName(friendProfileData);
         setFriendDisplayName(displayName);
         
         // Extract gaming genre preferences for conversation starters
-        const genres = friendProfile.gamingInterests || [];
+        const genres = friendProfileData.gamingInterests || [];
         setFriendGenres(genres);
         
-        console.log('Loaded friend gaming genres:', { friendId, genres });
+        console.log('Loaded friend profile:', { friendId, displayName, hasAvatar: !!friendProfileData.avatar, genres });
       }
     } catch (error) {
       console.error("Load friend profile failed:", error);
@@ -809,6 +817,28 @@ const ChatScreen: React.FC = () => {
   }, []);
 
   /**
+   * Get friend's avatar URL with fallback
+   */
+  const getFriendAvatarUrl = () => {
+    if (friendProfile?.avatar?.urls) {
+      return mediaService.getOptimizedAvatarUrl(friendProfile.avatar, '48');
+    }
+    // Fallback to old profilePhoto field
+    return friendProfile?.profilePhoto || null;
+  };
+
+  /**
+   * Get friend's banner URL with fallback
+   */
+  const getFriendBannerUrl = () => {
+    if (friendProfile?.profileBanner?.urls) {
+      return mediaService.getOptimizedBannerUrl(friendProfile.profileBanner, 'medium');
+    }
+    // Fallback to old banner URL field
+    return friendProfile?.profileBanner?.url || null;
+  };
+
+  /**
    * Handle conversation starter selection
    * Sends the selected starter as a text message
    */
@@ -1074,26 +1104,83 @@ const ChatScreen: React.FC = () => {
         backgroundColor={theme.colors.background.primary}
       />
 
+      {/* Friend Banner */}
+      {getFriendBannerUrl() && (
+        <View className="relative">
+          <Image
+            source={{ uri: getFriendBannerUrl() }}
+            className="w-full h-32"
+            style={{ resizeMode: 'cover' }}
+          />
+          {/* Banner Overlay */}
+          <View className="absolute inset-0 bg-black/40" />
+        </View>
+      )}
+
       {/* Header */}
-      <View className="flex-row items-center justify-between px-4 py-3 border-b border-cyber-gray/10">
+      <View className={`flex-row items-center justify-between px-4 py-3 border-b border-cyber-gray/10 ${getFriendBannerUrl() ? 'bg-cyber-black/80' : ''}`}>
         <TouchableOpacity onPress={handleBack} className="p-2 -ml-2">
           <Ionicons name="arrow-back" size={24} color="#ffffff" />
         </TouchableOpacity>
 
-        <View className="flex-1 ml-3">
+        {/* Friend Avatar */}
+        <View className="relative mr-3">
+          {getFriendAvatarUrl() ? (
+            <Image
+              source={{ uri: getFriendAvatarUrl() }}
+              className="w-10 h-10 rounded-full"
+              style={{ backgroundColor: '#2a2a2a' }}
+            />
+          ) : (
+            <View className="w-10 h-10 bg-cyber-cyan/20 rounded-full justify-center items-center">
+              <Ionicons name="person" size={20} color={accentColor} />
+            </View>
+          )}
+          {/* Online Status Indicator */}
+          <View
+            className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-cyber-black"
+            style={{ 
+              backgroundColor: friendOnlineStatus ? '#10b981' : '#6b7280'
+            }}
+          />
+        </View>
+
+        <View className="flex-1">
           <Text
             className="text-white font-inter font-semibold text-lg"
             numberOfLines={1}
           >
             {friendDisplayName}
           </Text>
-          <Text
-            className={`font-inter text-sm ${
-              friendOnlineStatus ? "text-cyber-green" : "text-white/40"
-            }`}
-          >
-            {friendOnlineStatus ? "Online now" : "Offline"}
-          </Text>
+          
+          {/* Status Message Display */}
+          {(() => {
+            const statusDisplay = getStatusDisplayData(friendProfile?.statusMessage);
+            if (statusDisplay) {
+              return (
+                <View className="flex-row items-center">
+                  <View 
+                    className="w-2 h-2 rounded-full mr-2"
+                    style={{ backgroundColor: statusDisplay.color }}
+                  />
+                  <Text className="text-white/80 font-inter text-sm" numberOfLines={1}>
+                    {statusDisplay.text}
+                  </Text>
+                </View>
+              );
+            }
+            
+            // Fallback to online status
+            return (
+              <Text
+                className={`font-inter text-sm ${
+                  friendOnlineStatus ? "text-cyber-green" : "text-white/40"
+                }`}
+              >
+                {friendOnlineStatus ? "Online now" : "Offline"}
+              </Text>
+            );
+          })()}
         </View>
 
         <TouchableOpacity

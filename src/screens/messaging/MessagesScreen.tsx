@@ -241,6 +241,8 @@ const MessagesScreen: React.FC = () => {
             lastMessageAt: conv.lastMessageAt?.toDate() || new Date(),
             hasUnreadMedia: conv.hasUnreadMedia || false,
             unreadCount: conv.unreadCount || 0,
+            avatar: userProfile?.avatar,
+            profilePhoto: userProfile?.profilePhoto,
           };
         }),
       );

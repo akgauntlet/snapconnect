@@ -79,16 +79,36 @@ class AuthService {
       );
       const user = userCredential.user;
 
-
+      console.log("✅ Email sign in successful for user:", user.uid);
 
       // Get user profile from database
       const profile = await this.getUserProfile(user.uid);
 
+      // Check if profile exists and is valid
+      if (!profile) {
+        console.warn("⚠️ User signed in but profile is missing - needs onboarding");
+        return {
+          user: this.formatUserData(user),
+          profile: null,
+          needsOnboarding: true,
+        };
+      }
 
+      // Check if profile is incomplete
+      if (!profile.onboardingComplete) {
+        console.warn("⚠️ User signed in but onboarding is incomplete");
+        return {
+          user: this.formatUserData(user),
+          profile,
+          needsOnboarding: true,
+        };
+      }
 
+      console.log("✅ User sign in complete with valid profile");
       return {
         user: this.formatUserData(user),
         profile,
+        needsOnboarding: false,
       };
     } catch (error) {
       console.error("❌ Email sign in failed:", error);
@@ -265,10 +285,20 @@ class AuthService {
           profile = await this.getUserProfile(mockUser.uid);
         }
 
+        // Check if profile is complete for existing users
+        const needsOnboarding = !profile || !profile.onboardingComplete;
+        
+        if (needsOnboarding) {
+          console.warn("⚠️ Phone user needs onboarding");
+        } else {
+          console.log("✅ Phone user has complete profile");
+        }
+
         return {
           user: this.formatUserData(mockUser),
           profile,
           isNewUser,
+          needsOnboarding,
         };
       } else {
         throw new Error("Invalid verification code");
@@ -355,6 +385,7 @@ class AuthService {
    */
   async getUserProfile(uid) {
     try {
+      console.log("🔍 Fetching user profile for UID:", uid);
       const db = this.getDB();
       const userRef = db.collection("users").doc(uid);
       const snapshot = await userRef.get();
@@ -362,18 +393,29 @@ class AuthService {
       if (!snapshot.exists) {
         console.warn("⚠️ User profile not found for UID:", uid);
         // Try to recover missing profile by checking for reserved username
+        console.log("🔄 Attempting profile recovery...");
         const recoveredProfile = await this.recoverMissingProfile(uid);
         if (recoveredProfile) {
+          console.log("✅ Profile recovered successfully");
           return recoveredProfile;
         }
 
-        console.warn("⚠️ Could not recover profile, returning null");
+        console.warn("❌ Could not recover profile - user needs to complete onboarding");
         return null;
       }
 
-      return snapshot.data();
+      const profile = snapshot.data();
+      console.log("✅ User profile retrieved:", { 
+        uid: profile.uid, 
+        hasUsername: !!profile.username,
+        onboardingComplete: profile.onboardingComplete,
+        email: !!profile.email,
+        phoneNumber: !!profile.phoneNumber 
+      });
+      
+      return profile;
     } catch (error) {
-      console.error("Get user profile failed:", error);
+      console.error("❌ Get user profile failed:", error);
       throw error;
     }
   }
@@ -412,6 +454,8 @@ class AuthService {
           profilePhoto: currentUser.photoURL || null,
           authMethod: currentUser.email ? "email" : "phone",
           gamingPlatform: null,
+          gamingInterests: [],
+          onboardingComplete: false, // Always false for recovered profiles
           createdAt: firebase.firestore.FieldValue.serverTimestamp(),
           lastActive: firebase.firestore.FieldValue.serverTimestamp(),
           status: "active",
@@ -600,7 +644,53 @@ class AuthService {
         .doc(username.toLowerCase());
       const snapshot = await usernameRef.get();
 
-      return !snapshot.exists;
+      // If username doesn't exist, it's available
+      if (!snapshot.exists) {
+        return true;
+      }
+
+      // Username exists, check if the associated user still exists
+      const reservationData = snapshot.data();
+      const uid = reservationData?.uid;
+
+      if (!uid) {
+        // Invalid reservation data, clean it up
+        console.warn("⚠️ Found username reservation without UID, cleaning up:", username);
+        await usernameRef.delete();
+        return true;
+      }
+
+      // Check if the user still exists by looking up their profile
+      try {
+        // Check if user document exists in Firestore
+        const userRef = db.collection("users").doc(uid);
+        const userSnapshot = await userRef.get();
+        
+        if (userSnapshot.exists) {
+          // User exists, username is taken
+          return false;
+        } else {
+          // User document doesn't exist, likely orphaned
+          throw new Error("User document not found");
+        }
+      } catch (userNotFoundError) {
+        // User doesn't exist anymore, clean up the orphaned username reservation
+        console.warn("⚠️ Found orphaned username reservation, cleaning up:", {
+          username,
+          orphanedUid: uid,
+          error: userNotFoundError.message
+        });
+        
+        try {
+          await usernameRef.delete();
+          console.log("✅ Successfully cleaned up orphaned username:", username);
+          return true; // Username is now available
+        } catch (cleanupError) {
+          console.error("❌ Failed to clean up orphaned username:", username, cleanupError);
+          // Return false to be safe - don't allow username if we can't clean up
+          return false;
+        }
+      }
     } catch (error) {
       console.error("Username check failed:", error);
       return false;
@@ -750,6 +840,184 @@ class AuthService {
     console.error("Original Firebase error:", error.code, error.message);
 
     return new Error(message);
+  }
+
+  /**
+   * Update user avatar
+   * @param {string} uid - User ID
+   * @param {Object} avatarData - Avatar data with URLs and paths
+   * @returns {Promise<Object>} Updated profile
+   */
+  async updateAvatar(uid, avatarData) {
+    try {
+      const db = this.getDB();
+      const { firebase } = require("../../config/firebase");
+
+      // Update user profile with avatar data
+      const updateData = {
+        profilePhoto: avatarData.mainUrl,
+        avatar: {
+          urls: avatarData.urls,
+          paths: avatarData.paths,
+          uploadedAt: avatarData.uploadedAt,
+        },
+        lastActive: firebase.firestore.FieldValue.serverTimestamp(),
+      };
+
+      const userRef = db.collection("users").doc(uid);
+      await userRef.update(updateData);
+
+      // Get updated profile
+      const updatedProfile = await this.getUserProfile(uid);
+      return updatedProfile;
+    } catch (error) {
+      console.error("❌ Avatar update failed:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Remove user avatar
+   * @param {string} uid - User ID
+   * @returns {Promise<Object>} Updated profile
+   */
+  async removeAvatar(uid) {
+    try {
+      const db = this.getDB();
+      const { firebase } = require("../../config/firebase");
+
+      // Update user profile to remove avatar
+      const updateData = {
+        profilePhoto: null,
+        avatar: null,
+        lastActive: firebase.firestore.FieldValue.serverTimestamp(),
+      };
+
+      const userRef = db.collection("users").doc(uid);
+      await userRef.update(updateData);
+
+      // Get updated profile
+      const updatedProfile = await this.getUserProfile(uid);
+      return updatedProfile;
+    } catch (error) {
+      console.error("❌ Avatar removal failed:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update user profile banner
+   * @param {string} uid - User ID
+   * @param {Object} bannerData - Banner data with URLs and paths
+   * @returns {Promise<Object>} Updated profile
+   */
+  async updateProfileBanner(uid, bannerData) {
+    try {
+      const db = this.getDB();
+      const { firebase } = require("../../config/firebase");
+
+      // Update user profile with banner data
+      const updateData = {
+        profileBanner: {
+          url: bannerData.mainUrl,
+          urls: bannerData.urls,
+          paths: bannerData.paths,
+          position: bannerData.position || 'center',
+          uploadedAt: bannerData.uploadedAt,
+        },
+        lastActive: firebase.firestore.FieldValue.serverTimestamp(),
+      };
+
+      const userRef = db.collection("users").doc(uid);
+      await userRef.update(updateData);
+
+      // Get updated profile
+      const updatedProfile = await this.getUserProfile(uid);
+      return updatedProfile;
+    } catch (error) {
+      console.error("❌ Profile banner update failed:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update user status message
+   * @param {string} uid - User ID
+   * @param {Object} statusData - Status message data
+   * @returns {Promise<Object>} Updated profile
+   */
+  async updateStatusMessage(uid, statusData) {
+    try {
+      const db = this.getDB();
+      const { firebase } = require("../../config/firebase");
+
+      // Prepare status message with expiration if provided
+      const statusMessage = {
+        text: statusData.text,
+        emoji: statusData.emoji || null,
+        gameContext: statusData.gameContext || null,
+        availability: statusData.availability || 'available',
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      };
+
+      // Add expiration if provided
+      if (statusData.expiresAt) {
+        statusMessage.expiresAt = statusData.expiresAt;
+      }
+
+      const updateData = {
+        statusMessage,
+        lastActive: firebase.firestore.FieldValue.serverTimestamp(),
+      };
+
+      const userRef = db.collection("users").doc(uid);
+      await userRef.update(updateData);
+
+      // Get updated profile
+      const updatedProfile = await this.getUserProfile(uid);
+      return updatedProfile;
+    } catch (error) {
+      console.error("❌ Status message update failed:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update achievement showcase
+   * @param {string} uid - User ID
+   * @param {Array} achievements - Array of achievement IDs to showcase
+   * @returns {Promise<Object>} Updated profile
+   */
+  async updateAchievementShowcase(uid, achievements) {
+    try {
+      const db = this.getDB();
+      const { firebase } = require("../../config/firebase");
+
+      // Limit to 5 achievements and validate structure
+      const showcaseAchievements = achievements.slice(0, 5).map(achievement => ({
+        id: achievement.id,
+        title: achievement.title,
+        description: achievement.description,
+        icon: achievement.icon,
+        rarity: achievement.rarity,
+        unlockedAt: achievement.unlockedAt,
+      }));
+
+      const updateData = {
+        achievementShowcase: showcaseAchievements,
+        lastActive: firebase.firestore.FieldValue.serverTimestamp(),
+      };
+
+      const userRef = db.collection("users").doc(uid);
+      await userRef.update(updateData);
+
+      // Get updated profile
+      const updatedProfile = await this.getUserProfile(uid);
+      return updatedProfile;
+    } catch (error) {
+      console.error("❌ Achievement showcase update failed:", error);
+      throw error;
+    }
   }
 
   /**

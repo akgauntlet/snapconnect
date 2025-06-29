@@ -80,10 +80,18 @@ export const useAuthStore = create(
         set({ isLoading: true, error: null });
 
         try {
-          const { user, profile } = await authService.signInWithEmail(
-            email,
-            password,
-          );
+          console.log("🔐 Starting email sign in...");
+          const result = await authService.signInWithEmail(email, password);
+          const { user, profile, needsOnboarding } = result;
+
+          // Log the sign-in result for debugging
+          console.log("🔐 Sign in result:", {
+            hasUser: !!user,
+            hasProfile: !!profile,
+            needsOnboarding: needsOnboarding,
+            profileComplete: profile?.onboardingComplete,
+            userId: user?.uid,
+          });
 
           set({
             user,
@@ -93,13 +101,25 @@ export const useAuthStore = create(
             error: null,
           });
 
-
+          // Enhanced logging for navigation debugging
+          if (needsOnboarding) {
+            console.log("📝 User needs onboarding - AppNavigator should stay in auth flow");
+            console.log("📍 Expected route: GamingInterests or other onboarding step");
+          } else {
+            console.log("✅ User fully authenticated - AppNavigator should switch to main app");
+            console.log("📍 Expected route: MainApp (TabNavigator)");
+          }
+          
+          // Force a small delay to ensure state propagation
+          setTimeout(() => {
+            console.log("🔄 Auth state should now be propagated to AppNavigator");
+          }, 100);
         } catch (error) {
+          console.error("❌ Sign in failed:", error.message);
           set({
             isLoading: false,
             error: error.message,
           });
-          console.error("Sign in failed:", error.message);
           throw error;
         }
       },
@@ -121,12 +141,20 @@ export const useAuthStore = create(
         set({ isLoading: true, error: null });
 
         try {
+          console.log("📝 Starting email sign up...");
           const { user, profile } = await authService.signUpWithEmail(
             email,
             password,
             displayName,
             additionalData,
           );
+
+          console.log("📝 Sign up result:", {
+            hasUser: !!user,
+            hasProfile: !!profile,
+            profileComplete: profile?.onboardingComplete,
+            userId: user?.uid,
+          });
 
           set({
             user,
@@ -136,13 +164,19 @@ export const useAuthStore = create(
             error: null,
           });
 
-
+          console.log("📝 New user signed up - AppNavigator should route to onboarding");
+          console.log("📍 Expected route: GamingInterests (onboarding step)");
+          
+          // Force a small delay to ensure state propagation
+          setTimeout(() => {
+            console.log("🔄 Auth state should now be propagated to AppNavigator");
+          }, 100);
         } catch (error) {
+          console.error("❌ Sign up failed:", error.message);
           set({
             isLoading: false,
             error: error.message,
           });
-          console.error("Sign up failed:", error.message);
           throw error;
         }
       },
@@ -197,12 +231,21 @@ export const useAuthStore = create(
         set({ isLoading: true, error: null });
 
         try {
-          const { user, profile, isNewUser } =
-            await authService.verifyPhoneNumber(
-              phoneVerification.verificationId,
-              code,
-              additionalData,
-            );
+          const result = await authService.verifyPhoneNumber(
+            phoneVerification.verificationId,
+            code,
+            additionalData,
+          );
+          const { user, profile, isNewUser, needsOnboarding } = result;
+
+          // Log the verification result for debugging
+          console.log("📱 Phone verification result:", {
+            hasUser: !!user,
+            hasProfile: !!profile,
+            isNewUser,
+            needsOnboarding,
+            profileComplete: profile?.onboardingComplete,
+          });
 
           set({
             user,
@@ -213,14 +256,20 @@ export const useAuthStore = create(
             phoneVerification: null,
           });
 
+          // If user needs onboarding, log it for the navigation system
+          if (needsOnboarding) {
+            console.log("📝 Phone user needs onboarding - will be redirected to auth flow");
+          } else {
+            console.log("✅ Phone user fully authenticated - proceeding to main app");
+          }
 
-          return { isNewUser };
+          return { isNewUser, needsOnboarding };
         } catch (error) {
           set({
             isLoading: false,
             error: error.message,
           });
-          console.error("Phone verification failed:", error.message);
+          console.error("❌ Phone verification failed:", error.message);
           throw error;
         }
       },
@@ -354,6 +403,175 @@ export const useAuthStore = create(
         } catch (error) {
           console.error("Username check failed:", error.message);
           return false;
+        }
+      },
+
+      /**
+       * Update user avatar
+       * @param {Object} avatarData - Avatar data with URLs and paths
+       * @returns {Promise<void>}
+       */
+      updateAvatar: async (avatarData) => {
+        const { user, profile } = get();
+
+        if (!user) {
+          throw new Error("No authenticated user");
+        }
+
+        set({ isLoading: true, error: null });
+
+        try {
+          const updatedProfile = await authService.updateAvatar(user.uid, avatarData);
+
+          set({
+            profile: updatedProfile,
+            isLoading: false,
+            error: null,
+          });
+
+          console.log("✅ Avatar updated successfully");
+        } catch (error) {
+          set({
+            isLoading: false,
+            error: error.message,
+          });
+          console.error("❌ Avatar update failed:", error.message);
+          throw error;
+        }
+      },
+
+      /**
+       * Remove user avatar
+       * @returns {Promise<void>}
+       */
+      removeAvatar: async () => {
+        const { user } = get();
+
+        if (!user) {
+          throw new Error("No authenticated user");
+        }
+
+        set({ isLoading: true, error: null });
+
+        try {
+          const updatedProfile = await authService.removeAvatar(user.uid);
+
+          set({
+            profile: updatedProfile,
+            isLoading: false,
+            error: null,
+          });
+
+          console.log("✅ Avatar removed successfully");
+        } catch (error) {
+          set({
+            isLoading: false,
+            error: error.message,
+          });
+          console.error("❌ Avatar removal failed:", error.message);
+          throw error;
+        }
+      },
+
+      /**
+       * Update profile banner
+       * @param {Object} bannerData - Banner data with URLs and paths
+       * @returns {Promise<void>}
+       */
+      updateProfileBanner: async (bannerData) => {
+        const { user } = get();
+
+        if (!user) {
+          throw new Error("No authenticated user");
+        }
+
+        set({ isLoading: true, error: null });
+
+        try {
+          const updatedProfile = await authService.updateProfileBanner(user.uid, bannerData);
+
+          set({
+            profile: updatedProfile,
+            isLoading: false,
+            error: null,
+          });
+
+          console.log("✅ Profile banner updated successfully");
+        } catch (error) {
+          set({
+            isLoading: false,
+            error: error.message,
+          });
+          console.error("❌ Profile banner update failed:", error.message);
+          throw error;
+        }
+      },
+
+      /**
+       * Update status message
+       * @param {Object} statusData - Status message data
+       * @returns {Promise<void>}
+       */
+      updateStatusMessage: async (statusData) => {
+        const { user } = get();
+
+        if (!user) {
+          throw new Error("No authenticated user");
+        }
+
+        set({ isLoading: true, error: null });
+
+        try {
+          const updatedProfile = await authService.updateStatusMessage(user.uid, statusData);
+
+          set({
+            profile: updatedProfile,
+            isLoading: false,
+            error: null,
+          });
+
+          console.log("✅ Status message updated successfully");
+        } catch (error) {
+          set({
+            isLoading: false,
+            error: error.message,
+          });
+          console.error("❌ Status message update failed:", error.message);
+          throw error;
+        }
+      },
+
+      /**
+       * Update achievement showcase
+       * @param {Array} achievements - Array of achievements to showcase
+       * @returns {Promise<void>}
+       */
+      updateAchievementShowcase: async (achievements) => {
+        const { user } = get();
+
+        if (!user) {
+          throw new Error("No authenticated user");
+        }
+
+        set({ isLoading: true, error: null });
+
+        try {
+          const updatedProfile = await authService.updateAchievementShowcase(user.uid, achievements);
+
+          set({
+            profile: updatedProfile,
+            isLoading: false,
+            error: null,
+          });
+
+          console.log("✅ Achievement showcase updated successfully");
+        } catch (error) {
+          set({
+            isLoading: false,
+            error: error.message,
+          });
+          console.error("❌ Achievement showcase update failed:", error.message);
+          throw error;
         }
       },
 

@@ -24,12 +24,12 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useState } from "react";
 import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { CyberButton, GamingInput } from "../../components/common";
 import { useAuthStore } from "../../stores/authStore";
@@ -92,7 +92,8 @@ const LoginScreen: React.FC<LoginScreenProps> = () => {
 
     try {
       await signInWithEmail(email, password);
-      // Navigation will be handled by auth state change
+      // Navigation will be handled automatically by AppNavigator when auth state changes
+      console.log("✅ Login successful - navigation will be handled by AppNavigator");
     } catch {
       // Error is already set in store state and will be displayed inline
       // No need to show modal
@@ -110,6 +111,7 @@ const LoginScreen: React.FC<LoginScreenProps> = () => {
 
     try {
       await signInWithPhoneNumber(phoneNumber);
+      // Navigate to phone verification screen for code entry
       navigation.navigate("PhoneVerification");
     } catch {
       // Error is already set in store state and will be displayed inline

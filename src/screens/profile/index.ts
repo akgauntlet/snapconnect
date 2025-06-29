@@ -12,5 +12,6 @@
 
 export { default as AchievementsScreen } from './AchievementsScreen';
 export { default as EditProfileScreen } from './EditProfileScreen';
+export { default as ProfileCustomizationScreen } from './ProfileCustomizationScreen';
 export { default as ProfileScreen } from './ProfileScreen';
 export { default as SettingsScreen } from './SettingsScreen';

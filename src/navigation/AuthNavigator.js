@@ -28,11 +28,49 @@ import LoginScreen from "../screens/auth/LoginScreen";
 import PhoneVerificationScreen from "../screens/auth/PhoneVerificationScreen";
 import SignupScreen from "../screens/auth/SignupScreen";
 import WelcomeScreen from "../screens/auth/WelcomeScreen";
+
+// Import auth store and utilities
+import { useAuthStore } from "../stores/authStore";
+import { getOnboardingStep } from "../utils/userHelpers";
+
 // TODO: Import other auth screens when created
 // import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 // import ProfileSetupScreen from '../screens/auth/ProfileSetupScreen';
 
 const Stack = createNativeStackNavigator();
+
+/**
+ * Determine the initial route based on authentication status and profile completeness
+ * @param {boolean} isAuthenticated - Whether user is authenticated
+ * @param {Object|null} profile - User profile object
+ * @returns {string} Initial route name
+ */
+const getInitialRouteName = (isAuthenticated, profile) => {
+  // If not authenticated, start with welcome flow
+  if (!isAuthenticated) {
+    console.log("🔐 User not authenticated - starting with Welcome");
+    return "Welcome";
+  }
+
+  // If authenticated, determine what onboarding step they need
+  const onboardingStep = getOnboardingStep(profile);
+  console.log("📝 Authenticated user onboarding step:", onboardingStep);
+
+  switch (onboardingStep) {
+    case 'gaming_interests':
+      return "GamingInterests";
+    case 'profile_setup':
+      // TODO: Create ProfileSetup screen and use it here
+      return "GamingInterests"; // Fallback to gaming interests for now
+    case 'complete':
+      // This shouldn't happen as complete users go to main app
+      console.warn("⚠️ Complete user in auth flow - this shouldn't happen");
+      return "Welcome";
+    default:
+      // New users or users needing signup
+      return "Welcome";
+  }
+};
 
 /**
  * Authentication navigation stack with gaming-themed transitions
@@ -50,9 +88,27 @@ const Stack = createNativeStackNavigator();
  * - Integrates with AI-powered fraud detection
  */
 const AuthNavigator = () => {
+  const { isAuthenticated, profile } = useAuthStore();
+  
+  // Determine initial route based on auth status and profile completeness
+  const initialRouteName = getInitialRouteName(isAuthenticated, profile);
+  
+  // Create a unique key to force re-evaluation when auth state changes
+  const authKey = `${isAuthenticated}-${profile?.onboardingComplete || 'false'}-${profile?.uid || 'none'}`;
+  
+  // Log navigator mounting for debugging
+  console.log("🔄 AuthNavigator render:", {
+    isAuthenticated,
+    hasProfile: !!profile,
+    onboardingComplete: profile?.onboardingComplete,
+    initialRouteName,
+    authKey
+  });
+
   return (
     <Stack.Navigator
-      initialRouteName="Welcome"
+      key={authKey}
+      initialRouteName={initialRouteName}
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: "#000000" }, // Cyber gaming background
@@ -98,6 +154,8 @@ const AuthNavigator = () => {
         component={GamingInterestsScreen}
         options={{
           animation: "slide_from_right",
+          // Prevent back navigation for all users during onboarding
+          gestureEnabled: false,
         }}
       />
 

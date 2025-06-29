@@ -297,7 +297,7 @@ const GamingGenreSelector: React.FC<GamingGenreSelectorProps> = ({
   };
 
   return (
-    <View className="flex-1">
+    <View className="flex-1 bg-cyber-black">
       {/* Header with selection count */}
       <View className="flex-row justify-between items-center mb-4">
         <View>
@@ -316,7 +316,7 @@ const GamingGenreSelector: React.FC<GamingGenreSelectorProps> = ({
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <View className="flex-1">
         {/* Presets */}
         {renderPresets()}
 
@@ -352,14 +352,8 @@ const GamingGenreSelector: React.FC<GamingGenreSelectorProps> = ({
           )}
         </View>
 
-        {/* Gaming Aesthetic Elements */}
-        <View className="items-center my-6">
-          <View className="w-full h-px bg-cyber-cyan opacity-30 mb-2" />
-          <Text className="text-green-400 text-xs font-mono">
-            [ GAMING PREFERENCES CONFIGURED ]
-          </Text>
-        </View>
-      </ScrollView>
+
+      </View>
     </View>
   );
 };

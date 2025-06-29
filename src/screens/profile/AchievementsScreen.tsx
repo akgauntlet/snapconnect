@@ -25,8 +25,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
+    Alert,
     SafeAreaView,
     ScrollView,
     StatusBar,
@@ -38,28 +39,14 @@ import { GameCard } from "../../components/common";
 import { useTabBarHeight } from "../../hooks/useTabBarHeight";
 import { useAuthStore } from "../../stores/authStore";
 import { useThemeStore } from "../../stores/themeStore";
+import {
+    convertToShowcaseFormat,
+    getAchievementProgress,
+    getAchievements,
+    getAchievementsByCategory,
+    type AchievementData
+} from "../../utils/achievementHelpers";
 import { getUserStats } from "../../utils/userHelpers";
-
-/**
- * Achievement data structure
- */
-interface Achievement {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  rarity: "common" | "rare" | "epic" | "legendary";
-  unlocked: boolean;
-  unlockedAt?: string;
-  progress?: {
-    current: number;
-    total: number;
-  };
-  reward?: {
-    type: "badge" | "title" | "filter" | "boost";
-    value: string;
-  };
-}
 
 /**
  * Achievements screen component
@@ -83,98 +70,83 @@ const AchievementsScreen: React.FC = () => {
   const { tabBarHeight } = useTabBarHeight();
 
   // Auth store
-  const { profile } = useAuthStore();
+  const { profile, updateAchievementShowcase } = useAuthStore();
   const userStats = getUserStats(profile);
+
+  // Get achievements using shared utility
+  const achievements = getAchievements(profile);
+  const totalProgress = getAchievementProgress(profile);
 
   // Local state
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [pinnedAchievements, setPinnedAchievements] = useState<string[]>([]);
+  const [isUpdatingShowcase, setIsUpdatingShowcase] = useState(false);
+
+  // Initialize pinned achievements from profile
+  useEffect(() => {
+    if (profile?.achievementShowcase) {
+      const pinnedIds = profile.achievementShowcase.map((achievement: any) => achievement.id);
+      setPinnedAchievements(pinnedIds);
+    }
+  }, [profile?.achievementShowcase]);
 
   /**
-   * Sample achievements data - in production, this would come from the backend
+   * Handle pinning/unpinning achievement
    */
-  const achievements: Achievement[] = [
-    {
-      id: "first_snap",
-      title: "First Snap",
-      description: "Share your first snap with friends",
-      icon: "camera",
-      rarity: "common",
-      unlocked: true,
-      unlockedAt: "2024-01-15T10:30:00Z",
-      reward: { type: "badge", value: "Photographer" },
-    },
-    {
-      id: "gaming_legend",
-      title: "Gaming Legend",
-      description: "Win 100 gaming matches",
-      icon: "trophy",
-      rarity: "legendary",
-      unlocked: userStats.victories >= 100,
-      unlockedAt: userStats.victories >= 100 ? "2024-01-20T15:45:00Z" : undefined,
-      progress: { current: userStats.victories, total: 100 },
-      reward: { type: "title", value: "Gaming Legend" },
-    },
-    {
-      id: "social_butterfly",
-      title: "Social Butterfly",
-      description: "Add 50 friends to your network",
-      icon: "people",
-      rarity: "rare",
-      unlocked: userStats.friends >= 50,
-      progress: { current: userStats.friends, total: 50 },
-      reward: { type: "boost", value: "Friend Finder" },
-    },
-    {
-      id: "content_creator",
-      title: "Content Creator",
-      description: "Create 25 gaming highlights",
-      icon: "play-circle",
-      rarity: "epic",
-      unlocked: userStats.highlights >= 25,
-      progress: { current: userStats.highlights, total: 25 },
-      reward: { type: "filter", value: "Creator Mode" },
-    },
-    {
-      id: "early_adopter",
-      title: "Early Adopter",
-      description: "Join SnapConnect in its first month",
-      icon: "rocket",
-      rarity: "rare",
-      unlocked: true,
-      unlockedAt: "2024-01-01T00:00:00Z",
-      reward: { type: "badge", value: "Pioneer" },
-    },
-    {
-      id: "perfect_week",
-      title: "Perfect Week",
-      description: "Use the app for 7 consecutive days",
-      icon: "calendar",
-      rarity: "common",
-      unlocked: false,
-      progress: { current: 4, total: 7 },
-      reward: { type: "boost", value: "Streak Master" },
-    },
-    {
-      id: "night_owl",
-      title: "Night Owl",
-      description: "Share content after midnight 10 times",
-      icon: "moon",
-      rarity: "rare",
-      unlocked: false,
-      progress: { current: 3, total: 10 },
-      reward: { type: "filter", value: "Midnight Mode" },
-    },
-    {
-      id: "team_player",
-      title: "Team Player",
-      description: "Play 50 multiplayer games with friends",
-      icon: "people-circle",
-      rarity: "epic",
-      unlocked: false,
-      progress: { current: 12, total: 50 },
-      reward: { type: "title", value: "Squad Leader" },
-    },
-  ];
+  const handleTogglePin = async (achievement: AchievementData) => {
+    if (!achievement.unlocked) {
+      Alert.alert(
+        "Achievement Locked",
+        "You can only pin unlocked achievements to your showcase.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+
+    const isCurrentlyPinned = pinnedAchievements.includes(achievement.id);
+    
+    if (!isCurrentlyPinned && pinnedAchievements.length >= 5) {
+      Alert.alert(
+        "Showcase Full",
+        "You can only pin up to 5 achievements to your showcase. Remove one first.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+
+    setIsUpdatingShowcase(true);
+
+    try {
+      let newPinnedIds: string[];
+      
+      if (isCurrentlyPinned) {
+        // Unpin achievement
+        newPinnedIds = pinnedAchievements.filter(id => id !== achievement.id);
+      } else {
+        // Pin achievement
+        newPinnedIds = [...pinnedAchievements, achievement.id];
+      }
+
+      // Convert to showcase format using shared utility
+      const showcaseAchievements = achievements
+        .filter(a => newPinnedIds.includes(a.id) && a.unlocked)
+        .map(convertToShowcaseFormat);
+
+      await updateAchievementShowcase(showcaseAchievements);
+      setPinnedAchievements(newPinnedIds);
+
+      console.log(`✅ Achievement ${isCurrentlyPinned ? 'unpinned' : 'pinned'}: ${achievement.title}`);
+    } catch (error) {
+      console.error("❌ Failed to update achievement showcase:", error);
+      Alert.alert(
+        "Update Failed",
+        "Failed to update your achievement showcase. Please try again.",
+        [{ text: "OK" }]
+      );
+    } finally {
+      setIsUpdatingShowcase(false);
+    }
+  };
 
   const categories = [
     { key: "all", label: "All", icon: "grid-outline" },
@@ -184,27 +156,16 @@ const AchievementsScreen: React.FC = () => {
   ];
 
   /**
-   * Filter achievements by category
+   * Filter achievements by category using shared utility
    */
   const getFilteredAchievements = () => {
-    if (selectedCategory === "all") return achievements;
-    
-    // Simple category filtering - in production, achievements would have category tags
-    const categoryMap: { [key: string]: string[] } = {
-      social: ["social_butterfly", "first_snap", "early_adopter"],
-      gaming: ["gaming_legend", "team_player", "perfect_week"],
-      creative: ["content_creator", "night_owl"],
-    };
-    
-    return achievements.filter(achievement => 
-      categoryMap[selectedCategory]?.includes(achievement.id)
-    );
+    return getAchievementsByCategory(profile, selectedCategory);
   };
 
   /**
    * Get rarity color
    */
-  const getRarityColor = (rarity: Achievement["rarity"]) => {
+  const getRarityColor = (rarity: AchievementData["rarity"]) => {
     switch (rarity) {
       case "common": return "#a0a0a0";
       case "rare": return "#00ffff";
@@ -217,28 +178,20 @@ const AchievementsScreen: React.FC = () => {
   /**
    * Get rarity label
    */
-  const getRarityLabel = (rarity: Achievement["rarity"]) => {
+  const getRarityLabel = (rarity: AchievementData["rarity"]) => {
     return rarity.charAt(0).toUpperCase() + rarity.slice(1);
   };
 
   /**
-   * Calculate total achievements progress
-   */
-  const getTotalProgress = () => {
-    const unlocked = achievements.filter(a => a.unlocked).length;
-    const total = achievements.length;
-    return { unlocked, total, percentage: Math.round((unlocked / total) * 100) };
-  };
-
-  const totalProgress = getTotalProgress();
-
-  /**
    * Render achievement item
    */
-  const renderAchievement = (achievement: Achievement) => {
+  const renderAchievement = (achievement: AchievementData) => {
     const rarityColor = getRarityColor(achievement.rarity);
     const progress = achievement.progress;
     const progressPercentage = progress ? (progress.current / progress.total) * 100 : 0;
+    const isPinned = pinnedAchievements.includes(achievement.id);
+    const canPin = achievement.unlocked && pinnedAchievements.length < 5;
+    const canUnpin = achievement.unlocked && isPinned;
 
     return (
       <View
@@ -281,16 +234,45 @@ const AchievementsScreen: React.FC = () => {
               >
                 {achievement.title}
               </Text>
-              <View 
-                className="px-2 py-1 rounded-full"
-                style={{ backgroundColor: `${rarityColor}20` }}
-              >
-                <Text 
-                  className="font-inter text-xs font-medium"
-                  style={{ color: rarityColor }}
+              <View className="flex-row items-center">
+                <View 
+                  className="px-2 py-1 rounded-full mr-2"
+                  style={{ backgroundColor: `${rarityColor}20` }}
                 >
-                  {getRarityLabel(achievement.rarity)}
-                </Text>
+                  <Text 
+                    className="font-inter text-xs font-medium"
+                    style={{ color: rarityColor }}
+                  >
+                    {getRarityLabel(achievement.rarity)}
+                  </Text>
+                </View>
+                
+                {/* Pin Button */}
+                {achievement.unlocked && (
+                  <TouchableOpacity
+                    onPress={() => handleTogglePin(achievement)}
+                    disabled={isUpdatingShowcase || (!canPin && !canUnpin)}
+                    className={`p-2 rounded-full ${
+                      isPinned 
+                        ? "bg-cyber-cyan/20 border border-cyber-cyan/40" 
+                        : canPin 
+                          ? "bg-cyber-gray/20 border border-cyber-gray/40" 
+                          : "bg-cyber-gray/10 border border-cyber-gray/20"
+                    }`}
+                  >
+                    <Ionicons
+                      name={isPinned ? "bookmark" : "bookmark-outline"}
+                      size={16}
+                      color={
+                        isPinned 
+                          ? accentColor 
+                          : canPin 
+                            ? "#ffffff" 
+                            : "#606060"
+                      }
+                    />
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
 
@@ -340,6 +322,20 @@ const AchievementsScreen: React.FC = () => {
               </View>
             )}
 
+            {/* Pinned Status */}
+            {isPinned && (
+              <View className="flex-row items-center mt-2">
+                <Ionicons
+                  name="bookmark"
+                  size={12}
+                  color={accentColor}
+                />
+                <Text className="text-cyber-cyan font-inter text-xs ml-1 font-medium">
+                  Pinned to showcase
+                </Text>
+              </View>
+            )}
+
             {/* Unlocked Date */}
             {achievement.unlocked && achievement.unlockedAt && (
               <Text className="text-white/50 font-inter text-xs mt-2">
@@ -372,6 +368,14 @@ const AchievementsScreen: React.FC = () => {
           </TouchableOpacity>
           <Text className="text-white font-orbitron text-2xl">Achievements</Text>
         </View>
+        
+        {/* Showcase Info */}
+        <View className="flex-row items-center bg-cyber-dark px-3 py-2 rounded-lg">
+          <Ionicons name="bookmark" size={16} color={accentColor} />
+          <Text className="text-cyber-cyan font-inter text-sm ml-2 font-medium">
+            {pinnedAchievements.length}/5
+          </Text>
+        </View>
       </View>
 
       <ScrollView
@@ -403,6 +407,20 @@ const AchievementsScreen: React.FC = () => {
               },
             ]}
           />
+        </View>
+
+        {/* Pin Instructions */}
+        <View className="mx-6 mb-6 bg-cyber-cyan/10 border border-cyber-cyan/20 rounded-lg p-4">
+          <View className="flex-row items-center mb-2">
+            <Ionicons name="information-circle" size={16} color={accentColor} />
+            <Text className="text-cyber-cyan font-inter text-sm ml-2 font-medium">
+              Showcase Your Achievements
+            </Text>
+          </View>
+          <Text className="text-white/70 font-inter text-xs">
+            Tap the bookmark icon on unlocked achievements to pin them to your profile showcase. 
+            You can pin up to 5 achievements to show off your best accomplishments.
+          </Text>
         </View>
 
         {/* Category Filters */}

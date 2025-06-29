@@ -27,6 +27,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useEffect, useRef, useState } from "react";
 import {
+    Image,
     KeyboardAvoidingView,
     Platform,
     SafeAreaView,
@@ -38,6 +39,8 @@ import {
     View,
 } from "react-native";
 import { GamingGenreSelector } from "../../components/common";
+import { AvatarUploader, BannerUploader, StatusMessageEditor } from "../../components/profile";
+import { mediaService } from "../../services/media";
 import { useAuthStore } from "../../stores/authStore";
 import { useThemeStore } from "../../stores/themeStore";
 import { showDestructiveAlert, showErrorAlert } from "../../utils/alertService";
@@ -76,6 +79,15 @@ const EditProfileScreen: React.FC = () => {
   const [bio, setBio] = useState(profile?.bio || "");
   const [gamingInterests, setGamingInterests] = useState<string[]>(profile?.gamingInterests || []);
   const [originalUsername] = useState(profile?.username || "");
+
+  // Avatar state
+  const [showAvatarUploader, setShowAvatarUploader] = useState(false);
+
+  // Banner state
+  const [showBannerUploader, setShowBannerUploader] = useState(false);
+
+  // Status message state
+  const [showStatusMessageEditor, setShowStatusMessageEditor] = useState(false);
 
   // Validation state
   const [usernameError, setUsernameError] = useState("");
@@ -135,108 +147,83 @@ const EditProfileScreen: React.FC = () => {
    * Check username availability with debouncing
    * @param {string} username - Username to check
    */
-  const checkUsernameAvailabilityDebounced = async (username: string) => {
-    // Skip check if username hasn't changed
-    if (username === originalUsername) {
-      setUsernameError("");
-      return;
-    }
-
-    if (!username) {
-      setUsernameError("");
-      return;
-    }
-
-    if (!isValidUsernameFormat(username)) {
-      setUsernameError(
-        "Username must be 3-20 characters, letters, numbers, and underscores only",
-      );
-      return;
-    }
-
-    setIsCheckingUsername(true);
-    setUsernameError("");
-
-    try {
-      const isAvailable = await checkUsernameAvailability(username);
-      if (!isAvailable) {
-        setUsernameError("Username is already taken");
-      }
-    } catch {
-      console.error("Username check failed");
-      setUsernameError("Unable to check username availability");
-    } finally {
-      setIsCheckingUsername(false);
-    }
-  };
-
-  /**
-   * Handle username input change
-   * @param {string} text - New username value
-   */
-  const handleUsernameChange = (text: string) => {
-    const cleanText = text.toLowerCase().trim();
-    setUsername(cleanText);
-    setUsernameError("");
-
+  const checkUsernameWithDebounce = (username: string) => {
     // Clear previous timeout
     if (usernameTimeoutRef.current) {
       clearTimeout(usernameTimeoutRef.current);
     }
 
-    // Set new timeout for debounced availability check
-    usernameTimeoutRef.current = setTimeout(() => {
-      checkUsernameAvailabilityDebounced(cleanText);
-    }, 500);
+    // Clear error immediately if username is empty or same as original
+    if (!username || username === originalUsername) {
+      setUsernameError("");
+      setIsCheckingUsername(false);
+      return;
+    }
+
+    // Validate format first
+    if (!isValidUsernameFormat(username)) {
+      setUsernameError(
+        "Username must be 3-20 characters with letters, numbers, and underscores only"
+      );
+      setIsCheckingUsername(false);
+      return;
+    }
+
+    // Set checking state
+    setIsCheckingUsername(true);
+    setUsernameError("");
+
+    // Set timeout for availability check
+    usernameTimeoutRef.current = setTimeout(async () => {
+      try {
+        const isAvailable = await checkUsernameAvailability(username);
+        
+        if (!isAvailable) {
+          setUsernameError("Username is already taken");
+        } else {
+          setUsernameError("");
+        }
+      } catch (error) {
+        console.error("Username availability check failed:", error);
+        setUsernameError("Unable to check username availability");
+      } finally {
+        setIsCheckingUsername(false);
+      }
+    }, 500); // 500ms debounce
   };
 
   /**
-   * Handle form submission with improved error handling
+   * Handle username change
+   * @param {string} text - New username value
+   */
+  const handleUsernameChange = (text: string) => {
+    // Convert to lowercase and remove spaces
+    const cleanedText = text.toLowerCase().replace(/\s/g, '');
+    setUsername(cleanedText);
+    
+    // Check availability with debouncing
+    checkUsernameWithDebounce(cleanedText);
+  };
+
+  /**
+   * Handle profile save
    */
   const handleSaveProfile = async () => {
+    // Validate required fields
     if (!displayName.trim()) {
-      showErrorAlert("Display name is required.");
+      showErrorAlert("Display name is required", "Validation Error");
       return;
     }
 
     if (!username.trim()) {
-      showErrorAlert("Username is required.");
-      return;
-    }
-
-    if (!isValidUsernameFormat(username)) {
-      showErrorAlert(
-        "Username must be 3-20 characters, letters, numbers, and underscores only.",
-      );
+      showErrorAlert("Username is required", "Validation Error");
       return;
     }
 
     if (usernameError) {
-      showErrorAlert("Please resolve username issues before saving.");
+      showErrorAlert("Please fix username errors before saving", "Validation Error");
       return;
     }
-
-    // Final username availability check if username changed
-    if (username !== originalUsername) {
-      setIsCheckingUsername(true);
-      try {
-        const isAvailable = await checkUsernameAvailability(username);
-        if (!isAvailable) {
-          setUsernameError("Username is already taken");
-          setIsCheckingUsername(false);
-          return;
-        }
-      } catch {
-        setIsCheckingUsername(false);
-        showErrorAlert(
-          "Unable to verify username availability. Please try again.",
-        );
-        return;
-      }
-      setIsCheckingUsername(false);
-    }
-
-    
 
     try {
       const updates = {
@@ -246,17 +233,12 @@ const EditProfileScreen: React.FC = () => {
         gamingInterests: gamingInterests,
       };
 
-      
-
       await updateProfile(updates);
-
-      
 
       // Show success state and navigate back immediately
       setSaveSuccess(true);
 
       // Navigate back immediately since we're using optimistic updates
-      
       navigation.goBack();
     } catch (updateError: any) {
       console.error("❌ Profile update failed:", updateError);
@@ -287,6 +269,98 @@ const EditProfileScreen: React.FC = () => {
       );
     } else {
       navigation.goBack();
+    }
+  };
+
+  /**
+   * Handle avatar upload complete
+   */
+  const handleAvatarUploadComplete = (avatarData: any) => {
+    console.log("✅ Avatar upload completed:", avatarData);
+    setShowAvatarUploader(false);
+    // Profile will be updated automatically by the auth store
+  };
+
+  /**
+   * Handle banner upload complete
+   */
+  const handleBannerUploadComplete = (bannerData: any) => {
+    console.log("✅ Banner upload completed:", bannerData);
+    setShowBannerUploader(false);
+    // Profile will be updated automatically by the auth store
+  };
+
+  /**
+   * Handle banner upload error
+   */
+  const handleBannerUploadError = (error: string) => {
+    console.error("❌ Banner upload error:", error);
+    showErrorAlert(error, "Banner Upload Failed");
+  };
+
+  /**
+   * Get current avatar URL with fallback
+   */
+  const getCurrentAvatarUrl = () => {
+    // Use the optimized avatar URL if available
+    if (profile?.avatar?.urls) {
+      return mediaService.getOptimizedAvatarUrl(profile.avatar, '96');
+    }
+    
+    // Fallback to old profilePhoto field
+    return profile?.profilePhoto || null;
+  };
+
+  /**
+   * Get current banner URL with fallback
+   */
+  const getCurrentBannerUrl = () => {
+    // Use the optimized banner URL if available
+    if (profile?.profileBanner?.urls) {
+      return mediaService.getOptimizedBannerUrl(profile.profileBanner, 'large');
+    }
+    
+    // Fallback to old banner URL field
+    return profile?.profileBanner?.url || null;
+  };
+
+  /**
+   * Get availability status color
+   * @param {string} availability - Availability status
+   * @returns {string} Color hex code
+   */
+  const getAvailabilityColor = (availability: string) => {
+    switch (availability) {
+      case 'available':
+        return '#10B981'; // Green
+      case 'busy':
+        return '#EF4444'; // Red
+      case 'gaming':
+        return '#8B5CF6'; // Purple
+      case 'afk':
+        return '#6B7280'; // Gray
+      default:
+        return '#10B981'; // Default to green
+    }
+  };
+
+  /**
+   * Get availability status label
+   * @param {string} availability - Availability status
+   * @returns {string} Human readable label
+   */
+  const getAvailabilityLabel = (availability: string) => {
+    switch (availability) {
+      case 'available':
+        return 'Available';
+      case 'busy':
+        return 'Busy';
+      case 'gaming':
+        return 'Gaming';
+      case 'afk':
+        return 'Away';
+      default:
+        return 'Available';
     }
   };
 
@@ -362,27 +436,136 @@ const EditProfileScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          {/* Profile Banner Section */}
+          <View className="mb-8">
+            <Text className="text-cyber-cyan font-inter mb-3 font-medium">
+              Profile Banner
+            </Text>
+            
+            {/* Banner Preview/Upload Area */}
+            <TouchableOpacity
+              onPress={() => setShowBannerUploader(true)}
+              className="w-full h-32 rounded-xl overflow-hidden bg-cyber-dark border-2 border-dashed border-cyber-gray/50"
+            >
+              {getCurrentBannerUrl() ? (
+                <View className="relative w-full h-full">
+                  <Image
+                    source={{ uri: getCurrentBannerUrl() }}
+                    className="w-full h-full"
+                    style={{ resizeMode: 'cover' }}
+                  />
+                  {/* Edit Overlay */}
+                  <View className="absolute inset-0 bg-black/50 justify-center items-center">
+                    <Ionicons name="camera-outline" size={24} color="white" />
+                    <Text className="text-white font-inter text-sm mt-1">
+                      Change Banner
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <View className="flex-1 justify-center items-center">
+                  <Ionicons name="image-outline" size={32} color="#6B7280" />
+                  <Text className="text-white/60 font-inter text-sm mt-2">
+                    Add Profile Banner
+                  </Text>
+                  <Text className="text-white/40 font-inter text-xs mt-1">
+                    Landscape images work best
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Status Message Section */}
+          <View className="mb-8">
+            <Text className="text-cyber-cyan font-inter mb-3 font-medium">
+              Status Message
+            </Text>
+            
+            {/* Status Message Preview/Edit Area */}
+            <TouchableOpacity
+              onPress={() => setShowStatusMessageEditor(true)}
+              className="w-full p-4 rounded-xl bg-cyber-dark border border-cyber-gray/50"
+            >
+              {profile?.statusMessage && (profile?.statusMessage?.text || profile?.statusMessage?.emoji) ? (
+                <View className="flex-row items-center">
+                  {/* Availability Indicator */}
+                  <View 
+                    className="w-3 h-3 rounded-full mr-3"
+                    style={{ backgroundColor: getAvailabilityColor(profile.statusMessage.availability) }}
+                  />
+                  <View className="flex-1">
+                    <Text className="text-white font-inter">
+                      {profile.statusMessage.emoji && `${profile.statusMessage.emoji} `}
+                      {profile.statusMessage.text}
+                    </Text>
+                    <Text className="text-white/60 font-inter text-xs mt-1">
+                      {getAvailabilityLabel(profile.statusMessage.availability)}
+                      {profile.statusMessage.gameContext && ` • ${profile.statusMessage.gameContext}`}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#6B7280" />
+                </View>
+              ) : (
+                <View className="flex-row items-center">
+                  <Ionicons name="chatbubble-outline" size={24} color="#6B7280" />
+                  <View className="flex-1 ml-3">
+                    <Text className="text-white/60 font-inter text-sm">
+                      Set Status Message
+                    </Text>
+                                         <Text className="text-white/40 font-inter text-xs mt-1">
+                       Let friends know what you&apos;re up to
+                     </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#6B7280" />
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+
           {/* Profile Photo Section */}
           <View className="items-center py-8">
-            <View className="w-24 h-24 bg-cyber-cyan/20 rounded-full justify-center items-center mb-4">
-              <Ionicons name="person" size={40} color={accentColor} />
-            </View>
-            <TouchableOpacity className="bg-cyber-dark px-4 py-2 rounded-lg">
+            {/* Avatar Display */}
+            <TouchableOpacity
+              onPress={() => setShowAvatarUploader(true)}
+              className="mb-4"
+            >
+              {getCurrentAvatarUrl() ? (
+                <View className="relative">
+                  <Image
+                    source={{ uri: getCurrentAvatarUrl() }}
+                    className="w-24 h-24 rounded-full"
+                    style={{ backgroundColor: '#2a2a2a' }}
+                  />
+                  {/* Edit Overlay */}
+                  <View className="absolute inset-0 bg-black/50 rounded-full justify-center items-center">
+                    <Ionicons name="camera-outline" size={24} color="white" />
+                  </View>
+                </View>
+              ) : (
+                <View className="w-24 h-24 bg-cyber-cyan/20 rounded-full justify-center items-center">
+                  <Ionicons name="person" size={40} color={accentColor} />
+                </View>
+              )}
+            </TouchableOpacity>
+
+            {/* Change Photo Button */}
+            <TouchableOpacity 
+              onPress={() => setShowAvatarUploader(true)}
+              className="bg-cyber-dark px-4 py-2 rounded-lg border border-cyber-cyan/30"
+            >
               <Text className="text-cyber-cyan font-inter font-medium">
-                Change Photo
+                {getCurrentAvatarUrl() ? 'Change Photo' : 'Add Photo'}
               </Text>
             </TouchableOpacity>
-            <Text className="text-white/40 font-inter text-xs mt-2 text-center">
-              Profile photo coming soon
-            </Text>
           </View>
 
           {/* Form Fields */}
-          <View className="mb-8">
+          <View className="space-y-6">
             {/* Display Name */}
             <View className="mb-6">
               <Text className="text-cyber-cyan font-inter mb-2 font-medium">
-                Display Name <Text className="text-red-400">*</Text>
+                Display Name
               </Text>
               <TextInput
                 value={displayName}
@@ -395,55 +578,54 @@ const EditProfileScreen: React.FC = () => {
                 editable={!isLoading}
                 maxLength={50}
               />
-              <Text className="text-white/40 font-inter text-xs mt-1">
-                {displayName.length}/50 characters
-              </Text>
             </View>
 
             {/* Username */}
             <View className="mb-6">
               <Text className="text-cyber-cyan font-inter mb-2 font-medium">
-                Username <Text className="text-red-400">*</Text>
+                Username
               </Text>
-              <TextInput
-                value={username}
-                onChangeText={handleUsernameChange}
-                placeholder="Choose a unique username"
-                placeholderTextColor="#6B7280"
-                className={`bg-cyber-dark border rounded-lg px-4 py-3 text-white font-inter ${
-                  usernameError ? "border-red-500" : "border-cyber-gray"
-                }`}
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!isLoading && !isCheckingUsername}
-                maxLength={20}
-              />
-
-              {isCheckingUsername ? (
-                <Text className="text-yellow-400 text-sm font-inter mt-1">
-                  Checking availability...
-                </Text>
-              ) : null}
-
+              <View className="relative">
+                <TextInput
+                  value={username}
+                  onChangeText={handleUsernameChange}
+                  placeholder="Enter your username"
+                  placeholderTextColor="#6B7280"
+                  className={`bg-cyber-dark border rounded-lg px-4 py-3 text-white font-jetbrains pr-10 ${
+                    usernameError
+                      ? "border-red-500"
+                      : username && !usernameError && !isCheckingUsername
+                      ? "border-green-500"
+                      : "border-cyber-gray"
+                  }`}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!isLoading}
+                  maxLength={20}
+                />
+                
+                {/* Username validation indicator */}
+                <View className="absolute right-3 top-4">
+                  {isCheckingUsername ? (
+                    <Ionicons name="time-outline" size={16} color="#6B7280" />
+                  ) : usernameError ? (
+                    <Ionicons name="close-circle" size={16} color="#ef4444" />
+                  ) : username && username !== originalUsername ? (
+                    <Ionicons name="checkmark-circle" size={16} color="#10b981" />
+                  ) : null}
+                </View>
+              </View>
+              
+              {/* Username error or help text */}
               {usernameError ? (
-                <Text className="text-red-400 text-sm font-inter mt-1">
+                <Text className="text-red-400 font-inter text-sm mt-1">
                   {usernameError}
                 </Text>
-              ) : null}
-
-              {username &&
-              !usernameError &&
-              !isCheckingUsername &&
-              username !== originalUsername ? (
-                <Text className="text-green-400 text-sm font-inter mt-1">
-                  ✓ Username available
+              ) : (
+                <Text className="text-white/40 font-inter text-xs mt-1">
+                  3-20 characters, letters, numbers, and underscores only
                 </Text>
-              ) : null}
-
-              <Text className="text-white/40 font-inter text-xs mt-1">
-                {username.length}/20 characters • Letters, numbers, and
-                underscores only
-              </Text>
+              )}
             </View>
 
             {/* Bio */}
@@ -507,6 +689,29 @@ const EditProfileScreen: React.FC = () => {
             </View>
           </View>
 
+          {/* Advanced Customization Link */}
+          <View className="mb-8">
+            <TouchableOpacity
+              onPress={() => navigation.navigate("ProfileCustomization")}
+              className="bg-cyber-dark/50 p-4 rounded-xl border border-cyber-cyan/30"
+            >
+              <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center">
+                  <Ionicons name="color-palette-outline" size={24} color={accentColor} />
+                  <View className="ml-3">
+                    <Text className="text-cyber-cyan font-inter font-medium">
+                      Advanced Customization
+                    </Text>
+                    <Text className="text-white/60 font-inter text-sm">
+                      Avatars, banners, status showcase
+                    </Text>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={accentColor} />
+              </View>
+            </TouchableOpacity>
+          </View>
+
           {/* Gaming Aesthetic Elements */}
           <View className="items-center mb-8">
             <View className="w-full h-px bg-cyber-cyan opacity-30 mb-4" />
@@ -516,6 +721,54 @@ const EditProfileScreen: React.FC = () => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Avatar Uploader Modal */}
+      <AvatarUploader
+        visible={showAvatarUploader}
+        onUploadComplete={handleAvatarUploadComplete}
+        onCancel={() => setShowAvatarUploader(false)}
+      />
+
+      {/* Banner Uploader Modal */}
+      {showBannerUploader && profile?.uid && (
+        <View className="absolute inset-0 bg-black/80 z-50">
+          <SafeAreaView className="flex-1">
+            <View className="flex-row justify-between items-center px-6 py-4 border-b border-cyber-gray/20">
+              <Text className="text-white font-orbitron text-xl">Profile Banner</Text>
+              <TouchableOpacity onPress={() => setShowBannerUploader(false)}>
+                <Ionicons name="close" size={24} color="white" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView className="flex-1 p-6">
+              <BannerUploader
+                userId={profile.uid}
+                currentBanner={profile.profileBanner}
+                onUploadComplete={handleBannerUploadComplete}
+                onUploadError={handleBannerUploadError}
+                aspectRatio="16:9"
+              />
+            </ScrollView>
+          </SafeAreaView>
+        </View>
+      )}
+
+      {/* Status Message Editor Modal */}
+      <StatusMessageEditor
+        visible={showStatusMessageEditor}
+        onClose={() => setShowStatusMessageEditor(false)}
+        initialStatus={{
+          text: profile?.statusMessage?.text || '',
+          emoji: profile?.statusMessage?.emoji || '',
+          gameContext: profile?.statusMessage?.gameContext || '',
+          availability: profile?.statusMessage?.availability || 'available',
+          expiresAt: profile?.statusMessage?.expiresAt || undefined,
+        }}
+        onSave={(statusData: any) => {
+          console.log('✅ Status message saved:', statusData);
+          setShowStatusMessageEditor(false);
+          // Profile will be updated automatically by the auth store
+        }}
+      />
     </SafeAreaView>
   );
 };

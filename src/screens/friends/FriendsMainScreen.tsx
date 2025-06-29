@@ -11,6 +11,7 @@
  * - react-native: Core components
  * - @react-navigation/native: Navigation
  * - @/services/firebase/friendsService: Friends management
+ * - @/services/media: Media services
  * - @/stores/authStore: Authentication state
  * - @/stores/themeStore: Theme management
  *
@@ -32,6 +33,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
     FlatList,
+    Image,
     RefreshControl,
     SafeAreaView,
     ScrollView,
@@ -45,6 +47,7 @@ import NotificationBadge from "../../components/common/NotificationBadge";
 import { useFriendRequests } from "../../hooks/useFriendRequests";
 import { useTabBarHeight } from "../../hooks/useTabBarHeight";
 import { friendsService } from "../../services/firebase/friendsService";
+import { mediaService } from "../../services/media";
 import { useAuthStore } from "../../stores/authStore";
 import { useThemeStore } from "../../stores/themeStore";
 import {
@@ -53,6 +56,7 @@ import {
     showSuccessAlert,
 } from "../../utils/alertService";
 import { useOptimizedFlatList } from "../../utils/scrollOptimization";
+import { getStatusDisplayData } from "../../utils/statusHelpers";
 
 /**
  * Friend interface for display
@@ -62,6 +66,16 @@ interface Friend {
   displayName: string;
   username: string;
   profilePhoto?: string;
+  avatar?: any; // Avatar data with URLs
+  profileBanner?: any; // Banner data with URLs
+  statusMessage?: {
+    text?: string;
+    emoji?: string;
+    gameContext?: string;
+    availability?: 'available' | 'busy' | 'gaming' | 'afk';
+    expiresAt?: Date;
+    updatedAt?: Date;
+  };
   lastActive?: Date;
   isOnline?: boolean;
   createdAt?: Date;
@@ -78,6 +92,15 @@ interface SerializableFriend {
   displayName: string;
   username: string;
   profilePhoto?: string;
+  profileBanner?: any; // Banner data with URLs
+  statusMessage?: {
+    text?: string;
+    emoji?: string;
+    gameContext?: string;
+    availability?: 'available' | 'busy' | 'gaming' | 'afk';
+    expiresAt?: string; // ISO string instead of Date
+    updatedAt?: string; // ISO string instead of Date
+  };
   bio?: string;
   lastActive?: string; // ISO string instead of Date
   isOnline?: boolean;
@@ -167,6 +190,9 @@ const FriendsMainScreen: React.FC = () => {
           displayName: friend.displayName || friend.username || "Unknown User",
           username: friend.username || "no-username",
           profilePhoto: friend.profilePhoto,
+          avatar: friend.avatar,
+          profileBanner: friend.profileBanner,
+          statusMessage: friend.statusMessage,
           lastActive: presence.lastActive,
           isOnline: presence.isOnline,
           createdAt: friend.createdAt?.toDate(),
@@ -280,6 +306,11 @@ const FriendsMainScreen: React.FC = () => {
       // Create a serializable version of the friend object
       const serializableFriend: SerializableFriend = {
         ...friend,
+        statusMessage: friend.statusMessage ? {
+          ...friend.statusMessage,
+          expiresAt: friend.statusMessage.expiresAt?.toISOString(),
+          updatedAt: friend.statusMessage.updatedAt?.toISOString(),
+        } : undefined,
         lastActive: friend.lastActive ? friend.lastActive.toISOString() : undefined,
         createdAt: friend.createdAt ? friend.createdAt.toISOString() : undefined,
       };
@@ -350,6 +381,28 @@ const FriendsMainScreen: React.FC = () => {
   };
 
   /**
+   * Get friend's avatar URL with fallback
+   */
+  const getFriendAvatarUrl = (friend: Friend) => {
+    if (friend.avatar?.urls) {
+      return mediaService.getOptimizedAvatarUrl(friend.avatar, '48');
+    }
+    // Fallback to old profilePhoto field
+    return friend.profilePhoto || null;
+  };
+
+  /**
+   * Get friend's banner URL with fallback
+   */
+  const getFriendBannerUrl = (friend: Friend) => {
+    if (friend.profileBanner?.urls) {
+      return mediaService.getOptimizedBannerUrl(friend.profileBanner, 'small');
+    }
+    // Fallback to old banner URL field
+    return friend.profileBanner?.url || null;
+  };
+
+  /**
    * Format last active time
    */
   const formatLastActive = (date: Date) => {
@@ -373,55 +426,101 @@ const FriendsMainScreen: React.FC = () => {
   const renderFriendItem = ({ item }: { item: Friend }) => (
     <TouchableOpacity
       onPress={() => handleViewProfile(item)}
-      className="flex-row items-center p-4 mx-4 mb-2 bg-cyber-dark/50 rounded-lg active:bg-cyber-gray/20"
+      className="mx-4 mb-2 rounded-lg overflow-hidden active:opacity-80"
     >
-      {/* Avatar with status indicator */}
-      <View className="relative mr-4">
-        <View className="w-12 h-12 bg-cyber-cyan/20 rounded-full justify-center items-center">
-          <Text className="text-cyber-cyan font-inter font-semibold text-sm">
-            {getFriendInitials(item)}
-          </Text>
+      {/* Banner Background (if available) */}
+      {getFriendBannerUrl(item) && (
+        <View className="absolute inset-0">
+          <Image
+            source={{ uri: getFriendBannerUrl(item)! }}
+            className="w-full h-full"
+            style={{ resizeMode: 'cover' }}
+          />
+          {/* Banner Overlay */}
+          <View className="absolute inset-0 bg-black/70" />
         </View>
-        {/* Status indicator */}
-        <View
-          className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-cyber-black"
-          style={{ backgroundColor: getStatusColor(item.status) }}
-        />
-      </View>
+      )}
 
-      {/* Friend info */}
-      <View className="flex-1">
-        <Text className="text-white font-inter font-medium text-base">
-          {item.displayName}
-        </Text>
-        <Text className="text-white/60 font-inter text-sm">
-          @{item.username}
-        </Text>
-        <Text className="text-white/40 font-inter text-xs mt-1">
-          {item.status === "online"
-            ? "Online now"
-            : item.lastActive
-              ? `Last seen ${formatLastActive(item.lastActive)}`
-              : "Offline"}
-        </Text>
-      </View>
+      {/* Content Container */}
+      <View className={`flex-row items-center p-4 ${!getFriendBannerUrl(item) ? 'bg-cyber-dark/50' : ''}`}>
+        {/* Avatar with status indicator */}
+        <View className="relative mr-4">
+          {getFriendAvatarUrl(item) ? (
+            <Image
+              source={{ uri: getFriendAvatarUrl(item)! }}
+              className="w-12 h-12 rounded-full"
+              style={{ backgroundColor: '#2a2a2a' }}
+            />
+          ) : (
+            <View className="w-12 h-12 bg-cyber-cyan/20 rounded-full justify-center items-center">
+              <Text className="text-cyber-cyan font-inter font-semibold text-sm">
+                {getFriendInitials(item)}
+              </Text>
+            </View>
+          )}
+          {/* Status indicator */}
+          <View
+            className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-cyber-black"
+            style={{ backgroundColor: getStatusColor(item.status) }}
+          />
+        </View>
 
-      {/* Actions */}
-      <View className="flex-row items-center">
-        {item.mutualFriends && item.mutualFriends > 0 && (
-          <View className="bg-cyber-cyan/20 px-2 py-1 rounded-full mr-2">
-            <Text className="text-cyber-cyan font-inter text-xs">
-              {item.mutualFriends} mutual
-            </Text>
-          </View>
-        )}
+        {/* Friend info */}
+        <View className="flex-1">
+          <Text className="text-white font-inter font-medium text-base">
+            {item.displayName}
+          </Text>
+          <Text className="text-white/60 font-inter text-sm">
+            @{item.username}
+          </Text>
+          
+          {/* Status Message Display */}
+          {(() => {
+            const statusDisplay = getStatusDisplayData(item.statusMessage);
+            if (statusDisplay) {
+              return (
+                <View className="flex-row items-center mt-1">
+                  <View 
+                    className="w-2 h-2 rounded-full mr-2"
+                    style={{ backgroundColor: statusDisplay.color }}
+                  />
+                  <Text className="text-white/70 font-inter text-xs" numberOfLines={1}>
+                    {statusDisplay.text}
+                  </Text>
+                </View>
+              );
+            }
+            
+            // Fallback to online status
+            return (
+              <Text className="text-white/40 font-inter text-xs mt-1">
+                {item.status === "online"
+                  ? "Online now"
+                  : item.lastActive
+                    ? `Last seen ${formatLastActive(item.lastActive)}`
+                    : "Offline"}
+              </Text>
+            );
+          })()}
+        </View>
 
-        <TouchableOpacity
-          onPress={() => handleRemoveFriend(item)}
-          className="p-2"
-        >
-          <Ionicons name="remove-circle-outline" size={20} color="#ef4444" />
-        </TouchableOpacity>
+        {/* Actions */}
+        <View className="flex-row items-center">
+          {item.mutualFriends && item.mutualFriends > 0 && (
+            <View className="bg-cyber-cyan/20 px-2 py-1 rounded-full mr-2">
+              <Text className="text-cyber-cyan font-inter text-xs">
+                {item.mutualFriends} mutual
+              </Text>
+            </View>
+          )}
+
+          <TouchableOpacity
+            onPress={() => handleRemoveFriend(item)}
+            className="p-2"
+          >
+            <Ionicons name="remove-circle-outline" size={20} color="#ef4444" />
+          </TouchableOpacity>
+        </View>
       </View>
     </TouchableOpacity>
   );

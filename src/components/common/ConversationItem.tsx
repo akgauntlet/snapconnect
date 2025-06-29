@@ -25,7 +25,8 @@
 
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { Image, Text, TouchableOpacity, View } from "react-native";
+import { mediaService } from "../../services/media";
 
 /**
  * Interface for conversation data
@@ -40,6 +41,8 @@ export interface Conversation {
   lastMessageAt: Date;
   hasUnreadMedia?: boolean;
   unreadCount?: number;
+  avatar?: any; // Avatar data with URLs
+  profilePhoto?: string; // Fallback for old profile photos
 }
 
 /**
@@ -79,6 +82,17 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
   };
 
   /**
+   * Get conversation avatar URL with fallback
+   */
+  const getConversationAvatarUrl = () => {
+    if (conversation.avatar?.urls) {
+      return mediaService.getOptimizedAvatarUrl(conversation.avatar, '48');
+    }
+    // Fallback to old profilePhoto field
+    return conversation.profilePhoto || null;
+  };
+
+  /**
    * Get status indicator color based on online status
    */
   const getStatusColor = () => {
@@ -107,11 +121,19 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
     >
       {/* Avatar with status indicator */}
       <View className="relative mr-4">
-        <View className="w-14 h-14 bg-cyber-cyan/10 border border-cyber-cyan/20 rounded-full justify-center items-center">
-          <Text className="text-cyber-cyan font-inter font-bold text-base">
-            {getUserInitials(conversation.name)}
-          </Text>
-        </View>
+        {getConversationAvatarUrl() ? (
+          <Image
+            source={{ uri: getConversationAvatarUrl()! }}
+            className="w-14 h-14 rounded-full border border-cyber-cyan/20"
+            style={{ backgroundColor: '#2a2a2a' }}
+          />
+        ) : (
+          <View className="w-14 h-14 bg-cyber-cyan/10 border border-cyber-cyan/20 rounded-full justify-center items-center">
+            <Text className="text-cyber-cyan font-inter font-bold text-base">
+              {getUserInitials(conversation.name)}
+            </Text>
+          </View>
+        )}
 
         {/* Online status indicator */}
         <View

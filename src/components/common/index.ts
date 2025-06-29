@@ -52,7 +52,8 @@ export type {
 // Utility Components (existing)
 export { default as ConversationItem } from "./ConversationItem";
 export { default as ConversationStarters } from "./ConversationStarters";
-export { AlertManager, customAlert, CustomAlertProvider } from "./CustomAlert";
+export { default as ConversationStartersIntro } from "./ConversationStartersIntro";
+export { AlertManager, CustomAlertProvider, customAlert } from "./CustomAlert";
 export { default as IncomingMessagesHeader } from "./IncomingMessagesHeader";
 export { default as MediaViewer } from "./MediaViewer";
 export { default as MessageFriendSelector } from "./MessageFriendSelector";

@@ -1,25 +1,19 @@
 /**
  * @file GamingInterestsScreen.tsx
- * @description Gaming interests selection screen for new user onboarding.
- * Allows users to select their favorite gaming genres during signup.
+ * @description Simple gaming interests selection screen for user onboarding.
+ * Allows users to select their gaming preferences to personalize their experience.
  *
  * @author SnapConnect Team
  * @created 2024-01-25
  * @modified 2024-01-25
  *
  * @dependencies
- * - react: React hooks
- * - react-native: Core components
- * - @react-navigation/native: Navigation
- * - @/components/common: GamingGenreSelector
- * - @/stores/authStore: Authentication state
- *
- * @usage
- * Part of the signup flow after basic profile creation.
- *
- * @ai_context
- * AI-powered gaming preference detection and smart recommendations.
- * Integrates with gaming platform APIs for enhanced suggestions.
+ * - react: React hooks and components
+ * - react-native: Core UI components
+ * - @react-navigation/native: Navigation hooks
+ * - @/components/common: GamingGenreSelector component
+ * - @/stores/authStore: Authentication state management
+ * - @/utils/alertService: Error handling utilities
  */
 
 import { Ionicons } from "@expo/vector-icons";
@@ -27,9 +21,11 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useState } from "react";
 import {
+    ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
     SafeAreaView,
+    ScrollView,
     Text,
     TouchableOpacity,
     View,
@@ -38,83 +34,63 @@ import { GamingGenreSelector } from "../../components/common";
 import { useAuthStore } from "../../stores/authStore";
 import { showErrorAlert } from "../../utils/alertService";
 
-// Type definitions
+/**
+ * Navigation type for gaming interests screen
+ */
 type GamingInterestsNavigationProp = NativeStackNavigationProp<any, "GamingInterests">;
 
+/**
+ * Props interface for the gaming interests screen
+ */
 interface GamingInterestsScreenProps {
   navigation?: GamingInterestsNavigationProp;
 }
 
 /**
  * Gaming interests selection screen component
- *
- * @param props - Component properties
- * @returns {React.ReactElement} Rendered gaming interests screen
- *
- * @performance
- * - Optimized genre selection with efficient state management
- * - Smooth navigation transitions with gaming aesthetics
- * - Memory-efficient component rendering
- *
- * @ai_integration
- * - Smart genre recommendations based on user behavior
- * - Platform integration for existing gaming library analysis
- * - Personalized gaming interest suggestions
+ * Simple, focused screen for selecting gaming preferences during onboarding
  */
-const GamingInterestsScreen: React.FC<GamingInterestsScreenProps> = () => {
+function GamingInterestsScreen(): React.ReactElement {
   const navigation = useNavigation<GamingInterestsNavigationProp>();
   const route = useRoute();
   
-  // Get signup data from navigation params
+  // Get signup data from navigation params if available
   const signupData = (route.params as any)?.signupData || {};
   
-  // Auth store
-  const { updateProfile, isLoading } = useAuthStore();
+  // Auth store hooks
+  const { updateProfile, isAuthenticated, profile } = useAuthStore();
+  
+  // Check if this is an existing user completing onboarding
+  const isExistingUserOnboarding = isAuthenticated && profile && !profile.onboardingComplete;
 
-  // Form state
+  // Component state
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [isCompleting, setIsCompleting] = useState(false);
 
   /**
-   * Handle genre selection changes
-   * @param {string[]} genres - Selected genre IDs
+   * Handle changes to selected gaming genres
+   * @param genres - Array of selected genre strings
    */
-  const handleGenresChange = (genres: string[]) => {
+  function handleGenresChange(genres: string[]): void {
     setSelectedGenres(genres);
-  };
+  }
 
   /**
-   * Handle skip - continue without selecting interests
+   * Complete the onboarding process by saving gaming interests to user profile
+   * @param interests - Array of selected gaming interest strings
    */
-  const handleSkip = () => {
-    // Complete signup without gaming interests
-    completeSignup([]);
-  };
-
-  /**
-   * Handle continue with selected interests
-   */
-  const handleContinue = () => {
-    if (selectedGenres.length === 0) {
+  async function completeOnboarding(interests: string[]): Promise<void> {
+    if (interests.length === 0) {
       showErrorAlert(
-        "Please select at least one gaming interest or skip this step.",
-        "No Interests Selected"
+        "Please select at least one gaming interest to continue.",
+        "Gaming Interests Required"
       );
       return;
     }
 
-    completeSignup(selectedGenres);
-  };
-
-  /**
-   * Complete the signup process with gaming interests
-   * @param {string[]} interests - Selected gaming interests
-   */
-  const completeSignup = async (interests: string[]) => {
     setIsCompleting(true);
 
     try {
-      // Update user profile with gaming interests
       const profileUpdates = {
         gamingInterests: interests,
         profileCompletedAt: new Date().toISOString(),
@@ -122,9 +98,9 @@ const GamingInterestsScreen: React.FC<GamingInterestsScreenProps> = () => {
       };
 
       await updateProfile(profileUpdates);
-
-      // Navigation will be handled by auth state change
-      // User will be automatically directed to main app
+      
+      // Navigation will be handled automatically by auth state changes
+      console.log("✅ Gaming interests saved successfully");
       
     } catch (error: any) {
       console.error("❌ Gaming interests update failed:", error);
@@ -135,15 +111,174 @@ const GamingInterestsScreen: React.FC<GamingInterestsScreenProps> = () => {
         "Profile Update Failed"
       );
     }
-  };
+  }
 
   /**
-   * Handle back navigation with confirmation
+   * Handle continue button press
    */
-  const handleGoBack = () => {
-    // Navigate back to previous signup step
-    navigation.goBack();
-  };
+  function handleContinue(): void {
+    completeOnboarding(selectedGenres);
+  }
+
+  /**
+   * Render the main content section with hero message and description
+   */
+  function renderHeroSection(): React.ReactElement {
+    return (
+      <View className="items-center mb-8">
+        <View className="bg-cyber-cyan/20 rounded-full p-6 mb-4">
+          <Ionicons name="game-controller" size={48} color="#00ffff" />
+        </View>
+        
+        <Text className="text-cyber-cyan font-orbitron text-2xl mb-2 text-center">
+          {isExistingUserOnboarding ? "Complete Your Profile" : "Choose Your Gaming Vibe"}
+        </Text>
+        
+        <Text className="text-white/80 font-inter text-base text-center leading-6 px-4">
+          {isExistingUserOnboarding 
+            ? "Set up your gaming preferences to unlock AI features and access the app"
+            : "Help us connect you with like-minded gamers by selecting your favorite genres"
+          }
+        </Text>
+      </View>
+    );
+  }
+
+  /**
+   * Render the gaming features info section
+   */
+  function renderFeaturesSection(): React.ReactElement {
+    return (
+      <View className="bg-cyber-dark/40 border border-cyber-cyan/20 rounded-lg p-6 mb-6">
+        <View className="flex-row items-center mb-4">
+          <Ionicons name="sparkles" size={20} color="#00ffff" />
+          <Text className="text-cyber-cyan font-inter font-semibold ml-3">
+            What You&apos;ll Get
+          </Text>
+        </View>
+
+        <View className="space-y-3">
+          <View className="flex-row items-start">
+            <Ionicons name="people" size={16} color="#22c55e" className="mt-1" />
+            <View className="flex-1 ml-3">
+              <Text className="text-white font-inter font-medium">
+                Smart Friend Matching
+              </Text>
+              <Text className="text-white/70 font-inter text-sm">
+                Connect with gamers who share your interests
+              </Text>
+            </View>
+          </View>
+
+          <View className="flex-row items-start">
+            <Ionicons name="chatbubbles" size={16} color="#22c55e" className="mt-1" />
+            <View className="flex-1 ml-3">
+              <Text className="text-white font-inter font-medium">
+                AI Conversation Starters
+              </Text>
+              <Text className="text-white/70 font-inter text-sm">
+                Never run out of things to talk about
+              </Text>
+            </View>
+          </View>
+
+          <View className="flex-row items-start">
+            <Ionicons name="trophy" size={16} color="#22c55e" className="mt-1" />
+            <View className="flex-1 ml-3">
+              <Text className="text-white font-inter font-medium">
+                Personalized Content
+              </Text>
+              <Text className="text-white/70 font-inter text-sm">
+                Get recommendations tailored to your taste
+              </Text>
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  /**
+   * Render the gaming genre selector section
+   */
+  function renderGenreSelectorSection(): React.ReactElement {
+    return (
+      <View className="flex-1 min-h-[300px] mb-6">
+        <View className="mb-4">
+          <Text className="text-white font-inter text-lg mb-2">
+            Select Your Gaming Interests
+          </Text>
+          <Text className="text-white/60 font-inter text-sm">
+            Choose up to 8 genres • {selectedGenres.length} selected
+          </Text>
+        </View>
+
+        <GamingGenreSelector
+          selectedGenres={selectedGenres}
+          onGenresChange={handleGenresChange}
+          maxSelections={8}
+          showPresets={true}
+          showCategories={true}
+          disabled={isCompleting}
+        />
+      </View>
+    );
+  }
+
+  /**
+   * Render the action buttons section
+   */
+  function renderActionSection(): React.ReactElement {
+    const hasSelection = selectedGenres.length > 0;
+    const buttonText = isCompleting 
+      ? "COMPLETING SETUP..." 
+      : hasSelection
+      ? `CONTINUE WITH ${selectedGenres.length} GENRE${selectedGenres.length !== 1 ? 'S' : ''}`
+      : "SELECT AT LEAST ONE GENRE";
+
+    return (
+      <View className="pt-4">
+        <TouchableOpacity
+          onPress={handleContinue}
+          disabled={isCompleting || !hasSelection}
+          className={`py-4 rounded-lg shadow-lg ${
+            hasSelection && !isCompleting 
+              ? "bg-cyber-cyan" 
+              : "bg-cyber-gray opacity-50"
+          }`}
+          style={hasSelection ? {
+            shadowColor: '#00ffff',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.3,
+            shadowRadius: 10,
+          } : undefined}
+        >
+          <View className="flex-row items-center justify-center">
+            {isCompleting && (
+              <ActivityIndicator 
+                size="small" 
+                color={hasSelection ? "#000000" : "#ffffff"} 
+                className="mr-2" 
+              />
+            )}
+            <Text className={`font-bold text-lg font-orbitron ${
+              hasSelection && !isCompleting ? "text-cyber-black" : "text-white/50"
+            }`}>
+              {buttonText}
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Gaming aesthetic footer */}
+        <View className="items-center mt-6">
+          <View className="w-full h-px bg-cyber-cyan opacity-30 mb-2" />
+          <Text className="text-green-400 text-xs font-mono">
+            [ PERSONALIZING GAMING EXPERIENCE • AI-POWERED ]
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-cyber-black">
@@ -153,86 +288,33 @@ const GamingInterestsScreen: React.FC<GamingInterestsScreenProps> = () => {
       >
         {/* Header */}
         <View className="flex-row justify-between items-center px-6 py-4 border-b border-cyber-gray">
-          <TouchableOpacity onPress={handleGoBack} className="p-2">
-            <Ionicons name="arrow-back" size={24} color="white" />
-          </TouchableOpacity>
-
-          <Text className="text-white font-orbitron text-xl">Gaming Interests</Text>
-
-          <TouchableOpacity onPress={handleSkip} className="p-2">
-            <Text className="text-cyber-cyan font-inter">Skip</Text>
-          </TouchableOpacity>
+          <View className="w-10" />
+          
+          <Text className="text-white font-orbitron text-xl">
+            Gaming Setup
+          </Text>
+          
+          <View className="w-10" />
         </View>
 
-        {/* Content */}
-        <View className="flex-1 px-6 py-6">
-          {/* Welcome Message */}
-          <View className="mb-6">
-            <Text className="text-cyber-cyan font-orbitron text-2xl mb-2">
-              Welcome to SnapConnect!
-            </Text>
-            <Text className="text-white/80 font-inter text-base leading-6">
-              Let&apos;s personalize your gaming experience. Select the genres you enjoy 
-              to help us connect you with like-minded gamers and suggest relevant content.
-            </Text>
-          </View>
+        {/* Main Content */}
+        <ScrollView 
+          className="flex-1 px-6 py-6"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 20 }}
+        >
+          {renderHeroSection()}
+          {renderFeaturesSection()}
+          {renderGenreSelectorSection()}
+        </ScrollView>
 
-          {/* Gaming Genre Selector */}
-          <View className="flex-1">
-            <GamingGenreSelector
-              selectedGenres={selectedGenres}
-              onGenresChange={handleGenresChange}
-              maxSelections={8}
-              showPresets={true}
-              showCategories={true}
-              disabled={isCompleting}
-            />
-          </View>
-
-          {/* Action Buttons */}
-          <View className="pt-6 space-y-3">
-            {/* Continue Button */}
-            <TouchableOpacity
-              onPress={handleContinue}
-              disabled={isCompleting || selectedGenres.length === 0}
-              className={`bg-cyber-cyan py-4 rounded-lg shadow-lg ${
-                isCompleting || selectedGenres.length === 0 ? "opacity-50" : ""
-              }`}
-              style={{
-                boxShadow: selectedGenres.length > 0 ? '0px 0px 10px rgba(0, 255, 255, 0.3)' : undefined,
-              } as any}
-            >
-              <Text className="text-cyber-black font-bold text-lg font-orbitron text-center">
-                {isCompleting 
-                  ? "COMPLETING SETUP..." 
-                  : `CONTINUE WITH ${selectedGenres.length} INTEREST${selectedGenres.length !== 1 ? 'S' : ''}`
-                }
-              </Text>
-            </TouchableOpacity>
-
-            {/* Skip Button */}
-            <TouchableOpacity
-              onPress={handleSkip}
-              disabled={isCompleting}
-              className="bg-cyber-dark border border-cyber-gray py-4 rounded-lg"
-            >
-              <Text className="text-white font-inter text-center">
-                Skip for Now - I&apos;ll Add Later
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Gaming Aesthetic Elements */}
-          <View className="items-center mt-6">
-            <View className="w-full h-px bg-cyber-cyan opacity-30 mb-2" />
-            <Text className="text-green-400 text-xs font-mono">
-              [ PERSONALIZING GAMING EXPERIENCE ]
-            </Text>
-          </View>
+        {/* Fixed Action Section */}
+        <View className="px-6 py-4 border-t border-cyber-gray/20">
+          {renderActionSection()}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
-};
+}
 
 export default GamingInterestsScreen; 
